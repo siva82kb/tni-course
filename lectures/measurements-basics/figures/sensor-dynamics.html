@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<script>
+MathJax = { tex: { inlineMath: [['\\(','\\)']] }, startup: { typeset: false } };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+* { box-sizing: border-box; margin:0; padding:0; }
+html { height:100%; overflow:hidden; }
+body {
+  font-family:'Segoe UI', system-ui, sans-serif;
+  background:#fff; color:#2D3748;
+  height:100%; overflow:hidden;
+  display:flex; flex-direction:column;
+  padding:5px 6px 4px; gap:4px;
+}
+
+/* ── Control rows ─────────────────────────────────────────────── */
+.ctrl-row {
+  display:flex; align-items:center;
+  gap:1.1rem; flex-wrap:nowrap;
+  font-size:10.5px;
+}
+.cp { display:flex; align-items:center; gap:4px; color:#555; white-space:nowrap; }
+.cp input[type=range] { width:90px; height:10px; accent-color:#2B6CB0; }
+.cp .v { min-width:34px; text-align:right; color:#222; font-weight:600; }
+.sep { width:1px; height:18px; background:#ddd; flex-shrink:0; }
+
+/* Radio groups */
+.rg { display:flex; align-items:center; gap:8px; font-size:10.5px; color:#555; }
+.rg label { display:flex; align-items:center; gap:3px; cursor:pointer; white-space:nowrap; }
+.rg input[type=radio] { accent-color:#2B6CB0; cursor:pointer; }
+
+/* Wave params (shown only when sine/square selected) */
+#wave-params { display:none; align-items:center; gap:1.1rem; }
+#wave-params.visible { display:flex; }
+
+#regime { margin-left:auto; font-size:9.5px; color:#888; white-space:nowrap; }
+
+/* ── Main row ─────────────────────────────────────────────────── */
+#main { display:flex; flex:1; min-height:0; }
+
+/* ── Slider column ────────────────────────────────────────────── */
+#sld-col { flex:0 0 46px; position:relative; overflow:visible; }
+#vslider { position:absolute; accent-color:#c33; cursor:grab; }
+#vslider:active { cursor:grabbing; }
+#vslider:disabled { opacity:0.4; cursor:default; }
+.tick {
+  position:absolute; right:3px; font-size:9px; color:#aaa;
+  transform:translateY(-50%); pointer-events:none; user-select:none;
+}
+
+/* ── Equation row ─────────────────────────────────────────────── */
+#eq-row {
+  text-align:center; min-height:24px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:#444; flex-shrink:0;
+}
+
+/* ── Plot ─────────────────────────────────────────────────────── */
+#plot { flex:1; min-width:0; min-height:0; }
+
+/* ── Pause button ─────────────────────────────────────────────── */
+#btn-pause {
+  font-size:10px; padding:2px 10px;
+  border:1px solid #999; border-radius:3px;
+  background:#f5f5f5; cursor:pointer;
+  font-family:inherit; flex-shrink:0;
+}
+#btn-pause.on { background:#c33; color:#fff; border-color:#c33; }
+</style>
+</head>
+<body>
+
+<!-- Row 1: system params + system type -->
+<div class="ctrl-row">
+  <div id="dyn-params" style="display:flex; align-items:center; gap:1.1rem;">
+    <div class="cp">
+      <span>f<sub>n</sub> (Hz)</span>
+      <input type="range" id="sl-fn" min="0.5" max="10" value="2" step="0.5">
+      <span class="v" id="vfn">2.0</span>
+    </div>
+    <div class="cp">
+      <span>ζ</span>
+      <input type="range" id="sl-ze" min="0.05" max="1.50" value="0.50" step="0.05">
+      <span class="v" id="vze">0.50</span>
+    </div>
+    <div class="sep"></div>
+  </div>
+  <div class="rg">
+    <label><input type="radio" name="dyn" value="static">          Static</label>
+    <label><input type="radio" name="dyn" value="dynamic" checked> Dynamic</label>
+  </div>
+  <div class="sep"></div>
+  <div class="rg">
+    <label><input type="radio" name="lin" value="linear"    checked> Linear</label>
+    <label><input type="radio" name="lin" value="nonlinear">         Nonlinear</label>
+  </div>
+  <button id="btn-pause">Pause</button>
+  <span id="regime">—</span>
+</div>
+
+<!-- Row 2: input mode + conditional wave params -->
+<div class="ctrl-row">
+  <div class="rg">
+    <span style="color:#777; margin-right:2px;">Input:</span>
+    <label><input type="radio" name="inp" value="manual"  checked> Manual</label>
+    <label><input type="radio" name="inp" value="sine">   Sinusoid</label>
+    <label><input type="radio" name="inp" value="square"> Square</label>
+    <label><input type="radio" name="inp" value="step">   Step</label>
+  </div>
+  <div class="sep"></div>
+  <div id="wave-params">
+    <div class="cp" id="freq-cp">
+      <span>f<sub>in</sub> (Hz)</span>
+      <input type="range" id="sl-fi" min="0.1" max="20" value="1" step="0.1">
+      <span class="v" id="vfi">1.0</span>
+    </div>
+    <div class="cp">
+      <span>A</span>
+      <input type="range" id="sl-ai" min="0.1" max="2.5" value="1.0" step="0.1">
+      <span class="v" id="vai">1.0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: noise -->
+<div class="ctrl-row">
+  <div class="rg">
+    <label><input type="checkbox" id="cb-noise"> Add noise</label>
+  </div>
+  <div class="cp" id="noise-params" style="opacity:0.3; pointer-events:none;">
+    <span>σ</span>
+    <input type="range" id="sl-ns" min="0.01" max="1.0" value="0.1" step="0.01">
+    <span class="v" id="vns">0.10</span>
+  </div>
+</div>
+
+<!-- Equation display -->
+<div id="eq-row">\(\ddot{y} + 2\zeta\omega_n\dot{y} + \omega_n^2 y = \omega_n^2 x\)</div>
+
+<!-- Main: slider + plot -->
+<div id="main">
+  <div id="sld-col">
+    <input type="range" id="vslider" min="-2.5" max="2.5" step="0.01" value="0">
+  </div>
+  <div id="plot"></div>
+</div>
+
+<script>
+/* ── constants ──────────────────────────────────────────────────── */
+const MT = 26, MB = 38;
+const Y_MIN = -3.5, Y_MAX = 3.5;           // plot axis range
+const TICK_VALS = [-3, -2, -1, 0, 1, 2, 3]; // plot gridlines
+const SLD_MIN = -2.5, SLD_MAX = 2.5;        // slider range
+const SLD_TICKS = [-2, -1, 0, 1, 2];        // slider column tick labels
+const WIN = 6.0;
+const BUF = 600;
+const DT  = 5e-4;   // 0.5 ms ODE step
+const NL_ALPHA = 0.5; // Duffing cubic coefficient (hardening spring)
+
+/* ── state ──────────────────────────────────────────────────────── */
+let fn = 2.0, ze = 0.50, wn = 2 * Math.PI * fn;
+let dynMode  = 'dynamic'; // 'static' | 'dynamic'
+let linMode  = 'linear';  // 'linear'  | 'nonlinear'
+let noiseOn  = false;
+let sigma    = 0.1;
+
+function randn() {
+  // Box-Muller — Gaussian N(0,1)
+  const u1 = Math.random() + 1e-12, u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+let inpMode  = 'manual';  // 'manual' | 'sine' | 'square'
+let xman = 0;             // manual slider value
+let finp = 1.0, ainp = 1.0;  // wave freq / amplitude
+
+let s1 = 0, s2 = 0, st = 0;  // y, ẏ, sim time
+let tb = new Array(BUF).fill(0);
+let xb = new Array(BUF).fill(0);
+let yb = new Array(BUF).fill(0);
+
+function resetSim() { s1=0; s2=0; st=0; tb.fill(0); xb.fill(0); yb.fill(0); }
+
+/* ── input value at time t ──────────────────────────────────────── */
+function computeInput(t) {
+  if (inpMode === 'sine')   return ainp * Math.sin(2 * Math.PI * finp * t);
+  if (inpMode === 'square') return ainp * Math.sign(Math.sin(2 * Math.PI * finp * t) || 1);
+  if (inpMode === 'step')   return t >= 0.5 ? ainp : 0;
+  return xman;
+}
+
+/* ── ODE step (20 × 0.5 ms = 10 ms per call) ───────────────────── */
+let lastX = 0;
+function simStep() {
+  for (let i = 0; i < 20; i++) {
+    const x = computeInput(st);
+    if (dynMode === 'static') {
+      // No dynamics — output follows input instantly
+      s1 = (linMode === 'linear') ? 0.8 * x : 2.0 * Math.tanh(x / 1.2); // linear or saturating
+      s2 = 0;
+    } else if (linMode === 'linear') {
+      // ÿ + 2ζωn ẏ + ωn² y = ωn² x
+      const s2d = -wn*wn*s1 - 2*ze*wn*s2 + wn*wn*x;
+      s2 += s2d * DT; s1 += s2 * DT;
+    } else {
+      // Duffing: ÿ + 2ζωn ẏ + ωn²(y + αy³) = ωn² x
+      const s2d = -wn*wn*(s1 + NL_ALPHA*s1*s1*s1) - 2*ze*wn*s2 + wn*wn*x;
+      s2 += s2d * DT; s1 += s2 * DT;
+    }
+    st += DT;
+    lastX = x;
+  }
+  // Clamp state to prevent blow-up
+  s1 = Math.max(-10, Math.min(10, s1));
+  s2 = Math.max(-100, Math.min(100, s2));
+
+  tb.push(st);     tb.shift();
+  xb.push(lastX);  xb.shift();
+  yb.push(s1 + (noiseOn ? sigma * randn() : 0));  yb.shift();
+}
+
+/* ── Plotly setup ───────────────────────────────────────────────── */
+const PLT = document.getElementById('plot');
+
+Plotly.newPlot(PLT, [
+  { x:[], y:[], name:'input x(t)',  mode:'lines',
+    line:{color:'#c33', width:1} },
+  { x:[], y:[], name:'output y(t)', mode:'lines',
+    line:{color:'#2B6CB0', width:1.5} }
+], {
+  margin: { l:5, r:12, t:MT, b:MB },
+  xaxis: { title:{text:'time (s)', font:{size:10}}, tickfont:{size:9} },
+  yaxis: {
+    range:[Y_MIN, Y_MAX], tickvals:TICK_VALS,
+    showticklabels:false, gridcolor:'#e8e8e8',
+    zeroline:true, zerolinecolor:'#ccc'
+  },
+  legend: {
+    font:{size:9}, bgcolor:'rgba(0,0,0,0)', bordercolor:'rgba(0,0,0,0)',
+    x:0.01, xanchor:'left', y:0.99, yanchor:'top'
+  },
+  paper_bgcolor:'#fff', plot_bgcolor:'#fafafa'
+}, { responsive:true, displayModeBar:false });
+
+/* ── Slider positioning + tick marks ────────────────────────────── */
+function layoutSlider() {
+  const col = document.getElementById('sld-col');
+  const H   = col.clientHeight;
+  const len = H - MT - MB;
+  if (len <= 0) return;
+
+  const sl = document.getElementById('vslider');
+  sl.style.width           = len + 'px';
+  sl.style.height          = '20px';
+  sl.style.left            = '23px';
+  sl.style.top             = (MT + len / 2) + 'px';
+  sl.style.transformOrigin = 'center center';
+  sl.style.transform       = 'translateX(-50%) translateY(-50%) rotate(-90deg)';
+
+  col.querySelectorAll('.tick').forEach(e => e.remove());
+  SLD_TICKS.forEach(v => {
+    const pct = (SLD_MAX - v) / (SLD_MAX - SLD_MIN);
+    const d = document.createElement('div');
+    d.className   = 'tick';
+    d.textContent = v;
+    d.style.top   = (MT + pct * len) + 'px';
+    col.appendChild(d);
+  });
+}
+
+/* ── Animation loop ─────────────────────────────────────────────── */
+let fc = 0, paused = false;
+function frame() {
+  if (!paused) {
+    simStep();
+
+    // In automated modes, drive the slider to show current input
+    if (inpMode !== 'manual') {
+      const sl = document.getElementById('vslider');
+      sl.value = Math.max(SLD_MIN, Math.min(SLD_MAX, lastX));
+    }
+  }
+
+  if (!paused && ++fc % 4 === 0) {
+    Plotly.update(PLT,
+      { x:[tb.slice(), tb.slice()], y:[xb.slice(), yb.slice()] },
+      { 'xaxis.range':[st - WIN, st] }
+    );
+
+    // Regime label
+    let info;
+    if (dynMode === 'static') {
+      info = linMode === 'linear'
+        ? 'static linear — y = 0.8x  (gain < 1, no dynamics)'
+        : 'static nonlinear — y = 2·tanh(x/1.2)  (saturation)';
+    } else if (linMode === 'nonlinear') {
+      info = `dynamic nonlinear — Duffing (α=${NL_ALPHA}, hardening spring)`;
+    } else {
+      info = ze < 1    ? 'dynamic linear · underdamped'
+           : ze < 1.01 ? 'dynamic linear · critically damped'
+                       : 'dynamic linear · overdamped';
+    }
+    document.getElementById('regime').textContent = info;
+  }
+
+  requestAnimationFrame(frame);
+}
+
+/* ── Controls ────────────────────────────────────────────────────── */
+// System params
+document.getElementById('sl-fn').oninput = function() {
+  fn = +this.value; wn = 2 * Math.PI * fn;
+  document.getElementById('vfn').textContent = fn.toFixed(1); resetSim();
+};
+document.getElementById('sl-ze').oninput = function() {
+  ze = +this.value;
+  document.getElementById('vze').textContent = ze.toFixed(2); resetSim();
+};
+
+/* ── Equation display ────────────────────────────────────────────── */
+const EQS = {
+  'static-linear':
+    '\\( y(t) = 0.8\\, x(t) \\)',
+  'static-nonlinear':
+    '\\( y(t) = 2\\tanh\\!\\bigl(x(t)/1.2\\bigr) \\)',
+  'dynamic-linear':
+    '\\( \\ddot{y} + 2\\zeta\\omega_n\\dot{y} + \\omega_n^2\\, y = \\omega_n^2\\, x \\)',
+  'dynamic-nonlinear':
+    '\\( \\ddot{y} + 2\\zeta\\omega_n\\dot{y} + \\omega_n^2\\bigl(y + \\alpha y^3\\bigr) = \\omega_n^2\\, x, \\quad \\alpha=' + NL_ALPHA + ' \\)',
+};
+
+function updateEquation() {
+  const div = document.getElementById('eq-row');
+  div.innerHTML = EQS[dynMode + '-' + linMode];
+  if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([div]);
+}
+
+// Static / Dynamic radios
+document.querySelectorAll('input[name=dyn]').forEach(r => {
+  r.addEventListener('change', () => {
+    dynMode = r.value;
+    const dp = document.getElementById('dyn-params');
+    dp.style.opacity       = dynMode === 'static' ? '0.3' : '1';
+    dp.style.pointerEvents = dynMode === 'static' ? 'none' : '';
+    updateEquation(); resetSim();
+  });
+});
+
+// Linear / Nonlinear radios
+document.querySelectorAll('input[name=lin]').forEach(r => {
+  r.addEventListener('change', () => { linMode = r.value; updateEquation(); resetSim(); });
+});
+
+// Input mode radios
+document.querySelectorAll('input[name=inp]').forEach(r => {
+  r.addEventListener('change', () => {
+    inpMode = r.value;
+    const wp = document.getElementById('wave-params');
+    const fc = document.getElementById('freq-cp');
+    wp.classList.toggle('visible', inpMode !== 'manual');
+    fc.style.display = (inpMode === 'sine' || inpMode === 'square') ? '' : 'none';
+    const sl = document.getElementById('vslider');
+    sl.disabled = (inpMode !== 'manual');
+    resetSim();
+  });
+});
+
+// Manual slider
+document.getElementById('vslider').oninput = function() { xman = +this.value; };
+
+// Wave params
+document.getElementById('sl-fi').oninput = function() {
+  finp = +this.value;
+  document.getElementById('vfi').textContent = finp.toFixed(1); resetSim();
+};
+document.getElementById('sl-ai').oninput = function() {
+  ainp = +this.value;
+  document.getElementById('vai').textContent = ainp.toFixed(1); resetSim();
+};
+
+// Noise
+document.getElementById('cb-noise').onchange = function() {
+  noiseOn = this.checked;
+  const np = document.getElementById('noise-params');
+  np.style.opacity       = noiseOn ? '1'    : '0.3';
+  np.style.pointerEvents = noiseOn ? ''     : 'none';
+};
+document.getElementById('sl-ns').oninput = function() {
+  sigma = +this.value;
+  document.getElementById('vns').textContent = sigma.toFixed(2);
+};
+
+// Pause / resume
+document.getElementById('btn-pause').onclick = function() {
+  paused = !paused;
+  this.textContent = paused ? 'Resume' : 'Pause';
+  this.classList.toggle('on', paused);
+};
+
+window.addEventListener('resize', layoutSlider);
+layoutSlider();
+frame();
+
+// Typeset initial equation once MathJax is ready
+window.addEventListener('load', () => {
+  if (window.MathJax && MathJax.typesetPromise)
+    MathJax.typesetPromise([document.getElementById('eq-row')]);
+});
+</script>
+</body>
+</html>

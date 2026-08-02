@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.75rem 1rem 0.5rem;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    font-size: 0.92rem;
+  }
+  .ctrl {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .ctrl label {
+    color: #718096;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  input[type="number"] {
+    width: 72px;
+    padding: 0.25rem 0.4rem;
+    border: 1.5px solid #CBD5E0;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    color: #2D3748;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus { border-color: #2B6CB0; }
+  input[type="range"] {
+    width: 120px;
+    cursor: pointer;
+  }
+  #fm-slider  { accent-color: #2B6CB0; }
+  #rin-slider { accent-color: #A51C30; }
+  .unit { color: #A0AEC0; font-size: 0.85rem; }
+  .readout {
+    display: flex;
+    gap: 1.2rem;
+    font-size: 0.88rem;
+    align-items: center;
+  }
+  .readout span { color: #718096; }
+  .readout strong { color: #2D3748; }
+  .val-fm   { color: #2B6CB0; font-weight: 700; }
+  .val-rin  { color: #A51C30; font-weight: 700; }
+  .val-err  { color: #2D7D46; font-weight: 700; }
+  #plot { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>f<sub>m</sub></label>
+    <input type="range" id="fm-slider" min="0" max="400" value="100" step="1">
+    <span class="val-fm" id="fm-val">100</span>
+    <span class="unit">N</span>
+  </div>
+
+  <div class="ctrl">
+    <label>r<sub>in</sub></label>
+    <input type="range" id="rin-slider" min="0" max="300" value="150" step="1">
+    <span class="val-rin" id="rin-val">—</span>
+  </div>
+
+  <div class="readout">
+    <div><span>r<sub>s</sub> = </span><strong id="rs-val">—</strong> <span>Ω</span></div>
+    <div><span>v<sub>s</sub> = </span><strong id="vs-val">—</strong> <span>V</span></div>
+    <div><span>v&#x0302;<sub>s</sub> = </span><strong id="vsh-val">—</strong> <span>V</span></div>
+    <div><span>error = </span><span class="val-err" id="err-val">—</span> <span>%</span></div>
+  </div>
+</div>
+
+<div id="plot"></div>
+
+<script>
+const IP = 0.1;  // fixed at 100 mA
+const fmSlider  = document.getElementById('fm-slider');
+const rinSlider = document.getElementById('rin-slider');
+const fmValEl   = document.getElementById('fm-val');
+const rinValEl  = document.getElementById('rin-val');
+const rsValEl   = document.getElementById('rs-val');
+const vsValEl   = document.getElementById('vs-val');
+const vshValEl  = document.getElementById('vsh-val');
+const errEl     = document.getElementById('err-val');
+
+const FM_MAX = 400;
+const N_PTS  = 400;
+const RIN_MIN_LOG = Math.log10(0.1);
+const RIN_MAX_LOG = Math.log10(10000);
+
+function sliderToRin(s) {
+  return Math.pow(10, RIN_MIN_LOG + (s / 300) * (RIN_MAX_LOG - RIN_MIN_LOG));
+}
+
+function rinLabel(rin) {
+  if (rin >= 1000) return (rin / 1000).toFixed(rin >= 9950 ? 0 : 1) + ' kΩ';
+  if (rin >= 10)   return rin.toFixed(0) + ' Ω';
+  return rin.toFixed(2) + ' Ω';
+}
+
+function Rs(fm)             { return 10 + 0.5 * Math.sqrt(fm); }
+function Vs(ip, fm)         { return ip * Rs(fm); }
+function VsHat(ip, fm, rin) { const rs = Rs(fm); return ip * (rs * rin) / (rs + rin); }
+
+function linspace(a, b, n) {
+  const arr = [];
+  for (let i = 0; i < n; i++) arr.push(a + (b - a) * i / (n - 1));
+  return arr;
+}
+
+const fmCurve = linspace(0, FM_MAX, N_PTS);
+
+function buildTraces(ip, fm, rin) {
+  const vsIdeal  = fmCurve.map(f => Vs(ip, f));
+  const vsLoaded = fmCurve.map(f => VsHat(ip, f, rin));
+  const pt_vs    = Vs(ip, fm);
+  const pt_vsh   = VsHat(ip, fm, rin);
+  const yMin     = 0;
+
+  return [
+    // Ideal curve
+    {
+      x: fmCurve, y: vsIdeal,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#2B6CB0', width: 2.5 },
+      name: 'v<sub>s</sub>  (ideal)',
+      hovertemplate: 'f<sub>m</sub>=%{x:.1f} N  v<sub>s</sub>=%{y:.4f} V<extra></extra>',
+    },
+    // Loaded curve
+    {
+      x: fmCurve, y: vsLoaded,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 1.2, dash: 'dot' },
+      name: 'v&#x0302;<sub>s</sub>  (loaded)',
+      hovertemplate: 'f<sub>m</sub>=%{x:.1f} N  v&#x0302;<sub>s</sub>=%{y:.4f} V<extra></extra>',
+    },
+    // Vertical dotted line at fm
+    {
+      x: [fm, fm], y: [yMin, Math.max(pt_vs, pt_vsh)],
+      type: 'scatter', mode: 'lines',
+      line: { color: '#718096', width: 1, dash: 'dot' },
+      hoverinfo: 'skip', showlegend: false,
+    },
+    // Operating point — ideal
+    {
+      x: [fm], y: [pt_vs],
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#2B6CB0', size: 8, symbol: 'circle', line: { color: '#fff', width: 2 } },
+      hoverinfo: 'skip', showlegend: false,
+    },
+    // Operating point — loaded
+    {
+      x: [fm], y: [pt_vsh],
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#A51C30', size: 8, symbol: 'circle', line: { color: '#fff', width: 2 } },
+      hoverinfo: 'skip', showlegend: false,
+    },
+  ];
+}
+
+function layout(ip) {
+  return {
+    margin: { l: 62, r: 20, t: 12, b: 55 },
+    xaxis: {
+      title: { text: 'f<sub>m</sub>  (N)', font: { size: 13, color: '#4A5568' } },
+      range: [0, FM_MAX],
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 11 },
+    },
+    yaxis: {
+      title: { text: 'voltage  (V)', font: { size: 13, color: '#4A5568' } },
+      range: [0, Vs(ip, FM_MAX) * 1.03],
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 11 },
+    },
+    plot_bgcolor:  '#ffffff',
+    paper_bgcolor: '#ffffff',
+    showlegend: true,
+    legend: { x: 0.02, y: 0.98, font: { size: 12 }, bgcolor: 'rgba(0,0,0,0)', bordercolor: 'rgba(0,0,0,0)' },
+    hovermode: 'closest',
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  };
+}
+
+const cfg = { displayModeBar: false, responsive: true };
+
+function update() {
+  const ip  = IP;
+  const fm  = parseFloat(fmSlider.value);
+  const rin = sliderToRin(parseFloat(rinSlider.value));
+
+  const rs  = Rs(fm);
+  const vs  = Vs(ip, fm);
+  const vsh = VsHat(ip, fm, rin);
+  const err = (1 - vsh / vs) * 100;
+
+  fmValEl.textContent  = fm.toFixed(0);
+  rinValEl.textContent = rinLabel(rin);
+  rsValEl.textContent  = rs.toFixed(2);
+  vsValEl.textContent  = vs.toFixed(4);
+  vshValEl.textContent = vsh.toFixed(4);
+  errEl.textContent    = err.toFixed(1);
+
+  Plotly.react('plot', buildTraces(ip, fm, rin), layout(ip), cfg);
+}
+
+// Initial draw
+Plotly.newPlot('plot', buildTraces(IP, 100, sliderToRin(150)), layout(IP), cfg);
+update();
+
+fmSlider.addEventListener('input',  update);
+rinSlider.addEventListener('input', update);
+</script>
+</body>
+</html>

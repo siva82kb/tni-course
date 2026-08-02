@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff; color: #2D3748;
+    padding: 0.55rem 0.9rem 0.3rem;
+    height: 100vh; display: flex; flex-direction: column; gap: 0.35rem;
+  }
+
+  .ctrl-row {
+    display: flex; align-items: center; flex-wrap: nowrap;
+    gap: 1.2rem; font-size: 0.82rem;
+  }
+  .cp { display: flex; align-items: center; gap: 0.32rem; color: #718096; white-space: nowrap; }
+  .cp span { font-weight: 600; }
+  .cp input[type=range] { width: 90px; cursor: pointer; }
+  .cv { font-weight: 700; min-width: 2.8rem; }
+  .rg { display: flex; align-items: center; gap: 0.55rem; color: #718096; }
+  .rg b { font-weight: 700; color: #4A5568; }
+  .rg label { display: flex; align-items: center; gap: 0.22rem; cursor: pointer; font-weight: 400; }
+  .sep { width: 1px; height: 15px; background: #E2E8F0; flex-shrink: 0; }
+  .spacer { flex: 1; }
+
+  .btn {
+    font-size: 0.79rem; padding: 0.20rem 0.65rem;
+    border: 1px solid #CBD5E0; border-radius: 4px;
+    background: #F7FAFC; cursor: pointer; font-family: inherit; color: #4A5568;
+  }
+  .btn:hover { background: #EDF2F7; }
+  #btn-play.playing { background: #276749; color: #fff; border-color: #276749; }
+
+  #p-sine, #p-rand, #p-fixed { display: flex; align-items: center; gap: 1.2rem; }
+
+  #plots { flex: 1; min-height: 0; }
+  #plot-main { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+
+<!-- Row 1: input controls -->
+<div class="ctrl-row">
+  <div class="rg">
+    <b>Input:</b>
+    <label><input type="radio" name="inp" value="fixed" style="accent-color:#718096;"> Fixed</label>
+    <label><input type="radio" name="inp" value="sine" checked style="accent-color:#718096;"> Sine</label>
+    <label><input type="radio" name="inp" value="rand" style="accent-color:#718096;"> Random</label>
+  </div>
+  <div class="sep"></div>
+
+  <div id="p-fixed" style="display:none;">
+    <div class="cp"><span>Value</span>
+      <input type="range" id="sl-fixed" min="-2" max="2" step="0.05" value="1.0" style="accent-color:#718096;">
+      <span class="cv" id="v-fixed" style="color:#4A5568;">1.00</span>
+    </div>
+  </div>
+
+  <div id="p-sine">
+    <div class="cp"><span>f (Hz)</span>
+      <input type="range" id="sl-freq" min="0.1" max="8" step="0.1" value="1.0" style="accent-color:#718096;">
+      <span class="cv" id="v-freq" style="color:#4A5568;">1.0</span>
+    </div>
+    <div class="cp"><span>Amp</span>
+      <input type="range" id="sl-amp" min="0.1" max="2" step="0.1" value="1.0" style="accent-color:#718096;">
+      <span class="cv" id="v-amp" style="color:#4A5568;">1.0</span>
+    </div>
+  </div>
+
+  <div id="p-rand" style="display:none;">
+    <div class="cp"><span>f<sub>max</sub> (Hz)</span>
+      <input type="range" id="sl-fmax" min="0.5" max="10" step="0.5" value="3.0" style="accent-color:#718096;">
+      <span class="cv" id="v-fmax" style="color:#4A5568;">3.0</span>
+    </div>
+    <div class="cp"><span>Amp</span>
+      <input type="range" id="sl-ramp" min="0.1" max="2" step="0.1" value="1.0" style="accent-color:#718096;">
+      <span class="cv" id="v-ramp" style="color:#4A5568;">1.0</span>
+    </div>
+    <button class="btn" id="btn-regen">↺ New</button>
+  </div>
+</div>
+
+<!-- Row 2: sensor params + g(x) + controls -->
+<div class="ctrl-row">
+  <div class="cp">
+    <span style="color:#2B6CB0; font-weight:700;">Sensor 1 &nbsp;τ (s)</span>
+    <input type="range" id="sl-tau1" min="0.05" max="3.0" step="0.05" value="0.3" style="accent-color:#2B6CB0;">
+    <span class="cv" id="v-tau1" style="color:#2B6CB0;">0.30</span>
+  </div>
+  <div class="sep"></div>
+  <div class="cp">
+    <span style="color:#C05621; font-weight:700;">Sensor 2 &nbsp;τ (s)</span>
+    <input type="range" id="sl-tau2" min="0.05" max="3.0" step="0.05" value="1.50" style="accent-color:#C05621;">
+    <span class="cv" id="v-tau2" style="color:#C05621;">1.50</span>
+  </div>
+  <div class="sep"></div>
+  <div class="rg">
+    <b>g(x):</b>
+    <label><input type="radio" name="gmode" value="linear" checked style="accent-color:#718096;"> Linear</label>
+    <label><input type="radio" name="gmode" value="nonlinear" style="accent-color:#718096;"> Nonlinear</label>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="btn-reset">↺ Reset</button>
+  <button class="btn" id="btn-play">▶ Play</button>
+</div>
+
+<!-- Plot -->
+<div id="plots">
+  <div id="plot-main"></div>
+</div>
+
+<script>
+/* ── Constants ──────────────────────────────────────────── */
+const SIM_DT          = 0.001;
+const PLOT_DT         = 0.010;
+const SIM_SUB         = Math.round(PLOT_DT / SIM_DT);
+const FRAMES_PER_PLOT = 4;
+const WIN             = 20.0;
+const BUF             = Math.round(WIN / PLOT_DT);
+const RAND_TOTAL      = 120.0;
+const N_RAND          = Math.round(RAND_TOTAL / SIM_DT);
+const N_RAND_COMP     = 20;
+const Y_LIM           = 2.8;
+const C1 = '#3B82F6', C2 = '#C05621';
+
+/* ── Parameters ─────────────────────────────────────────── */
+let tau      = [0.30, 1.50];
+let inpMode  = 'sine';
+let fixedVal = 1.0, sineFreq = 1.0, sineAmp = 1.0;
+let randFmax = 3.0, randAmp = 1.0;
+let gLinear  = true;
+
+/* ── Sim state ───────────────────────────────────────────── */
+let simT = 0, z = [0, 0];
+const tb = new Array(BUF).fill(null);
+const xb = new Array(BUF).fill(0);
+const yb = [new Array(BUF).fill(0), new Array(BUF).fill(0)];
+
+let randSig = null, playing = false, rafId = null;
+
+/* ── Random signal ───────────────────────────────────────── */
+function genRandom() {
+  const arr    = new Float32Array(N_RAND);
+  const phases = Array.from({length: N_RAND_COMP}, () => Math.random() * 2 * Math.PI);
+  const freqs  = Array.from({length: N_RAND_COMP}, (_, i) => (i + 1) * randFmax / N_RAND_COMP);
+  const amps   = Array.from({length: N_RAND_COMP}, () => 0.5 + Math.random());
+  const asum   = amps.reduce((s, v) => s + v, 0);
+  for (let i = 0; i < N_RAND; i++) {
+    const ti = i * SIM_DT; let x = 0;
+    for (let k = 0; k < N_RAND_COMP; k++)
+      x += amps[k] * Math.sin(2 * Math.PI * freqs[k] * ti + phases[k]);
+    arr[i] = randAmp * x / asum;
+  }
+  randSig = arr;
+}
+
+function getInput(ti) {
+  if (inpMode === 'fixed') return fixedVal;
+  if (inpMode === 'sine')  return sineAmp * Math.sin(2 * Math.PI * sineFreq * ti);
+  const idx = Math.min(Math.floor(ti / SIM_DT), N_RAND - 1);
+  return randSig ? randSig[idx] : 0;
+}
+
+function gFunc(x) { return gLinear ? x : 2.0 * Math.tanh(x / 1.2); }
+
+/* ── Reset ───────────────────────────────────────────────── */
+function resetSim(andRegen) {
+  simT = 0; z = [0, 0];
+  for (let i = 0; i < BUF; i++) { tb[i] = null; xb[i] = 0; yb[0][i] = 0; yb[1][i] = 0; }
+  if (andRegen && inpMode === 'rand') genRandom();
+  plotUpdate();
+}
+
+/* ── ODE: τ·ż + z = x_m  →  ż = (x_m − z) / τ ─────────── */
+function simFrame() {
+  for (let s = 0; s < SIM_SUB; s++) {
+    const xm = getInput(simT);
+    for (let k = 0; k < 2; k++) {
+      z[k] += (xm - z[k]) / tau[k] * SIM_DT;
+      z[k]  = Math.max(-20, Math.min(20, z[k]));
+    }
+    simT += SIM_DT;
+  }
+  const xNow = getInput(simT);
+  tb.push(simT);        tb.shift();
+  xb.push(xNow);        xb.shift();
+  yb[0].push(gFunc(z[0])); yb[0].shift();
+  yb[1].push(gFunc(z[1])); yb[1].shift();
+}
+
+/* ── Plotly ──────────────────────────────────────────────── */
+const cfg     = { displayModeBar: false, responsive: true };
+const axStyle = {
+  showgrid: true, gridcolor: '#EDF2F7', linecolor: '#CBD5E0',
+  zeroline: true, zerolinecolor: '#CBD5E0', zerolinewidth: 1,
+  tickfont: { color: '#718096', size: 10 },
+};
+const baseL = {
+  plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+  hovermode: false, font: { family: 'Segoe UI, system-ui, sans-serif' },
+  margin: { l: 48, r: 14, t: 34, b: 44 },
+};
+
+function visSlice() {
+  const tA = [], xA = [], y1A = [], y2A = [];
+  for (let i = 0; i < BUF; i++) {
+    if (tb[i] !== null) {
+      tA.push(tb[i]); xA.push(xb[i]);
+      y1A.push(yb[0][i]); y2A.push(yb[1][i]);
+    }
+  }
+  return { tA, xA, y1A, y2A };
+}
+
+let initialized = false;
+
+function plotInit() {
+  Plotly.newPlot('plot-main', [
+    { x: [], y: [], mode: 'lines', name: 'Input  x<sub>m</sub>(t)',
+      line: { color: 'rgba(34,197,94,0.45)', width: 1.2 } },
+    { x: [], y: [], mode: 'lines', name: 'Sensor 1  (τ=0.30 s)',
+      line: { color: C1, width: 1.2 } },
+    { x: [], y: [], mode: 'lines', name: 'Sensor 2  (τ=1.50 s)',
+      line: { color: C2, width: 1.2 } },
+  ], {
+    ...baseL, showlegend: true,
+    legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
+              bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' } },
+    xaxis: { ...axStyle, range: [-WIN, 0],
+      title: { text: 'time (s)', font: { size: 11, color: '#4A5568' } } },
+    yaxis: { ...axStyle, range: [-1.2, 1.2] },
+  }, cfg);
+  initialized = true;
+}
+
+function dataRange(arrays) {
+  let lo = Infinity, hi = -Infinity;
+  for (const arr of arrays)
+    for (const v of arr) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (!isFinite(lo)) { lo = -1; hi = 1; }
+  const pad = (hi - lo) * 0.2 || 0.2;
+  return [lo - pad, hi + pad];
+}
+
+function plotUpdate() {
+  if (!initialized) return;
+  const { tA, xA, y1A, y2A } = visSlice();
+  const tEnd = simT;
+  const t1 = tau[0].toFixed(2), t2 = tau[1].toFixed(2);
+  const yRange = dataRange([xA, y1A, y2A]);
+
+  Plotly.react('plot-main', [
+    { x: tA, y: xA,  mode: 'lines', name: 'Input  x<sub>m</sub>(t)',
+      line: { color: 'rgba(34,197,94,0.45)', width: 1.2 } },
+    { x: tA, y: y1A, mode: 'lines', name: `Sensor 1  (τ=${t1} s)`,
+      line: { color: C1, width: 1.2 } },
+    { x: tA, y: y2A, mode: 'lines', name: `Sensor 2  (τ=${t2} s)`,
+      line: { color: C2, width: 1.2 } },
+  ], {
+    ...baseL, showlegend: true,
+    legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
+              bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' } },
+    xaxis: { ...axStyle, range: [tEnd - WIN, tEnd],
+      title: { text: 'time (s)', font: { size: 11, color: '#4A5568' } } },
+    yaxis: { ...axStyle, range: yRange },
+  }, cfg);
+}
+
+/* ── Animation ────────────────────────────────────────────── */
+function loop() {
+  if (!playing) return;
+  for (let i = 0; i < FRAMES_PER_PLOT; i++) simFrame();
+  plotUpdate();
+  rafId = requestAnimationFrame(loop);
+}
+
+function setPlaying(on) {
+  playing = on;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = on ? '⏸ Pause' : '▶ Play';
+  btn.classList.toggle('playing', on);
+  if (on) rafId = requestAnimationFrame(loop);
+  else if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+/* ── UI wiring ────────────────────────────────────────────── */
+function showInputParams() {
+  document.getElementById('p-fixed').style.display = inpMode === 'fixed' ? 'flex' : 'none';
+  document.getElementById('p-sine').style.display  = inpMode === 'sine'  ? 'flex' : 'none';
+  document.getElementById('p-rand').style.display  = inpMode === 'rand'  ? 'flex' : 'none';
+}
+
+document.querySelectorAll('input[name=inp]').forEach(r => r.addEventListener('change', () => {
+  inpMode = r.value; showInputParams();
+  const was = playing; if (was) setPlaying(false);
+  resetSim(true); if (was) setPlaying(true);
+}));
+
+document.querySelectorAll('input[name=gmode]').forEach(r => r.addEventListener('change', () => {
+  gLinear = r.value === 'linear';
+}));
+
+function bind(id, vid, digits, setter) {
+  const sl = document.getElementById(id), vl = document.getElementById(vid);
+  sl.addEventListener('input', () => { const v = parseFloat(sl.value); vl.textContent = v.toFixed(digits); setter(v); });
+}
+
+bind('sl-tau1',  'v-tau1',  2, v => { tau[0] = v; });
+bind('sl-tau2',  'v-tau2',  2, v => { tau[1] = v; });
+bind('sl-fixed', 'v-fixed', 2, v => { fixedVal = v; });
+bind('sl-freq',  'v-freq',  1, v => { sineFreq = v; });
+bind('sl-amp',   'v-amp',   1, v => { sineAmp  = v; });
+bind('sl-fmax',  'v-fmax',  1, v => { randFmax = v; genRandom(); });
+bind('sl-ramp',  'v-ramp',  1, v => { randAmp  = v; genRandom(); });
+
+document.getElementById('btn-regen').addEventListener('click', () => {
+  const was = playing; if (was) setPlaying(false);
+  genRandom(); resetSim(false); if (was) setPlaying(true);
+});
+document.getElementById('btn-reset').addEventListener('click', () => {
+  const was = playing; if (was) setPlaying(false);
+  resetSim(true); if (was) setPlaying(true);
+});
+document.getElementById('btn-play').addEventListener('click', () => setPlaying(!playing));
+
+/* ── Init ─────────────────────────────────────────────────── */
+genRandom();
+plotInit();
+plotUpdate();
+</script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #fff; color: #2D3748;
+    padding: 0.4rem 0.8rem 0.2rem;
+    height: 100vh; display: flex; flex-direction: column; gap: 0.25rem;
+  }
+  .ctrl-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1.2rem; font-size: 0.71rem; flex-wrap: wrap;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.3rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 78px; cursor: pointer; }
+  .val { font-weight: 700; min-width: 2.5rem; }
+  button {
+    padding: 0.15rem 0.65rem; border: none; border-radius: 4px;
+    font-size: 0.71rem; font-weight: 600; cursor: pointer;
+  }
+  #pause-btn { background: #2B6CB0; color: #fff; }
+  #pause-btn:hover { background: #2c5282; }
+  #clear-btn { background: #e2e8f0; color: #4A5568; margin-left: 0.3rem; }
+  #clear-btn:hover { background: #cbd5e0; }
+  #plot { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+
+<div class="ctrl-row">
+  <div class="ctrl">
+    <label>F (N)</label>
+    <input type="range" id="F-sl" min="0" max="100" step="1" value="50"
+           style="accent-color:#D97706">
+    <span class="val" id="F-vl" style="color:#D97706">50</span>
+  </div>
+  <div class="ctrl">
+    <label>d (cm)</label>
+    <input type="range" id="d-sl" min="-9" max="9" step="0.1" value="0"
+           style="accent-color:#7C3AED">
+    <span class="val" id="d-vl" style="color:#7C3AED">0.0</span>
+  </div>
+  <div class="ctrl">
+    <label>σ₁ (N)</label>
+    <input type="range" id="s1-sl" min="0" max="10" step="0.1" value="1"
+           style="accent-color:#2563EB">
+    <span class="val" id="s1-vl" style="color:#2563EB">1.0</span>
+  </div>
+  <div class="ctrl">
+    <label>σ₂ (N)</label>
+    <input type="range" id="s2-sl" min="0" max="10" step="0.1" value="1"
+           style="accent-color:#E53E3E">
+    <span class="val" id="s2-vl" style="color:#E53E3E">1.0</span>
+  </div>
+  <div class="ctrl">
+    <label>Speed</label>
+    <input type="range" id="spd-sl" min="5" max="200" step="5" value="50">
+  </div>
+  <div class="ctrl">
+    <button id="pause-btn">Pause</button>
+    <button id="clear-btn">Clear</button>
+  </div>
+</div>
+
+<div id="plot"></div>
+
+<script>
+const L        = 20;   // beam length cm (-10 to +10)
+const TRAIL    = 250;
+const C_F1     = '#2563EB';
+const C_F2     = '#E53E3E';
+const C_FTOT   = '#DC2626';
+const C_COP    = '#7C3AED';
+const C_FORCE  = '#D97706';
+const C_BEAM   = '#2D3748';
+const C_SUPP   = '#718096';
+const C_GROUND = '#A0AEC0';
+const C_TRUE   = 'rgba(160,174,192,0.9)';
+const CFG      = { displayModeBar: false, responsive: true };
+
+let trail = [];   // [{f1,f2,fTot,cop}, ...]
+let timer = null, running = true;
+
+// Rounded-rectangle SVG path in Plotly paper coords (y increases upward)
+const rr = (x0,y0,x1,y1,r) =>
+  `M${x0+r},${y0} H${x1-r} Q${x1},${y0} ${x1},${y0+r} V${y1-r} Q${x1},${y1} ${x1-r},${y1} H${x0+r} Q${x0},${y1} ${x0},${y1-r} V${y0+r} Q${x0},${y0} ${x0+r},${y0} Z`;
+
+function randn(sigma) {
+  const u = Math.max(Math.random(), 1e-10);
+  return sigma * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+}
+
+function gp(id) { return parseFloat(document.getElementById(id).value); }
+
+function trueVals(F, d) {
+  const p  = L / 2 + d;       // position from left end
+  const F2 = F * p / L;
+  const F1 = F - F2;
+  return { F1, F2, FTot: F, COP: d };
+}
+
+// ── Beam diagram helpers ───────────────────────────────────────────
+// Downward arrow: tip at y=0.3, shaft from yTop
+function arrDown(cx, yTop, col) {
+  const SZ = 0.5;
+  return [
+    { x:[cx,cx], y:[yTop, 0.3+SZ], type:'scatter', mode:'lines',
+      line:{color:col,width:2}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+    { x:[cx-SZ*0.5, cx+SZ*0.5, cx, cx-SZ*0.5],
+      y:[0.3+SZ, 0.3+SZ, 0.2, 0.3+SZ],
+      type:'scatter', mode:'none', fill:'toself', fillcolor:col,
+      line:{width:0}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+  ];
+}
+
+// Upward arrow from yBot to yBot+h (returns [] if h < 0.2)
+function arrUp(cx, yBot, h, col) {
+  if (h < 0.2) return [];
+  const SZ = 0.4, yTop = yBot + h;
+  return [
+    { x:[cx,cx], y:[yBot, yTop-SZ], type:'scatter', mode:'lines',
+      line:{color:col,width:1.5}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+    { x:[cx-SZ*0.5, cx+SZ*0.5, cx, cx-SZ*0.5],
+      y:[yTop-SZ, yTop-SZ, yTop, yTop-SZ],
+      type:'scatter', mode:'none', fill:'toself', fillcolor:col,
+      line:{width:0}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+  ];
+}
+
+function beamTraces(F, d, cur) {
+  const ARROW_SCALE = 6 / 100;   // 100 N → 6 units above beam surface
+  const GBASE = -3.5;
+  const f1h = Math.max(cur.f1, 0) * ARROW_SCALE;
+  const f2h = Math.max(cur.f2, 0) * ARROW_SCALE;
+  const copClip = Math.max(-9.5, Math.min(9.5, cur.cop));
+
+  return [
+    // Ground fills (left & right)
+    { x:[-12,-8,-8,-12,-12], y:[GBASE,GBASE,GBASE-1,GBASE-1,GBASE],
+      type:'scatter', mode:'none', fill:'toself', fillcolor:'#EDF2F7',
+      line:{color:C_GROUND,width:1.5}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+    { x:[8,12,12,8,8], y:[GBASE,GBASE,GBASE-1,GBASE-1,GBASE],
+      type:'scatter', mode:'none', fill:'toself', fillcolor:'#EDF2F7',
+      line:{color:C_GROUND,width:1.5}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+
+    // Load cells (left & right)
+    { x:[-11.5,-8.5,-8.5,-11.5,-11.5], y:[-2,-2,GBASE,GBASE,-2],
+      type:'scatter', mode:'lines', fill:'toself', fillcolor:'#E2E8F0',
+      line:{color:C_SUPP,width:1.5}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+    { x:[8.5,11.5,11.5,8.5,8.5], y:[-2,-2,GBASE,GBASE,-2],
+      type:'scatter', mode:'lines', fill:'toself', fillcolor:'#E2E8F0',
+      line:{color:C_SUPP,width:1.5}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+
+    // Support triangles (left & right)
+    { x:[-10,-11.3,-8.7,-10], y:[0,-2,-2,0],
+      type:'scatter', mode:'none', fill:'toself', fillcolor:C_SUPP,
+      line:{width:0}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+    { x:[10,8.7,11.3,10], y:[0,-2,-2,0],
+      type:'scatter', mode:'none', fill:'toself', fillcolor:C_SUPP,
+      line:{width:0}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+
+    // Beam
+    { x:[-10,10], y:[0,0], type:'scatter', mode:'lines',
+      line:{color:C_BEAM,width:10}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+
+    // Center tick on beam
+    { x:[0,0], y:[-0.3,0.3], type:'scatter', mode:'lines',
+      line:{color:'#A0AEC0',width:1.5, dash:'dot'}, xaxis:'x', yaxis:'y', hoverinfo:'skip', showlegend:false },
+
+    // Applied force arrow
+    ...arrDown(d, 8.5, C_FORCE),
+
+    // Reaction arrows (upward from beam surface)
+    ...arrUp(-10, 0, f1h, C_F1),
+    ...arrUp( 10, 0, f2h, C_F2),
+
+    // COP ruler (below beam structure)
+    { x:[-10,10], y:[-5.5,-5.5], type:'scatter', mode:'lines',
+      line:{color:'#CBD5E0',width:1.5}, xaxis:'x',yaxis:'y', hoverinfo:'skip',showlegend:false },
+    ...[-10,-5,0,5,10].map(tx => ({
+      x:[tx,tx], y:[-5.3,-5.7], type:'scatter', mode:'lines',
+      line:{color:'#CBD5E0',width:1}, xaxis:'x',yaxis:'y', hoverinfo:'skip',showlegend:false
+    })),
+    // COP stem + triangle
+    { x:[copClip,copClip], y:[-5.05,-5.38], type:'scatter', mode:'lines',
+      line:{color:C_COP,width:2}, xaxis:'x',yaxis:'y', hoverinfo:'skip',showlegend:false },
+    { x:[copClip], y:[-5.5], type:'scatter', mode:'markers',
+      marker:{symbol:'triangle-down', size:10, color:C_COP},
+      xaxis:'x',yaxis:'y', hoverinfo:'skip',showlegend:false },
+  ];
+}
+
+function redraw() {
+  const F  = gp('F-sl'), d  = gp('d-sl');
+  const s1 = gp('s1-sl'), s2 = gp('s2-sl');
+  const tv = trueVals(F, d);
+  const n  = trail.length;
+  const cur = n > 0 ? trail[n-1] : { f1:tv.F1, f2:tv.F2, fTot:tv.FTot, cop:tv.COP };
+  const tIdx = Array.from({length:n}, (_,i) => i);
+
+  // Running mean ± std for F1 and F2
+  const f1vals = trail.map(s => s.f1);
+  const f2vals = trail.map(s => s.f2);
+  const arrMean = a => a.reduce((s,v)=>s+v,0) / a.length;
+  const arrStd  = (a,mu) => Math.sqrt(a.reduce((s,v)=>s+(v-mu)**2,0) / (a.length-1));
+  const f1mean = n > 0 ? arrMean(f1vals) : null;
+  const f2mean = n > 0 ? arrMean(f2vals) : null;
+  const f1std  = n > 1 ? arrStd(f1vals, f1mean) : 0;
+  const f2std  = n > 1 ? arrStd(f2vals, f2mean) : 0;
+  const f1lbl  = f1mean !== null ? `F₁   ${f1mean.toFixed(1)} ± ${f1std.toFixed(1)} N` : 'F₁   —';
+  const f2lbl  = f2mean !== null ? `F₂   ${f2mean.toFixed(1)} ± ${f2std.toFixed(1)} N` : 'F₂   —';
+
+  const copvals  = trail.map(s => s.cop);
+  const ftotvals = trail.map(s => s.fTot);
+  const errvals  = trail.map(s => s.relErr).filter(v => v !== null);
+  const copmean  = n > 0 ? arrMean(copvals)  : null;
+  const ftotmean = n > 0 ? arrMean(ftotvals) : null;
+  const ne       = errvals.length;
+  const errmean  = ne > 0 ? arrMean(errvals) : null;
+  const copstd   = n > 1 ? arrStd(copvals,  copmean)  : 0;
+  const ftotstd  = n > 1 ? arrStd(ftotvals, ftotmean) : 0;
+  const errstd   = ne > 1 ? arrStd(errvals, errmean)  : 0;
+  const coplbl   = copmean  !== null ? `COP  ${copmean.toFixed(1)} ± ${copstd.toFixed(1)} cm`    : 'COP  —';
+  const ftotlbl  = ftotmean !== null ? `ΣF  ${ftotmean.toFixed(1)} ± ${ftotstd.toFixed(1)} N`   : 'ΣF  —';
+  const errlbl   = Math.abs(d) < 0.25 ? '÷0 error'
+                 : errmean !== null ? `err  ${errmean.toFixed(1)} ± ${errstd.toFixed(1)} %` : 'err  —';
+  const errcol   = Math.abs(d) < 0.25 ? '#DC2626' : C_COP;
+
+  // True-value dashed lines (full width of plot)
+  const trueLine = (val, xa, ya) => ({
+    x:[0, TRAIL-1], y:[val, val], type:'scatter', mode:'lines',
+    line:{color:C_TRUE, width:1, dash:'dot'},
+    xaxis:xa, yaxis:ya, hoverinfo:'skip', showlegend:false
+  });
+
+  // Running time-series line
+  const tsLine = (arr, col, name, xa, ya) => ({
+    x:tIdx, y:arr, type:'scatter', mode:'lines',
+    line:{color:col, width:1}, name,
+    xaxis:xa, yaxis:ya, hoverinfo:'skip', showlegend:false
+  });
+
+  const traces = [
+    ...beamTraces(F, d, cur),
+
+    // F1 & F2 combined (top-left)
+    trueLine(tv.F1,  'x2','y2'),
+    tsLine(trail.map(s=>s.f1),  C_F1,  'F₁',    'x2','y2'),
+    trueLine(tv.F2,  'x2','y2'),
+    tsLine(trail.map(s=>s.f2),  C_F2,  'F₂',    'x2','y2'),
+
+    // COP (top-right)
+    trueLine(tv.COP, 'x3','y3'),
+    tsLine(trail.map(s=>s.cop), C_COP, 'COP',   'x3','y3'),
+
+    // Total force (bottom-left)
+    trueLine(tv.FTot,'x4','y4'),
+    tsLine(trail.map(s=>s.fTot),C_FTOT,'F_tot', 'x4','y4'),
+
+    // COP relative error (bottom-right)
+    trueLine(0,      'x5','y5'),
+    tsLine(trail.map(s=>s.relErr), C_COP, 'err','x5','y5'),
+  ];
+
+  const f1h = Math.max(cur.f1, 0) * (6/100);
+  const f2h = Math.max(cur.f2, 0) * (6/100);
+  const copClip = Math.max(-9.5, Math.min(9.5, cur.cop));
+
+  const annotations = [
+    // Applied force label
+    { xref:'x',yref:'y', x:d, y:9.5, text:`F = ${F.toFixed(0)} N`, showarrow:false,
+      font:{color:C_FORCE,size:10}, xanchor:'center' },
+    // Reaction force values — near arrow tips, above beam
+    { xref:'x',yref:'y', x:-10, y:f1h+0.6,
+      text:`F₁ = ${cur.f1.toFixed(1)} N`, showarrow:false,
+      font:{color:C_F1,size:11}, xanchor:'center' },
+    { xref:'x',yref:'y', x:10, y:f2h+0.6,
+      text:`F₂ = ${cur.f2.toFixed(1)} N`, showarrow:false,
+      font:{color:C_F2,size:11}, xanchor:'center' },
+    // LC labels inside load cell boxes
+    { xref:'x',yref:'y', x:-10, y:-2.75, text:'LC₁', showarrow:false,
+      font:{color:'#718096',size:8}, xanchor:'center' },
+    { xref:'x',yref:'y', x:10,  y:-2.75, text:'LC₂', showarrow:false,
+      font:{color:'#718096',size:8}, xanchor:'center' },
+    // COP ruler label + tick labels
+    { xref:'x',yref:'y', x:-12, y:-5.5, text:'COP', showarrow:false,
+      font:{color:C_COP,size:9}, xanchor:'left' },
+    { xref:'x',yref:'y', x:-10, y:-6.1, text:'−10', showarrow:false,
+      font:{size:8,color:'#A0AEC0'}, xanchor:'center' },
+    { xref:'x',yref:'y', x:0,   y:-6.1, text:'0',   showarrow:false,
+      font:{size:8,color:'#A0AEC0'}, xanchor:'center' },
+    { xref:'x',yref:'y', x:10,  y:-6.1, text:'+10', showarrow:false,
+      font:{size:8,color:'#A0AEC0'}, xanchor:'center' },
+    // COP value below indicator
+    { xref:'x',yref:'y', x:copClip, y:-6.9,
+      text:`${cur.cop.toFixed(1)} cm`, showarrow:false,
+      font:{color:C_COP,size:10}, xanchor:'center' },
+    // Time series panel titles
+    // Stat badges — paper coords, top-left corner of F1/F2 panel
+    { xref:'paper', yref:'paper', x:0.10, y:0.6605,
+      text:f1lbl, showarrow:false,
+      font:{color:'white', size:13, family:'Arial, sans-serif'}, xanchor:'center', yanchor:'middle' },
+    { xref:'paper', yref:'paper', x:0.36, y:0.6605,
+      text:f2lbl, showarrow:false,
+      font:{color:'white', size:13, family:'Arial, sans-serif'}, xanchor:'center', yanchor:'middle' },
+    // Stat badges for remaining three panels
+    { xref:'paper', yref:'paper', x:0.77, y:0.635,
+      text:coplbl, showarrow:false,
+      font:{color:'white', size:13, family:'Arial, sans-serif'}, xanchor:'center', yanchor:'middle' },
+    { xref:'paper', yref:'paper', x:0.11, y:0.3055,
+      text:ftotlbl, showarrow:false,
+      font:{color:'white', size:13, family:'Arial, sans-serif'}, xanchor:'center', yanchor:'middle' },
+    { xref:'paper', yref:'paper', x:0.765, y:0.3055,
+      text:errlbl, showarrow:false,
+      font:{color:'white', size:13, family:'Arial, sans-serif'}, xanchor:'center', yanchor:'middle' },
+  ];
+
+  const FY = [-20, 120];
+  const axCommon = { showgrid:false, zeroline:true, zerolinecolor:'#E2E8F0',
+                     zerolinewidth:1.5, tickfont:{size:9}, linecolor:'#CBD5E0' };
+  const txCommon = { showgrid:false, zeroline:false, showticklabels:false, linewidth:0 };
+
+  const layout = {
+    margin: { l:45, r:10, t:8, b:35 },
+
+    // Beam diagram (centred, 50% width)
+    xaxis:  { domain:[0.25,0.75], range:[-13,13], showgrid:false, zeroline:false,
+              showticklabels:false, linewidth:0, anchor:'y' },
+    yaxis:  { domain:[0.68,0.98], range:[-8,11], showgrid:false, zeroline:false,
+              showticklabels:false, linewidth:0, anchor:'x' },
+
+    // F1 & F2 (top-left)
+    xaxis2: { ...txCommon, domain:[0,0.46], range:[0,TRAIL], anchor:'y2' },
+    yaxis2: { ...axCommon, domain:[0.36,0.68], range:FY, anchor:'x2' },
+
+    // COP (top-right)
+    xaxis3: { ...txCommon, domain:[0.54,1.0], range:[0,TRAIL], anchor:'y3' },
+    yaxis3: { ...axCommon, domain:[0.36,0.65], range:[-15,15], anchor:'x3' },
+
+    // Total force (bottom-left)
+    xaxis4: { ...txCommon, domain:[0,0.46], range:[0,TRAIL], anchor:'y4' },
+    yaxis4: { ...axCommon, domain:[0,0.32], range:FY, anchor:'x4' },
+
+    // COP relative error (bottom-right)
+    xaxis5: { ...txCommon, domain:[0.54,1.0], range:[0,TRAIL], anchor:'y5' },
+    yaxis5: { ...axCommon, domain:[0,0.32], range:[-200,200], anchor:'x5' },
+
+    // Stat badges — narrow rounded rectangles in paper coords
+    shapes: [
+      // F1/F2 panel (top-left)
+      { type:'path', xref:'paper', yref:'paper',
+        path: rr(0.025, 0.644, 0.175, 0.677, 0.007),
+        fillcolor:C_F1, line:{width:0}, layer:'above' },
+      { type:'path', xref:'paper', yref:'paper',
+        path: rr(0.285, 0.644, 0.435, 0.677, 0.007),
+        fillcolor:C_F2, line:{width:0}, layer:'above' },
+      // COP panel (top-right)
+      { type:'path', xref:'paper', yref:'paper',
+        path: rr(0.685, 0.621, 0.855, 0.648, 0.007),
+        fillcolor:C_COP, line:{width:0}, layer:'above' },
+      // F_total panel (bottom-left)
+      { type:'path', xref:'paper', yref:'paper',
+        path: rr(0.025, 0.293, 0.195, 0.319, 0.007),
+        fillcolor:C_FTOT, line:{width:0}, layer:'above' },
+      // COP error panel (bottom-right)
+      { type:'path', xref:'paper', yref:'paper',
+        path: rr(0.680, 0.293, 0.850, 0.319, 0.007),
+        fillcolor:errcol, line:{width:0}, layer:'above' },
+    ],
+    plot_bgcolor:'#fff', paper_bgcolor:'#fff',
+    showlegend:false, annotations,
+    font:{ family:'Segoe UI, system-ui, sans-serif' },
+  };
+
+  Plotly.react('plot', traces, layout, CFG);
+}
+
+function addSample() {
+  const F  = gp('F-sl'), d  = gp('d-sl');
+  const s1 = gp('s1-sl'), s2 = gp('s2-sl');
+  const tv = trueVals(F, d);
+  const f1  = tv.F1 + randn(s1);
+  const f2  = tv.F2 + randn(s2);
+  const fTot = f1 + f2;
+  const cop    = Math.abs(fTot) > 0.5 ? f2 * L / fTot - L/2 : tv.COP;
+  const relErr = Math.abs(tv.COP) > 0.25
+    ? (cop - tv.COP) / Math.abs(tv.COP) * 100   // % relative to true COP
+    : null;                                       // undefined when d = 0
+  trail.push({ f1, f2, fTot, cop, relErr });
+  if (trail.length > TRAIL) trail.shift();
+  redraw();
+}
+
+function startAnim() {
+  if (timer) clearInterval(timer);
+  timer = setInterval(addSample, gp('spd-sl'));
+}
+
+function clearTrail() { trail = []; redraw(); }
+
+// ── Controls ──────────────────────────────────────────────────────
+[['F','0'], ['d','1'], ['s1','1'], ['s2','1']].forEach(([id, dec]) => {
+  document.getElementById(`${id}-sl`).addEventListener('input', function() {
+    document.getElementById(`${id}-vl`).textContent =
+      parseFloat(this.value).toFixed(+dec);
+    clearTrail();
+  });
+});
+
+document.getElementById('spd-sl').addEventListener('input', () => {
+  if (running) startAnim();
+});
+document.getElementById('pause-btn').addEventListener('click', () => {
+  if (running) {
+    clearInterval(timer); timer = null; running = false;
+    document.getElementById('pause-btn').textContent = 'Resume';
+    document.getElementById('pause-btn').style.background = '#276749';
+  } else {
+    startAnim(); running = true;
+    document.getElementById('pause-btn').textContent = 'Pause';
+    document.getElementById('pause-btn').style.background = '#2B6CB0';
+  }
+});
+document.getElementById('clear-btn').addEventListener('click', clearTrail);
+
+redraw();
+startAnim();
+</script>
+</body>
+</html>

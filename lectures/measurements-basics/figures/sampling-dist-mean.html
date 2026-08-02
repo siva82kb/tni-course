@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.5rem 1rem 0.3rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.72rem;
+    flex-wrap: wrap;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.3rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 80px; cursor: pointer; }
+  #mu-slider     { accent-color: #718096; }
+  #sigma-slider  { accent-color: #744210; }
+  #window-slider { accent-color: #C05621; }
+  .val { font-weight: 700; min-width: 2rem; }
+  .val-mu     { color: #718096; }
+  .val-sigma  { color: #744210; }
+  .val-window { color: #C05621; }
+  #resample-btn {
+    padding: 0.15rem 0.7rem;
+    background: #2B6CB0; color: #fff;
+    border: none; border-radius: 4px;
+    font-size: 0.72rem; font-weight: 600; cursor: pointer;
+  }
+  #resample-btn:hover { background: #2c5282; }
+  #plot { flex: 1; min-height: 0; }
+  .readout {
+    display: flex; gap: 2rem; font-size: 0.72rem;
+    justify-content: center; padding-bottom: 0.1rem;
+  }
+  .readout span { color: #718096; }
+  .r-true   { color: #A51C30 !important; font-weight: 700; }
+  .r-window { color: #C05621 !important; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>True &mu;</label>
+    <input type="range" id="mu-slider" min="-2" max="2" step="0.1" value="0">
+    <span id="mu-val" class="val val-mu">0.0</span>
+  </div>
+  <div class="ctrl">
+    <label>True &sigma;</label>
+    <input type="range" id="sigma-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+    <span id="sigma-val" class="val val-sigma">1.0</span>
+  </div>
+  <div class="ctrl">
+    <label>Window W</label>
+    <input type="range" id="window-slider" min="1" max="500" step="1" value="50">
+    <span id="window-val" class="val val-window">50</span>
+  </div>
+  <div class="ctrl">
+    <button id="resample-btn">Resample</button>
+  </div>
+</div>
+
+<div id="plot"></div>
+
+<div class="readout">
+  <div><span>True distribution: </span><strong class="r-true" id="true-readout">&#956; = 0.00, &#963; = 1.00</strong></div>
+  <div><span>SE of window means (&#963;/&#8730;W): </span><strong class="r-window" id="se-readout">—</strong></div>
+</div>
+
+<script>
+const N_SAMPLES = 10000;
+const IDX = Array.from({length: N_SAMPLES}, (_, i) => i);
+
+let poolSeed = 42;
+let pool = makePool(poolSeed);
+
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+function gaussNoise(rng) {
+  const u1 = Math.max(rng(), 1e-10), u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+function gaussPDF(x, mu, sigma) {
+  return (1 / (sigma * Math.sqrt(2 * Math.PI))) *
+         Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
+}
+function linspace(a, b, n) {
+  return Array.from({length: n}, (_, i) => a + (b - a) * i / (n - 1));
+}
+function makePool(seed) {
+  const rng = seededRand(seed);
+  return Array.from({length: N_SAMPLES}, () => gaussNoise(rng));
+}
+
+const cfg = { displayModeBar: false, responsive: true };
+
+function update() {
+  const mu    = parseFloat(document.getElementById('mu-slider').value);
+  const sigma = parseFloat(document.getElementById('sigma-slider').value);
+  const W     = parseInt(document.getElementById('window-slider').value);
+  const se    = sigma / Math.sqrt(W);
+  const nWin  = Math.floor(N_SAMPLES / W);
+
+  document.getElementById('mu-val').textContent     = mu.toFixed(1);
+  document.getElementById('sigma-val').textContent  = sigma.toFixed(1);
+  document.getElementById('window-val').textContent = W;
+  document.getElementById('true-readout').textContent =
+    `μ = ${mu.toFixed(2)}, σ = ${sigma.toFixed(2)}`;
+  document.getElementById('se-readout').textContent  = se.toFixed(3);
+
+  const xs = pool.map(z => mu + sigma * z);
+
+  // Non-overlapping window means
+  const winMeans = Array.from({length: nWin}, (_, i) => {
+    const sl = xs.slice(i * W, (i + 1) * W);
+    return sl.reduce((a, b) => a + b, 0) / W;
+  });
+
+  // Staircase as duplicate-point pairs — scattergl doesn't support shape:'hv',
+  // so we manually produce (x_start, x_end) × (mean, mean) per window.
+  // Consecutive windows share a boundary x, creating the vertical jump.
+  const xStep = [];
+  const yStep = [];
+  for (let i = 0; i < nWin; i++) {
+    xStep.push(i * W, (i + 1) * W);
+    yStep.push(winMeans[i], winMeans[i]);
+  }
+
+  // Theoretical PDF of window means for histogram overlay
+  const yLo     = mu - 4.5 * sigma;
+  const yHi     = mu + 4.5 * sigma;
+  const yPDF    = linspace(yLo, yHi, 400);
+  const theoPDF = yPDF.map(y => gaussPDF(y, mu, se));
+  const origPDF = yPDF.map(y => gaussPDF(y, mu, sigma));
+  const theoPeak = Math.max(...theoPDF);
+
+  const traces = [
+    // ── Left: raw sample time series ───────────────────────
+    {
+      x: IDX, y: xs,
+      type: 'scattergl', mode: 'lines',
+      line: { color: 'rgba(147,197,253,0.4)', width: 0.6 },
+      name: 'Samples',
+      xaxis: 'x', yaxis: 'y',
+      hovertemplate: 'i=%{x}  x=%{y:.3f}<extra></extra>',
+    },
+    // ── Left: true mean reference line ─────────────────────
+    {
+      x: [0, N_SAMPLES], y: [mu, mu],
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 1, dash: 'dot' },
+      name: 'True μ',
+      xaxis: 'x', yaxis: 'y',
+      hoverinfo: 'skip',
+    },
+    // ── Left: moving average staircase (drawn last = on top) ─
+    {
+      x: xStep, y: yStep,
+      type: 'scattergl', mode: 'lines',
+      line: { color: '#C05621', width: 2.5 },
+      name: `Window mean (W = ${W})`,
+      xaxis: 'x', yaxis: 'y',
+      hovertemplate: 'x̄ = %{y:.3f}<extra></extra>',
+    },
+
+    // ── Right: histogram of window means ───────────────────
+    {
+      y: winMeans,
+      type: 'histogram',
+      orientation: 'h',
+      histnorm: 'probability density',
+      marker: { color: 'rgba(192,86,33,0.35)',
+                line: { color: '#C05621', width: 0.6 } },
+      name: 'Window means',
+      xaxis: 'x2', yaxis: 'y',
+      showlegend: false,
+      hovertemplate: 'x̄ = %{y:.3f}  p = %{x:.3f}<extra></extra>',
+    },
+    // ── Right: original distribution N(μ, σ) PDF ───────────
+    {
+      x: origPDF, y: yPDF,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#90CDF4', width: 1.5 },
+      name: 'N(μ, σ)',
+      xaxis: 'x2', yaxis: 'y',
+    },
+    // ── Right: theoretical N(μ, σ/√W) PDF ──────────────────
+    {
+      x: theoPDF, y: yPDF,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 1.5, dash: 'dot' },
+      name: 'N(μ, σ/√W)',
+      xaxis: 'x2', yaxis: 'y',
+    },
+  ];
+
+  const layout = {
+    margin: { l: 50, r: 12, t: 8, b: 45 },
+    // Left panel — time series
+    xaxis: {
+      domain: [0, 0.77],
+      range: [0, N_SAMPLES],
+      title: { text: 'Sample index', font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#4A5568', size: 11 },
+    },
+    // Right panel — histogram
+    xaxis2: {
+      domain: [0.81, 1.0],
+      range: [0, theoPeak * 1.45],
+      title: { text: 'Density', font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#4A5568', size: 11 },
+    },
+    // Shared y-axis
+    yaxis: {
+      range: [yLo, yHi],
+      title: { text: 'Value', font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#4A5568', size: 11 },
+    },
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.4, xanchor: 'center', y: 1.07,
+      bgcolor: 'rgba(255,255,255,0.85)', font: { size: 10, color: '#4A5568' },
+    },
+    hovermode: 'closest',
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  };
+
+  Plotly.react('plot', traces, layout, cfg);
+}
+
+update();
+document.getElementById('mu-slider').addEventListener('input', update);
+document.getElementById('sigma-slider').addEventListener('input', update);
+document.getElementById('window-slider').addEventListener('input', update);
+document.getElementById('resample-btn').addEventListener('click', () => {
+  poolSeed = (poolSeed * 1664525 + 1013904223) & 0x7fffffff;
+  pool = makePool(poolSeed);
+  update();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #fff;
+  color: #2D3748;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+}
+#left {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 6px 8px 8px;
+  border-right: 1px solid #eee;
+}
+#right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 8px 8px 4px;
+}
+#plot { flex: 1; min-height: 0; }
+canvas {
+  display: block;
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lbl {
+  flex: 0 0 72px;
+  font-size: 10px;
+  color: #555;
+  line-height: 1.2;
+}
+.val {
+  flex: 0 0 40px;
+  font-size: 10px;
+  color: #222;
+  text-align: right;
+}
+input[type=range] { flex: 1; height: 10px; accent-color: #2B6CB0; }
+.btns { display: flex; gap: 3px; }
+button {
+  font-size: 9.5px;
+  padding: 2px 7px;
+  border: 1px solid #999;
+  border-radius: 3px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-family: inherit;
+}
+button.on { background: #2B6CB0; color: #fff; border-color: #2B6CB0; }
+#info {
+  font-size: 9.5px;
+  color: #666;
+  text-align: center;
+  padding: 2px 0;
+  min-height: 14px;
+}
+</style>
+</head>
+<body>
+
+<!-- Left: animation canvas + controls -->
+<div id="left">
+  <canvas id="cv" width="224" height="158"></canvas>
+
+  <div class="row">
+    <span class="lbl">f<sub>n</sub> (Hz)</span>
+    <input type="range" id="sl-fn" min="5" max="100" value="20" step="1">
+    <span class="val" id="vfn">20</span>
+  </div>
+  <div class="row">
+    <span class="lbl">ζ</span>
+    <input type="range" id="sl-ze" min="0.05" max="1.50" value="0.70" step="0.05">
+    <span class="val" id="vze">0.70</span>
+  </div>
+  <div class="row">
+    <span class="lbl">f<sub>in</sub> (Hz)</span>
+    <input type="range" id="sl-fi" min="0.5" max="80" value="5" step="0.5">
+    <span class="val" id="vfi">5.0</span>
+  </div>
+  <div class="row">
+    <span class="lbl">Motion</span>
+    <div class="btns">
+      <button id="b-sine"  class="on" onclick="setProfile('sine')">Sine</button>
+      <button id="b-step"            onclick="setProfile('step')">Step</button>
+      <button id="b-chirp"           onclick="setProfile('chirp')">Chirp</button>
+    </div>
+  </div>
+  <div id="info">—</div>
+</div>
+
+<!-- Right: Plotly time-series -->
+<div id="right">
+  <div id="plot"></div>
+</div>
+
+<script>
+/* ── Physical parameters ─────────────────────────────────────────── */
+const G = 9.81;
+let fn = 20, ze = 0.70, fi = 5.0;
+let wn = 2 * Math.PI * fn;
+let profile = 'sine';
+const A = G; // 1 g input amplitude
+
+/* ── Simulation state ────────────────────────────────────────────── */
+let z = 0, zd = 0, st = 0;
+const DT = 5e-4; // 0.5 ms integration step
+
+/* ── Ring buffer for plot (one point per animation frame ≈ 10 ms) ── */
+const BUF = 500;
+let tb = new Array(BUF).fill(0);
+let ab = new Array(BUF).fill(0);
+let ob = new Array(BUF).fill(0);
+function resetSim() { z=0; zd=0; st=0; tb.fill(0); ab.fill(0); ob.fill(0); }
+
+/* ── Input acceleration profile ──────────────────────────────────── */
+function ain(t) {
+  if (profile === 'sine') {
+    return A * Math.sin(2 * Math.PI * fi * t);
+  }
+  if (profile === 'step') {
+    // square wave at 0.25 Hz — gives time for step response to settle
+    const T = 4.0, tc = t % T;
+    return A * (tc < T / 2 ? 1 : -1);
+  }
+  // chirp: sweeps 0.1·fn → 3·fn over 10 s, then repeats
+  const T = 10, tc = t % T;
+  const f_t = 0.1 * fn + 2.9 * fn * (tc / T);
+  return A * Math.sin(2 * Math.PI * f_t * tc);
+}
+
+/* ── ODE integration (20 × 0.5 ms = 10 ms per call) ─────────────── */
+function simStep() {
+  let la = 0;
+  for (let i = 0; i < 20; i++) {
+    la = ain(st);
+    // z'' + 2ζωn z' + ωn² z = −a_housing
+    const zdd = -la - 2*ze*wn*zd - wn*wn*z;
+    zd += zdd * DT;
+    z  += zd  * DT;
+    st += DT;
+  }
+  const aout = -(wn * wn * z); // calibrated output: ≈ a_true for f ≪ fn
+  return { a: la, aout };
+}
+
+/* ── Canvas geometry ─────────────────────────────────────────────── */
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const CW = cv.width, CH = cv.height;
+
+// Housing rectangle
+const HX=14, HY=28, HW=CW-28, HH=72;
+const HCX = HX + HW/2, HCY = HY + HH/2;
+const MASS_W=26, MASS_H=52;
+
+function drawSpring(x1, x2, y, nCoils, amp) {
+  const s = (x2 - x1) / (2 * nCoils + 2);
+  ctx.beginPath();
+  ctx.moveTo(x1, y);
+  ctx.lineTo(x1 + s, y);
+  for (let i = 0; i < nCoils; i++) {
+    ctx.lineTo(x1 + s*(2*i+2), y - amp);
+    ctx.lineTo(x1 + s*(2*i+3), y + amp);
+  }
+  ctx.lineTo(x2, y);
+  ctx.stroke();
+}
+
+function drawCanvas(zNow, aNow) {
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Housing label
+  ctx.fillStyle = '#aaa';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('accelerometer housing', HCX, HY - 5);
+
+  // Housing fill + border
+  ctx.fillStyle = '#f8f8f8';
+  ctx.strokeStyle = '#bbb';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(HX, HY, HW, HH);
+  ctx.strokeRect(HX, HY, HW, HH);
+
+  // Map z → pixels; quasi-static displacement = 35 px
+  const z0 = A / (wn * wn); // quasi-static max
+  const zScale = 35 / z0;
+  const maxPx = HW/2 - MASS_W/2 - 6;
+  const zPx = Math.max(-maxPx, Math.min(maxPx, zNow * zScale));
+  const MCX = HCX + zPx;
+
+  // Springs (left wall → mass, mass → right wall)
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1.2;
+  drawSpring(HX + 3,   MCX - MASS_W/2, HCY, 5, 7);
+  drawSpring(MCX + MASS_W/2, HX+HW-3, HCY, 5, 7);
+
+  // Mass block
+  ctx.fillStyle = '#2B6CB0';
+  ctx.fillRect(MCX - MASS_W/2, HCY - MASS_H/2, MASS_W, MASS_H);
+  ctx.strokeStyle = '#1a4a80';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(MCX - MASS_W/2, HCY - MASS_H/2, MASS_W, MASS_H);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('m', MCX, HCY);
+
+  // Annotations below housing
+  ctx.textBaseline = 'alphabetic';
+  const aty = HY + HH + 14;
+  const aG  = aNow / G;
+  const outG = -(wn*wn*zNow) / G;
+
+  ctx.font = '9.5px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#c33';
+  ctx.fillText(`a (true)  = ${aG  >= 0 ? '+' : ''}${aG.toFixed(3)} g`, HX, aty);
+  ctx.fillStyle = '#2B6CB0';
+  ctx.fillText(`a (meas.) = ${outG >= 0 ? '+' : ''}${outG.toFixed(3)} g`, HX, aty + 16);
+
+  // Horizontal displacement indicator line under mass
+  if (Math.abs(zPx) > 1) {
+    ctx.strokeStyle = '#2B6CB0';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath();
+    ctx.moveTo(HCX, HY + HH + 1);
+    ctx.lineTo(MCX, HY + HH + 1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#2B6CB0';
+    ctx.font = '8.5px sans-serif';
+    ctx.textAlign = zPx > 0 ? 'right' : 'left';
+    ctx.fillText(`z=${(zNow*1000).toFixed(2)}mm`, MCX + (zPx > 0 ? -2 : 2), HY + HH - 2);
+  }
+}
+
+/* ── Plotly initialisation ───────────────────────────────────────── */
+const plotDiv = document.getElementById('plot');
+Plotly.newPlot(plotDiv, [
+  { x:[], y:[], name:'a true (input)', mode:'lines',
+    line:{color:'#c33', width:1.5, dash:'dot'} },
+  { x:[], y:[], name:'a output (measured)', mode:'lines',
+    line:{color:'#2B6CB0', width:2} }
+], {
+  margin: { l:50, r:12, t:28, b:40 },
+  xaxis: { title:{text:'time (s)', font:{size:10}}, tickfont:{size:9} },
+  yaxis: { title:{text:'acceleration (g)', font:{size:10}}, tickfont:{size:9} },
+  legend: { font:{size:9}, bgcolor:'rgba(0,0,0,0)', bordercolor:'rgba(0,0,0,0)',
+            x:0.01, xanchor:'left', y:0.99, yanchor:'top' },
+  title:  { text:'Accelerometer response', font:{size:11}, x:0.5 },
+  paper_bgcolor:'#fff', plot_bgcolor:'#fafafa'
+}, { responsive:true, displayModeBar:false });
+
+/* ── Animation loop ──────────────────────────────────────────────── */
+const WIN = 3.0; // seconds of history shown
+let fcount = 0;
+
+function frame() {
+  const { a, aout } = simStep();
+
+  // Push one point to ring buffer
+  tb.push(st);  tb.shift();
+  ab.push(a / G);    ab.shift();
+  ob.push(aout / G); ob.shift();
+
+  // Canvas every frame
+  drawCanvas(z, a);
+
+  // Plot every 3rd frame (~20 Hz) for performance
+  if (++fcount % 3 === 0) {
+    Plotly.react(plotDiv,
+      [ { x:tb.slice(), y:ab.slice(), name:'a true (input)', mode:'lines',
+          line:{color:'#c33', width:1.5, dash:'dot'} },
+        { x:tb.slice(), y:ob.slice(), name:'a output (measured)', mode:'lines',
+          line:{color:'#2B6CB0', width:2} } ],
+      { margin:{l:50,r:12,t:28,b:40},
+        xaxis:{ title:{text:'time (s)',font:{size:10}}, tickfont:{size:9},
+                range:[st-WIN, st] },
+        yaxis:{ title:{text:'acceleration (g)',font:{size:10}}, tickfont:{size:9},
+                autorange:true },
+        legend:{ font:{size:9}, bgcolor:'rgba(0,0,0,0)', bordercolor:'rgba(0,0,0,0)',
+                 x:0.01, xanchor:'left', y:0.99, yanchor:'top' },
+        title:{ text:'Accelerometer response', font:{size:11}, x:0.5 },
+        paper_bgcolor:'#fff', plot_bgcolor:'#fafafa' });
+  }
+
+  // Regime label
+  const ratio = (fi / fn).toFixed(2);
+  let regime;
+  if (profile === 'chirp') {
+    regime = 'sweeping through resonance';
+  } else if (fi < 0.3 * fn) {
+    regime = '✓ accelerometer regime (f ≪ fₙ)';
+  } else if (fi > 2 * fn) {
+    regime = '⚠ seismometer regime (f ≫ fₙ)';
+  } else {
+    regime = '⚠ near resonance — output distorted';
+  }
+  document.getElementById('info').textContent =
+    profile !== 'chirp' ? `f_in/f_n = ${ratio} — ${regime}` : regime;
+
+  requestAnimationFrame(frame);
+}
+
+/* ── Controls ────────────────────────────────────────────────────── */
+function setProfile(p) {
+  profile = p;
+  ['sine','step','chirp'].forEach(q =>
+    document.getElementById('b-' + q).classList.toggle('on', q === p));
+  resetSim();
+}
+
+document.getElementById('sl-fn').oninput = function() {
+  fn = +this.value; wn = 2 * Math.PI * fn;
+  document.getElementById('vfn').textContent = fn;
+  resetSim();
+};
+document.getElementById('sl-ze').oninput = function() {
+  ze = +this.value;
+  document.getElementById('vze').textContent = ze.toFixed(2);
+  resetSim();
+};
+document.getElementById('sl-fi').oninput = function() {
+  fi = +this.value;
+  document.getElementById('vfi').textContent = fi.toFixed(1);
+  resetSim();
+};
+
+frame();
+</script>
+</body>
+</html>

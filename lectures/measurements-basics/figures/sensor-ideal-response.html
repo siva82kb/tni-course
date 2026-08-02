@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>window.MathJax = { Hub: { Config: function(){}, Queue: function(){} } };</script>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.75rem 1rem 0.5rem;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    font-size: 0.92rem;
+  }
+  .ctrl {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .ctrl label {
+    color: #718096;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  input[type="number"] {
+    width: 72px;
+    padding: 0.25rem 0.4rem;
+    border: 1.5px solid #CBD5E0;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    color: #2D3748;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus { border-color: #2B6CB0; }
+  input[type="range"] {
+    width: 220px;
+    accent-color: #2B6CB0;
+    cursor: pointer;
+  }
+  .unit { color: #A0AEC0; font-size: 0.85rem; }
+  .readout {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.88rem;
+  }
+  .readout span { color: #718096; }
+  .readout strong { color: #2D3748; }
+  .val-fm { color: #2B6CB0; font-weight: 700; }
+  .val-vs { color: #A51C30; font-weight: 700; }
+  #plot { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>i<sub>p</sub></label>
+    <input type="number" id="ip-input" value="1" min="0.01" max="100" step="0.1">
+    <span class="unit">mA</span>
+  </div>
+
+  <div class="ctrl">
+    <label>f<sub>m</sub></label>
+    <input type="range" id="fm-slider" min="0" max="400" value="100" step="1">
+    <span class="val-fm" id="fm-val">100</span>
+    <span class="unit">N</span>
+  </div>
+
+  <div class="readout">
+    <div><span>R<sub>s</sub> = </span><strong id="rs-val">—</strong> <span>Ω</span></div>
+    <div><span>v<sub>s</sub> = </span><span class="val-vs" id="vs-val">—</span> <span>V</span></div>
+  </div>
+</div>
+
+<div id="plot"></div>
+
+<script>
+const ipInput   = document.getElementById('ip-input');
+const fmSlider  = document.getElementById('fm-slider');
+const fmValEl   = document.getElementById('fm-val');
+const rsValEl   = document.getElementById('rs-val');
+const vsValEl   = document.getElementById('vs-val');
+
+const FM_MAX = 400;
+const N_PTS  = 400;
+
+function Rs(fm)       { return 10 + 0.5 * Math.sqrt(fm); }
+function Vs(ip, fm)   { return ip * Rs(fm); }
+
+function linspace(a, b, n) {
+  const arr = [];
+  for (let i = 0; i < n; i++) arr.push(a + (b - a) * i / (n - 1));
+  return arr;
+}
+
+const fmCurve = linspace(0, FM_MAX, N_PTS);
+
+function buildTraces(ip, fm) {
+  const vsCurve = fmCurve.map(f => Vs(ip, f));
+  const pt_vs   = Vs(ip, fm);
+  const pt_rs   = Rs(fm);
+  const yMin    = Vs(ip, 0);
+
+  return [
+    {
+      x: fmCurve, y: vsCurve,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#2B6CB0', width: 2.5 },
+      hovertemplate: 'f<sub>m</sub> = %{x:.1f} N<br>v<sub>s</sub> = %{y:.4f} V<extra></extra>',
+      name: 'v<sub>s</sub>',
+    },
+    {
+      x: [fm, fm], y: [yMin * 0.98, pt_vs],
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 0.7, dash: 'dash' },
+      hoverinfo: 'skip', showlegend: false,
+    },
+    {
+      x: [0, fm], y: [pt_vs, pt_vs],
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 0.7, dash: 'dash' },
+      hoverinfo: 'skip', showlegend: false,
+    },
+    {
+      x: [fm], y: [pt_vs],
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#A51C30', size: 9, symbol: 'circle',
+                line: { color: '#fff', width: 2 } },
+      hovertemplate: 'f<sub>m</sub> = %{x:.1f} N<br>v<sub>s</sub> = %{y:.4f} V<extra></extra>',
+      name: 'operating point',
+    },
+  ];
+}
+
+function layout(ip) {
+  const yLo = Vs(ip, 0)       * 0.97;
+  const yHi = Vs(ip, FM_MAX)  * 1.02;
+  return {
+    margin: { l: 62, r: 20, t: 12, b: 55 },
+    xaxis: {
+      title: { text: 'f<sub>m</sub>  (N)', font: { size: 13, color: '#4A5568' } },
+      range: [0, FM_MAX],
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 11 },
+    },
+    yaxis: {
+      title: { text: 'v<sub>s</sub>  (V)', font: { size: 13, color: '#4A5568' } },
+      range: [yLo, yHi],
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 11 },
+    },
+    plot_bgcolor:  '#ffffff',
+    paper_bgcolor: '#ffffff',
+    showlegend: false,
+    hovermode: 'closest',
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  };
+}
+
+const cfg = { displayModeBar: false, responsive: true };
+
+function update() {
+  const ip = 0.001 * Math.max(parseFloat(ipInput.value) || 1, 0.01);
+  const fm = parseFloat(fmSlider.value);
+
+  fmValEl.textContent = fm.toFixed(0);
+  rsValEl.textContent = Rs(fm).toFixed(2);
+  vsValEl.textContent = Vs(ip, fm).toFixed(4);
+
+  Plotly.react('plot', buildTraces(ip, fm), layout(ip), cfg);
+}
+
+// Initial draw
+Plotly.newPlot('plot', buildTraces(1, 100), layout(1), cfg);
+rsValEl.textContent = Rs(100).toFixed(2);
+vsValEl.textContent = Vs(1, 100).toFixed(4);
+
+fmSlider.addEventListener('input', update);
+ipInput.addEventListener('input', update);
+</script>
+</body>
+</html>

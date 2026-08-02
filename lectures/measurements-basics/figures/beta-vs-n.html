@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff; color: #2D3748;
+    height: 100vh; padding: 0.3rem;
+  }
+  #plot { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="plot"></div>
+<script>
+function betaOf(N) { return 1 / Math.sqrt(2 * (N - 1)); }
+
+// log-spaced N from 2 to 10000
+const N = [];
+for (let e = Math.log10(2); e <= 4.0001; e += 0.02) N.push(Math.round(Math.pow(10, e)));
+const uniqN = [...new Set(N)].filter(n => n >= 2 && n <= 10000);
+const beta = uniqN.map(n => betaOf(n) * 100);   // percent
+
+// reference points to annotate
+const marks = [
+  { n: 5,    label: '35%' },
+  { n: 50,   label: '10%' },
+  { n: 5000, label: '1%'  },
+];
+
+const traces = [
+  {
+    x: uniqN, y: beta,
+    type: 'scatter', mode: 'lines',
+    line: { color: '#A51C30', width: 2.5 },
+    hovertemplate: 'N = %{x}<br>β = %{y:.2f}%<extra></extra>',
+    showlegend: false,
+  },
+  {
+    x: marks.map(m => m.n),
+    y: marks.map(m => betaOf(m.n) * 100),
+    type: 'scatter', mode: 'markers+text',
+    marker: { color: '#2B6CB0', size: 8 },
+    text: marks.map(m => `  N=${m.n}: ${m.label}`),
+    textposition: 'top right',
+    textfont: { size: 12, color: '#2B6CB0' },
+    hoverinfo: 'skip', showlegend: false,
+  },
+];
+
+const layout = {
+  margin: { l: 52, r: 16, t: 12, b: 46 },
+  xaxis: {
+    type: 'log', range: [Math.log10(2), 4],
+    title: { text: 'Number of measurements, N', font: { size: 13, color: '#4A5568' } },
+    tickvals: [2, 10, 100, 1000, 10000],
+    ticktext: ['2', '10', '100', '1000', '10000'],
+    showgrid: true, gridcolor: '#EDF2F7',
+    linecolor: '#CBD5E0', tickfont: { color: '#4A5568', size: 11 },
+  },
+  yaxis: {
+    range: [0, 75],
+    title: { text: 'β = fractional error in σ̂  (%)', font: { size: 13, color: '#4A5568' } },
+    showgrid: true, gridcolor: '#EDF2F7',
+    linecolor: '#CBD5E0', tickfont: { color: '#4A5568', size: 11 },
+  },
+  plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+  font: { family: 'Segoe UI, system-ui, sans-serif' },
+};
+
+Plotly.newPlot('plot', traces, layout, { displayModeBar: false, responsive: true });
+</script>
+</body>
+</html>

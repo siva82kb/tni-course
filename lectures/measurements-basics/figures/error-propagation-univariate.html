@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff; color: #2D3748;
+    padding: 0.5rem 1rem 0.3rem;
+    height: 100vh; display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  #controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1.1rem; font-size: 0.72rem; flex-wrap: wrap;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.3rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 75px; cursor: pointer; }
+  select {
+    font-size: 0.72rem; font-weight: 600; color: #2D3748;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    padding: 0.1rem 0.3rem; background: #fff; cursor: pointer;
+  }
+  #mu-slider    { accent-color: #718096; }
+  #sigma-slider { accent-color: #744210; }
+  #speed-slider { accent-color: #276749; }
+  .val { font-weight: 700; min-width: 2rem; }
+  .val-mu    { color: #718096; }
+  .val-sigma { color: #744210; }
+  button {
+    padding: 0.15rem 0.65rem; border: none; border-radius: 4px;
+    font-size: 0.72rem; font-weight: 600; cursor: pointer;
+  }
+  #pause-btn { background: #2B6CB0; color: #fff; }
+  #pause-btn:hover { background: #2c5282; }
+  #clear-btn { background: #e2e8f0; color: #4A5568; }
+  #clear-btn:hover { background: #cbd5e0; }
+  #params {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1.1rem; font-size: 0.72rem; flex-wrap: wrap; min-height: 1.3rem;
+  }
+  #plot { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>f (x)</label>
+    <select id="func-select">
+      <option value="linear">Linear</option>
+      <option value="quad">Quadratic</option>
+      <option value="exp">Exponential</option>
+      <option value="sine">Sine</option>
+      <option value="sigmoid">Sigmoid</option>
+      <option value="sqrt">nth Root</option>
+    </select>
+  </div>
+  <div class="ctrl">
+    <label>μ</label>
+    <input type="range" id="mu-slider" min="-2" max="2" step="0.1" value="0">
+    <span id="mu-val" class="val val-mu">0.0</span>
+  </div>
+  <div class="ctrl">
+    <label>σ</label>
+    <input type="range" id="sigma-slider" min="0.1" max="2.0" step="0.1" value="0.5">
+    <span id="sigma-val" class="val val-sigma">0.5</span>
+  </div>
+  <div class="ctrl">
+    <label>Speed</label>
+    <input type="range" id="speed-slider" min="50" max="600" step="50" value="200">
+  </div>
+  <div class="ctrl">
+    <button id="pause-btn">Pause</button>
+    <button id="clear-btn" style="margin-left:0.3rem;">Clear</button>
+  </div>
+</div>
+
+<div id="params"></div>
+
+<div id="plot"></div>
+
+<script>
+// Per-function parameter definitions
+const FUNC_PARAMS = {
+  linear:  [
+    { id:'m',   label:'m',  min:-3,    max:3,    step:0.1,  val:1,   dec:1 },
+    { id:'c',   label:'c',  min:-3,    max:3,    step:0.1,  val:0,   dec:1 },
+  ],
+  quad:    [
+    { id:'a',   label:'a',  min:-2,    max:2,    step:0.1,  val:1,   dec:1 },
+    { id:'b',   label:'b',  min:-3,    max:3,    step:0.1,  val:0,   dec:1 },
+    { id:'c',   label:'c',  min:-3,    max:3,    step:0.1,  val:0,   dec:1 },
+  ],
+  exp:     [
+    { id:'a',   label:'a',  min:0.1,   max:3,    step:0.1,  val:1,   dec:1 },
+    { id:'k',   label:'k',  min:-2,    max:2,    step:0.1,  val:1,   dec:1 },
+  ],
+  sine:    [
+    { id:'a',   label:'a',  min:0.1,   max:3,    step:0.1,  val:1,   dec:1 },
+    { id:'f',   label:'f',  min:0.1,   max:4,    step:0.1,  val:1,   dec:1 },
+    { id:'phi', label:'φ',  min:-3.14, max:3.14, step:0.1,  val:0,   dec:2 },
+  ],
+  sigmoid: [
+    { id:'k',   label:'k',  min:0.1,   max:5,    step:0.1,  val:1,   dec:1 },
+  ],
+  sqrt:    [
+    { id:'n',   label:'n',  min:1,     max:6,    step:1,    val:2,   dec:0 },
+  ],
+};
+
+// Fixed x-domain per function (y computed dynamically from params)
+const X_DOMAIN = {
+  linear:  [-5,  5],
+  quad:    [-4,  4],
+  exp:     [-3,  3],
+  sine:    [-4,  4],
+  sigmoid: [-7,  7],
+  sqrt:    [-4,  4],
+};
+
+// Build parameter sliders for the selected function
+function buildParamUI(fKey) {
+  const defs = FUNC_PARAMS[fKey] || [];
+  document.getElementById('params').innerHTML = defs.map(d => `
+    <div class="ctrl">
+      <label>${d.label}</label>
+      <input type="range" id="p-${d.id}" min="${d.min}" max="${d.max}" step="${d.step}" value="${d.val}"
+        oninput="document.getElementById('v-${d.id}').textContent=parseFloat(this.value).toFixed(${d.dec});clearTrail()">
+      <span id="v-${d.id}" class="val">${d.val.toFixed(d.dec)}</span>
+    </div>`).join('');
+}
+
+// Read current function + params and return {fKey, fn, label}
+function getActiveFn() {
+  const fKey = document.getElementById('func-select').value;
+  const p = {};
+  (FUNC_PARAMS[fKey] || []).forEach(d => {
+    const el = document.getElementById(`p-${d.id}`);
+    p[d.id] = el ? parseFloat(el.value) : d.val;
+  });
+  let fn, label;
+  switch (fKey) {
+    case 'linear':
+      fn    = x => p.m * x + p.c;
+      label = `f(x) = ${p.m.toFixed(1)}x + ${p.c.toFixed(1)}`;
+      break;
+    case 'quad':
+      fn    = x => p.a * x*x + p.b * x + p.c;
+      label = `f(x) = ${p.a.toFixed(1)}x² + ${p.b.toFixed(1)}x + ${p.c.toFixed(1)}`;
+      break;
+    case 'exp':
+      fn    = x => p.a * Math.exp(p.k * x);
+      label = `f(x) = ${p.a.toFixed(1)}·e^(${p.k.toFixed(1)}x)`;
+      break;
+    case 'sine':
+      fn    = x => p.a * Math.sin(p.f * x + p.phi);
+      label = `f(x) = ${p.a.toFixed(1)}·sin(${p.f.toFixed(1)}x + ${p.phi.toFixed(2)})`;
+      break;
+    case 'sigmoid':
+      fn    = x => 1 / (1 + Math.exp(-p.k * x));
+      label = `f(x) = σ(${p.k.toFixed(1)}x)`;
+      break;
+    case 'sqrt':
+      fn    = x => x >= 0 ? Math.pow(x, 1/p.n) : -Math.pow(-x, 1/p.n);
+      label = `f(x) = x^(1/${p.n})`;
+      break;
+  }
+  return { fKey, fn, label };
+}
+
+// Recompute and store axis range for the current function type (default params).
+// Called only when function type changes — NOT when params change.
+function updateRange() {
+  const { fKey, fn } = getActiveFn();
+  const [xLo, xHi] = X_DOMAIN[fKey];
+  const xs = linspace(xLo, xHi, 300);
+  const ys = xs.map(fn).filter(y => isFinite(y) && !isNaN(y));
+  const yMin = ys.length ? Math.min(...ys) : -1;
+  const yMax = ys.length ? Math.max(...ys) :  1;
+  const pad = Math.max((yMax - yMin) * 0.10, 0.3);
+  currentRange = { xLo, xHi, yLo: yMin - pad, yHi: yMax + pad };
+}
+
+const TRAIL_LEN = 100;
+const N_CURVE   = 400;
+let trail       = [];   // [{x, fx}, ...], oldest first
+let animTimer   = null;
+let running     = true;
+let currentRange = { xLo: -5, xHi: 5, yLo: -5.2, yHi: 5.2 }; // fixed until function type changes
+
+function gaussSample(mu, sigma) {
+  const u1 = Math.max(Math.random(), 1e-10), u2 = Math.random();
+  return mu + sigma * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+function linspace(a, b, n) {
+  return Array.from({length: n}, (_, i) => a + (b - a) * i / (n - 1));
+}
+
+const cfg = { displayModeBar: false, responsive: true };
+
+function getMuSigma() {
+  return {
+    mu:    parseFloat(document.getElementById('mu-slider').value),
+    sigma: parseFloat(document.getElementById('sigma-slider').value),
+  };
+}
+
+function redraw() {
+  const { mu, sigma } = getMuSigma();
+  const { fKey, fn, label } = getActiveFn();
+  const { xLo, xHi, yLo, yHi } = currentRange;
+
+  const xCurve = linspace(xLo, xHi, N_CURVE);
+  const yCurve = xCurve.map(fn);
+
+  const n   = trail.length;
+  const cur = n > 0 ? trail[n - 1] : null;
+
+  // Bottom strip (shared xaxis): x value vs time index
+  //   y=0 → oldest → bottom of strip
+  //   y=n-1 → newest → top of strip, adjacent to main plot
+  const bX = trail.map(s => s.x);
+  const bY = trail.map((_, i) => i);
+
+  // Right strip (shared yaxis): f(x) value vs time index
+  //   x2=0 → newest → left of strip, adjacent to main plot
+  //   x2=n-1 → oldest → right of strip
+  const rX = trail.map((_, i) => n - 1 - i);  // newest=0=left, oldest=n-1=right
+  const rY = trail.map(s => s.fx);
+
+  const mOrange = { color: '#C05621', size: 10, line: { color: '#7B341E', width: 1.5 } };
+
+  // True reference values (no estimation)
+  const xMm = mu - sigma, xMu = mu, xMp = mu + sigma;
+  const fMm = fn(xMm), fMu = fn(xMu), fMp = fn(xMp);
+  const fLo = Math.min(fMm, fMp), fHi = Math.max(fMm, fMp);
+  const bM  = 'rgba(37,99,235,0.85)',  bS  = 'rgba(37,99,235,0.50)';
+  const gM  = 'rgba(5,150,105,0.85)', gS  = 'rgba(5,150,105,0.50)';
+  // Helper: reference line trace
+  const rl = (xs, ys, c, solid, xa, ya) => ({
+    x: xs, y: ys, type: 'scatter', mode: 'lines',
+    line: { color: c, width: solid ? 1.5 : 1, dash: solid ? 'solid' : 'dot' },
+    showlegend: false, xaxis: xa, yaxis: ya, hoverinfo: 'skip',
+  });
+
+  // Curve slice between xMm and xMp — used for curve-bounded fills
+  let i0 = 0, i1 = xCurve.length - 1;
+  while (i0 < xCurve.length - 1 && xCurve[i0] < xMm) i0++;
+  while (i1 > 0 && xCurve[i1] > xMp) i1--;
+  const csX = xCurve.slice(i0, i1 + 1);
+  const csY = yCurve.slice(i0, i1 + 1);
+
+  // Blue fill: under the curve from yLo up to curve, between xMm and xMp
+  const bfX = [...csX, xMp, xMm];
+  const bfY = [...csY, yLo, yLo];
+
+  // Green fill: to the right of the curve segment, from curve to xHi
+  // Polygon: curve left→right, then right edge down, then bottom back to start
+  const gfX = [...csX, xHi, xHi, xMm];
+  const gfY = [...csY, fMp, fMm, fMm];
+
+  const traces = [
+    // ── Main: blue fill under curve between x = μ−σ and μ+σ ─────
+    {
+      x: bfX, y: bfY,
+      type: 'scatter', mode: 'none', fill: 'toself',
+      fillcolor: 'rgba(37,99,235,0.07)', line: { width: 0 },
+      showlegend: false, xaxis: 'x', yaxis: 'y', hoverinfo: 'skip',
+    },
+    // ── Main: green fill right of curve between f(μ−σ) and f(μ+σ) ─
+    {
+      x: gfX, y: gfY,
+      type: 'scatter', mode: 'none', fill: 'toself',
+      fillcolor: 'rgba(5,150,105,0.07)', line: { width: 0 },
+      showlegend: false, xaxis: 'x', yaxis: 'y', hoverinfo: 'skip',
+    },
+
+    // ── f(x) curve ──────────────────────────────────────────────
+    {
+      x: xCurve, y: yCurve,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 2 },
+      name: label,
+      xaxis: 'x', yaxis: 'y',
+      hovertemplate: 'x=%{x:.2f}  f(x)=%{y:.3f}<extra></extra>',
+    },
+
+    // ── Reference lines on main: verticals (blue) up to curve ───
+    rl([xMm, xMm], [yLo, fMm], bS, false, 'x', 'y'),
+    rl([xMu, xMu], [yLo, fMu], bM, true,  'x', 'y'),
+    rl([xMp, xMp], [yLo, fMp], bS, false, 'x', 'y'),
+
+    // ── Reference lines on main: horizontals (green) right to xHi
+    rl([xMm, xHi], [fMm, fMm], gS, false, 'x', 'y'),
+    rl([xMu, xHi], [fMu, fMu], gM, true,  'x', 'y'),
+    rl([xMp, xHi], [fMp, fMp], gS, false, 'x', 'y'),
+
+    // ── Markers on curve at μ−σ, μ, μ+σ ─────────────────────────
+    {
+      x: [xMm, xMu, xMp], y: [fMm, fMu, fMp],
+      type: 'scatter', mode: 'markers',
+      marker: { color: 'white', size: [6, 8, 6], line: { color: '#2563EB', width: 1.5 } },
+      showlegend: false, xaxis: 'x', yaxis: 'y', hoverinfo: 'skip',
+    },
+
+    // ── Current sample on main ───────────────────────────────────
+    ...(cur ? [{
+      x: [cur.x], y: [cur.fx],
+      type: 'scatter', mode: 'markers',
+      marker: mOrange,
+      showlegend: false, xaxis: 'x', yaxis: 'y',
+      hovertemplate: 'x=%{x:.3f}  f(x)=%{y:.3f}<extra></extra>',
+    }] : []),
+
+    // ── Vertical projection: current x → bottom strip ───────────
+    ...(cur ? [{
+      x: [cur.x, cur.x], y: [yLo, cur.fx],
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(192,86,33,0.5)', width: 1, dash: 'dot' },
+      showlegend: false, xaxis: 'x', yaxis: 'y', hoverinfo: 'skip',
+    }] : []),
+
+    // ── Horizontal projection: current f(x) → right strip (points RIGHT) ──
+    ...(cur ? [{
+      x: [cur.x, xHi], y: [cur.fx, cur.fx],
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(192,86,33,0.5)', width: 1, dash: 'dot' },
+      showlegend: false, xaxis: 'x', yaxis: 'y', hoverinfo: 'skip',
+    }] : []),
+
+    // ── Bottom strip: fill between μ−σ and μ+σ (light blue) ──────
+    {
+      x: [xMm, xMp, xMp, xMm, xMm],
+      y: [-0.5, -0.5, TRAIL_LEN - 0.5, TRAIL_LEN - 0.5, -0.5],
+      type: 'scatter', mode: 'none', fill: 'toself',
+      fillcolor: 'rgba(37,99,235,0.07)', line: { width: 0 },
+      showlegend: false, xaxis: 'x', yaxis: 'y2', hoverinfo: 'skip',
+    },
+
+    // ── Bottom strip: x time series (vertical, blue) ─────────────
+    {
+      x: bX, y: bY,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#2563EB', width: 1.5 },
+      showlegend: false, xaxis: 'x', yaxis: 'y2', hoverinfo: 'skip',
+    },
+
+    // ── Bottom strip: most recent point marker (blue) ────────────
+    ...(cur ? [{
+      x: [cur.x], y: [n - 1],
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#2563EB', size: 8, line: { color: '#1D4ED8', width: 1.5 } },
+      showlegend: false, xaxis: 'x', yaxis: 'y2', hoverinfo: 'skip',
+    }] : []),
+
+    // ── Bottom strip: true mean (solid) and ±σ (dashed) verticals ─
+    rl([xMm, xMm], [-0.5, TRAIL_LEN - 0.5], bS, false, 'x', 'y2'),
+    rl([xMu, xMu], [-0.5, TRAIL_LEN - 0.5], bM, true,  'x', 'y2'),
+    rl([xMp, xMp], [-0.5, TRAIL_LEN - 0.5], bS, false, 'x', 'y2'),
+
+    // ── Right strip: fill between f(μ−σ) and f(μ+σ) (light green) ─
+    {
+      x: [-0.5, TRAIL_LEN - 0.5, TRAIL_LEN - 0.5, -0.5, -0.5],
+      y: [Math.min(fMm, fMp), Math.min(fMm, fMp),
+          Math.max(fMm, fMp), Math.max(fMm, fMp), Math.min(fMm, fMp)],
+      type: 'scatter', mode: 'none', fill: 'toself',
+      fillcolor: 'rgba(5,150,105,0.07)', line: { width: 0 },
+      showlegend: false, xaxis: 'x2', yaxis: 'y', hoverinfo: 'skip',
+    },
+
+    // ── Right strip: f(x) time series (horizontal, green) ────────
+    {
+      x: rX, y: rY,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#059669', width: 1.5 },
+      showlegend: false, xaxis: 'x2', yaxis: 'y', hoverinfo: 'skip',
+    },
+
+    // ── Right strip: most recent point marker (green) ────────────
+    ...(cur ? [{
+      x: [0], y: [cur.fx],
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#059669', size: 8, line: { color: '#047857', width: 1.5 } },
+      showlegend: false, xaxis: 'x2', yaxis: 'y', hoverinfo: 'skip',
+    }] : []),
+
+    // ── Right strip: true mean (solid) and ±σ (dashed) horizontals ─
+    rl([-0.5, TRAIL_LEN - 0.5], [fMm, fMm], gS, false, 'x2', 'y'),
+    rl([-0.5, TRAIL_LEN - 0.5], [fMu, fMu], gM, true,  'x2', 'y'),
+    rl([-0.5, TRAIL_LEN - 0.5], [fMp, fMp], gS, false, 'x2', 'y'),
+  ];
+
+  const layout = {
+    margin: { l: 58, r: 12, t: 12, b: 48 },
+
+    // Main + bottom strip share this xaxis (x value, fixed range)
+    xaxis: {
+      domain: [0, 0.62], range: [xLo, xHi], anchor: 'y2',
+      title: { text: 'x', font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#E2E8F0',
+      tickfont: { color: '#4A5568', size: 10 },
+    },
+
+    // Main + right strip share this yaxis (f(x) value, fixed range)
+    yaxis: {
+      domain: [0.32, 1.0], range: [yLo, yHi], anchor: 'x2',
+      title: { text: 'f (x)', font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#E2E8F0',
+      tickfont: { color: '#4A5568', size: 10 },
+    },
+
+    // Bottom strip: time axis (sample index, 0=oldest=bottom, n-1=newest=top)
+    yaxis2: {
+      domain: [0, 0.27], range: [-0.5, TRAIL_LEN + 4], anchor: 'x',
+      showgrid: false, showline: false, zeroline: false, showticklabels: false,
+    },
+
+    // Right strip: time axis (sample index, 0=newest=left, n-1=oldest=right)
+    xaxis2: {
+      domain: [0.67, 1.0], range: [-1.5, TRAIL_LEN - 0.5], anchor: 'y',
+      showgrid: false, showline: false, zeroline: false, showticklabels: false,
+    },
+
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.38, xanchor: 'center', y: 1.07,
+      bgcolor: 'rgba(255,255,255,0.85)', font: { size: 10, color: '#4A5568' },
+    },
+    hovermode: 'closest',
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  };
+
+  Plotly.react('plot', traces, layout, cfg);
+}
+
+function addSample() {
+  const { mu, sigma } = getMuSigma();
+  const { fn } = getActiveFn();
+  const x  = gaussSample(mu, sigma);
+  const fx = fn(x);
+  trail.push({ x, fx });
+  if (trail.length > TRAIL_LEN) trail.shift();
+  redraw();
+}
+
+function startAnim() {
+  if (animTimer) clearInterval(animTimer);
+  const ms = parseInt(document.getElementById('speed-slider').value);
+  animTimer = setInterval(addSample, ms);
+}
+
+function clearTrail() {
+  trail = [];
+  redraw();
+}
+
+// ── Controls ──────────────────────────────────────────────────────
+document.getElementById('mu-slider').addEventListener('input', () => {
+  document.getElementById('mu-val').textContent =
+    parseFloat(document.getElementById('mu-slider').value).toFixed(1);
+  clearTrail();
+});
+document.getElementById('sigma-slider').addEventListener('input', () => {
+  document.getElementById('sigma-val').textContent =
+    parseFloat(document.getElementById('sigma-slider').value).toFixed(1);
+  clearTrail();
+});
+document.getElementById('func-select').addEventListener('change', () => {
+  buildParamUI(document.getElementById('func-select').value);
+  updateRange();
+  clearTrail();
+});
+document.getElementById('speed-slider').addEventListener('input', () => {
+  if (running) startAnim();
+});
+document.getElementById('pause-btn').addEventListener('click', () => {
+  if (running) {
+    clearInterval(animTimer); animTimer = null;
+    running = false;
+    document.getElementById('pause-btn').textContent = 'Resume';
+    document.getElementById('pause-btn').style.background = '#276749';
+  } else {
+    startAnim(); running = true;
+    document.getElementById('pause-btn').textContent = 'Pause';
+    document.getElementById('pause-btn').style.background = '#2B6CB0';
+  }
+});
+document.getElementById('clear-btn').addEventListener('click', clearTrail);
+
+buildParamUI(document.getElementById('func-select').value);
+updateRange();
+redraw();
+startAnim();
+</script>
+</body>
+</html>

@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="measurements-basics_files/libs/clipboard/clipboard.min.js"></script>
+<script src="measurements-basics_files/libs/quarto-html/tabby.min.js"></script>
+<script src="measurements-basics_files/libs/quarto-html/popper.min.js"></script>
+<script src="measurements-basics_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="measurements-basics_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="measurements-basics_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="measurements-basics_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.9.38">
+
+  <meta name="author" content="Sivakumar Balasubramanian">
+  <meta name="dcterms.date" content="2026-08-01">
+  <title>Transducers &amp; Instrumentation</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="measurements-basics_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="measurements-basics_files/libs/revealjs/dist/reveal.css">
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+  </style>
+  <link rel="stylesheet" href="measurements-basics_files/libs/revealjs/dist/theme/quarto-7938eb0c05c730bdc0355fc4aaab0e2f.css">
+  <link href="measurements-basics_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="measurements-basics_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="measurements-basics_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="measurements-basics_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+<script src="mathjax-config.js"></script>
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Transducers &amp; Instrumentation</h1>
+  <p class="subtitle">Module 1 — Measurement Fundamentals</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Sivakumar Balasubramanian 
+</div>
+        <p class="quarto-title-affiliation">
+            Christian Medical College Vellore · Department of Bioengineering
+          </p>
+    </div>
+</div>
+
+  <p class="date">August 1, 2026</p>
+</section>
+<section>
+<section id="ubiquity-of-biomedical-measurements" class="title-slide slide level1 center">
+<h1>Ubiquity of Biomedical Measurements</h1>
+
+</section>
+<section id="working-within-evidence-based-medicine" class="slide level2">
+<h2>Working within evidence-based medicine</h2>
+<p><span class="framesub">Decisions for the individual patient rest on objective numbers.</span></p>
+<p><span class="highlight">Evidence-based medicine</span> is the environment we work in.</p>
+<p>Research and trials are distilled into objective <span class="highlight">decision rules</span> — thresholds that say <em>when to act</em>.</p>
+<p>But an evidence-based threshold is inert without a number from <em>this</em> patient.</p>
+<div class="block">
+<p>Evidence sets the <span class="highlight">threshold</span>. Measurement supplies the <span class="highlight">number</span>. Together they help with the <span class="highlight">decision</span>.</p>
+</div>
+<p><span class="deemph">So a clinician must deal with a stream of numbers — each compared against the evidence.</span></p>
+</section>
+<section id="a-clinical-day-is-a-stream-of-numbers" class="slide level2">
+<h2>A clinical day is a stream of numbers</h2>
+<p><span class="framesub">Wherever care happens, something is being measured.</span></p>
+<div style="width:85%; margin:0 auto;">
+<table class="caption-top">
+<colgroup>
+<col style="width: 28%">
+<col style="width: 72%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>What gets measured</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Emergency &amp; triage</td>
+<td>Heart rate, blood pressure, SpO<sub>2</sub>, temperature, glucose</td>
+</tr>
+<tr class="even">
+<td>ICU monitoring</td>
+<td>ECG, arterial pressure, capnography (CO<sub>2</sub>), respiration</td>
+</tr>
+<tr class="odd">
+<td>Diagnosis</td>
+<td>ECG, EEG, blood biochemistry, cell counts, structural and functional imaging</td>
+</tr>
+<tr class="even">
+<td>Surgery &amp; anaesthesia</td>
+<td>Depth of anaesthesia, end-tidal CO<sub>2</sub>, oxygenation</td>
+</tr>
+<tr class="odd">
+<td>Rehabilitation</td>
+<td>Gait analysis, joint range of motion, muscle force, movement quality</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span class="deemph">In-class: a live SpO<sub>2</sub> / ECG reading on the bench — the same numbers, in front of us.</span></p>
+</section>
+<section id="every-number-triggers-a-decision" class="slide level2">
+<h2>Every number triggers a decision</h2>
+<p><span class="framesub">Evidence-based thresholds, applied to the individual patient.</span></p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Measurement</th>
+<th style="text-align: center;"></th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>SpO<sub>2</sub> = 88%</td>
+<td style="text-align: center;">→</td>
+<td>Start supplemental O<sub>2</sub> &amp; investigate</td>
+</tr>
+<tr class="even">
+<td>Core temperature = 35.0 °C</td>
+<td style="text-align: center;">→</td>
+<td>Active warming</td>
+</tr>
+<tr class="odd">
+<td>Blood glucose = 45 mg/dL</td>
+<td style="text-align: center;">→</td>
+<td>Immediate glucose administration</td>
+</tr>
+<tr class="even">
+<td>Gait speed = 0.8 m/s</td>
+<td style="text-align: center;">→</td>
+<td>Flag fall risk / frailty</td>
+</tr>
+</tbody>
+</table>
+<div class="center">
+<p><span class="red"><strong>A wrong number can mean a wrong decision.</strong></span></p>
+</div>
+<p><span class="cite">Sources: SpO<sub>2</sub> — BTS oxygen guideline (O’Driscoll et al., <em>Thorax</em> 2017); temperature (Brown et al., <em>NEJM</em> 2012); glucose — ADA (<em>Standards of Care</em> 2026); gait speed (Studenski et al., <em>JAMA</em> 2011).</span></p>
+</section>
+<section id="these-map-onto-what-we-will-focus-on" class="slide level2">
+<h2>These map onto what we will focus on</h2>
+<p><span class="framesub">The course is organised around how each kind of number is obtained.</span></p>
+<p>We focus on five types of biomedical variables:</p>
+<ul>
+<li><span class="highlight">Kinematics &amp; kinetics</span> <span class="deemph">— movement, force, complex movement quantity and quality measures</span></li>
+<li><span class="highlight">Biopotentials</span> <span class="deemph">— electrical potentials from bioelectric phenomena (ECG, EEG, EMG), and bioimpedance</span></li>
+<li><span class="highlight">Pressure, flow, volume</span> <span class="deemph">— blood pressure, airway pressure, spirometry, cardiac output</span></li>
+<li><span class="highlight">Thermal</span> <span class="deemph">— body and core temperature</span></li>
+<li><span class="highlight">Optical</span> <span class="deemph">— SpO<sub>2</sub>, tissue perfusion, bilirubin</span></li>
+</ul>
+</section>
+<section id="two-questions-behind-every-number" class="slide level2">
+<h2>Two questions behind every number</h2>
+<div class="block">
+<p><span class="highlight">1. How is this quantity actually measured?</span></p>
+</div>
+<div class="block">
+<p><span class="highlight">2. How do we know we can trust the number?</span> <span class="deemph">Is it accurate? Precise? Repeatable?</span></p>
+</div>
+<p><span class="deemph">This module takes on question 2 — what makes a measurement trustworthy. The rest of the course takes on question 1 — one measurement problem at a time.</span></p>
+</section></section>
+<section>
+<section id="measurement-fundamentals" class="title-slide slide level1 center">
+<h1>Measurement Fundamentals</h1>
+
+</section>
+<section id="what-is-measurement" class="slide level2">
+<h2>What is measurement?</h2>
+<p><span class="framesub">Turning a physical quantity into a number we can act on.</span></p>
+<p><span class="highlight">Measurement</span> is the process of assigning numbers to physical, abstract, or logical characteristics of an entity by comparing them to a known standard.</p>
+<p><span class="math display">\[\text{measurement} = \underbrace{\text{value}}_{\text{how many}} \times \underbrace{\text{unit}}_{\text{which standard}}\]</span></p>
+<p>A measurement result carries:</p>
+<ul>
+<li>a <span class="highlight">value</span> and a <span class="highlight">unit</span> — 37.0 °C, 120 mmHg</li>
+<li>a <span class="highlight">scale</span> tells us what operations are legitimate on the measurement (next)</li>
+<li>an <span class="highlight">uncertainty</span> — how far we trust it <span class="deemph">(Section 5)</span></li>
+</ul>
+<p><span class="deemph">The number is the end of this process — the objective quantity clinical decisions rest on.</span></p>
+</section>
+<section id="scales-of-measurement" class="slide level2">
+<h2>Scales of measurement</h2>
+<p><span class="framesub">What are we allowed to do with these numbers.</span></p>
+<div style="width:100%; margin:0 auto;">
+<table class="caption-top">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 25%">
+<col style="width: 20%">
+<col style="width: 45%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Scale</th>
+<th>What is meaningful</th>
+<th>Clinical example</th>
+<th>Permitted Operation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Nominal</td>
+<td>labels only; no order</td>
+<td>Blood type (A, B, AB, O)</td>
+<td>Only evaluate equalities. <span class="math inline">\(x_1 = x_2\)</span> or <span class="math inline">\(x_1 \neq x_2\)</span></td>
+</tr>
+<tr class="even">
+<td>Ordinal</td>
+<td>ordered, gaps incomparable</td>
+<td>mRS (0–6); Pain (0–10)</td>
+<td>Only evaluate inequalities. <span class="math inline">\(x_1 &gt; x_2\)</span>, <span class="math inline">\(y_1 = y_2\)</span></td>
+</tr>
+<tr class="odd">
+<td>Interval</td>
+<td>equal gaps; no true zero</td>
+<td>Temperature in °C</td>
+<td>All arithmetic operations only on differences. <span class="math inline">\(x_2 - x_1\)</span></td>
+</tr>
+<tr class="even">
+<td>Ratio</td>
+<td>equal gaps <em>and</em> a true zero</td>
+<td>Force, pressure, flow, temperature in °K</td>
+<td>All arithmetic operations on the measurements directly.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span class="deemph">0°C does not mean “no temperature”; 0 N does mean “no force”. That is the interval/ratio distinction.</span></p>
+<p>Physical measurands are almost all <span class="highlight">ratio</span> (force, pressure, flow, current) or <span class="highlight">interval</span> (°C). Clinical assessments are often <span class="highlight">ordinal</span> (mRS, pain, MRC strength).</p>
+</section>
+<section id="quiz-name-the-scale" class="slide level2">
+<h2>Quiz — name the scale</h2>
+<p><span class="framesub">Match each measurement to its scale: nominal · ordinal · interval · ratio.</span></p>
+<div style="width:70%; margin:0 auto;">
+<table class="caption-top">
+<colgroup>
+<col style="width: 60%">
+<col style="width: 40%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Measurement</th>
+<th>Scale?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Blood volume (<span class="math inline">\(m^3\)</span>)</td>
+<td><span class="fragment highlight">Ratio</span></td>
+</tr>
+<tr class="even">
+<td>Grades in TnI (<span class="math inline">\(A+, A, B, C, D, E, F\)</span>)</td>
+<td><span class="fragment highlight">Ordinal</span></td>
+</tr>
+<tr class="odd">
+<td>Temperature (<span class="math inline">\(^{\circ}F\)</span>)</td>
+<td><span class="fragment highlight">Interval</span></td>
+</tr>
+<tr class="even">
+<td>Gender (<span class="math inline">\(M, F\)</span>)</td>
+<td><span class="fragment highlight">Nominal</span></td>
+</tr>
+<tr class="odd">
+<td>Heart rate (<span class="math inline">\(bpm\)</span>)</td>
+<td><span class="fragment highlight">Ratio</span></td>
+</tr>
+<tr class="even">
+<td>HIV status (<span class="math inline">\(+ve, -ve\)</span>)</td>
+<td><span class="fragment highlight">Nominal</span></td>
+</tr>
+<tr class="odd">
+<td>Age of a person (<span class="math inline">\(years\)</span>)</td>
+<td><span class="fragment highlight">Ratio</span></td>
+</tr>
+<tr class="even">
+<td>RGB colors (<span class="math inline">\(\#FE0034\)</span>)</td>
+<td><span class="fragment highlight">Nominal</span></td>
+</tr>
+<tr class="odd">
+<td>Wavelength of light (<span class="math inline">\(m\)</span>)</td>
+<td><span class="fragment highlight">Ratio</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span class="deemph">Click to reveal — then ask: <em>what does that scale let you do with the number?</em></span></p>
+</section></section>
+<section>
+<section id="sensors-and-the-signal-chain-model" class="title-slide slide level1 center">
+<h1>Sensors and the Signal Chain Model</h1>
+
+</section>
+<section id="physical-systems-energy-and-state" class="slide level2">
+<h2>Physical systems: energy and state</h2>
+<p>Every physical system has two things associated with it:</p>
+<ul>
+<li><span class="highlight">Energy</span> — what drives its dynamic behaviour.</li>
+<li><span class="highlight">State</span> — what tells how the system will evolve with time.</li>
+</ul>
+<p><img data-src="figures/physical-system.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
+<p><span class="deemph">States are what we are primarily interested in measuring:</span> <span class="highlight">voltage, charge, position, velocity, temperature,</span> …</p>
+</section>
+<section id="physical-systems-energy-and-states-are-connected" class="slide level2">
+<h2>Physical systems: energy and states are connected</h2>
+<p>A system’s <span class="highlight">total energy</span> and its <span class="highlight">states</span> are deeply connected.</p>
+<div class="columns" style="display:flex; align-items:center; text-align:center;">
+<div class="column" style="width:20%;">
+<p><span class="highlight">States</span></p>
+</div><div class="column" style="width:5%;">
+<p><span class="math inline">\(\longrightarrow\)</span></p>
+</div><div class="column" style="width:25%;">
+<p><span class="highlight">Information about system’s memory</span></p>
+</div><div class="column" style="width:5%;">
+<p><span class="math inline">\(\longrightarrow\)</span></p>
+</div><div class="column" style="width:45%;">
+<p><span class="highlight">Memory comes from energy storage elements</span></p>
+</div></div>
+<p>The <span class="highlight">states</span> of a system are our <span class="highlight">primary measurement interest</span> (mostly).</p>
+</section>
+<section id="physical-systems-energy-and-state-1" class="slide level2">
+<h2>Physical systems: energy and state</h2>
+<p>For an <span class="highlight">energetically closed system</span>, its states can change even though its total energy remains the same:</p>
+<div class="columns">
+<div class="column" style="width:33%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="figures/pendulum.svg" class="quarto-figure quarto-figure-center" style="height:150px; width:auto;"></p>
+</figure>
+</div>
+<div style="text-align:center; font-size:0.8em;">
+<p><strong>Pendulum</strong> (State: <span class="math inline">\(\theta,\ \dot\theta\)</span>)</p>
+<p><span class="math inline">\(E = \tfrac{1}{2}m\ell^2\dot\theta^2 + mg\ell(1{-}\cos\theta)\)</span></p>
+</div>
+</div><div class="column" style="width:33%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="figures/lc-circuit.svg" class="quarto-figure quarto-figure-center" style="height:150px; width:auto;"></p>
+</figure>
+</div>
+<div style="text-align:center; font-size:0.8em;">
+<p><strong>LC circuit</strong> (State: <span class="math inline">\(V_C,\ I_L\)</span>)</p>
+<p><span class="math inline">\(E = \tfrac{1}{2}CV_C^2 + \tfrac{1}{2}LI_L^2\)</span></p>
+</div>
+</div><div class="column" style="width:33%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="figures/mass-spring.svg" class="quarto-figure quarto-figure-center" style="height:150px; width:auto;"></p>
+</figure>
+</div>
+<div style="text-align:center; font-size:0.8em;">
+<p><strong>Mass–spring</strong> (State: <span class="math inline">\(x,\ \dot x\)</span>)</p>
+<p><span class="math inline">\(E = \tfrac{1}{2}m\dot x^2 + \tfrac{1}{2}kx^2\)</span></p>
+</div>
+</div></div>
+<p>But for a system,</p>
+<center>
+<span class="highlight">Total Energy changes</span> <span class="math inline">\(\longrightarrow\)</span> <span class="highlight">States change</span>
+</center>
+<div class="block">
+<p><strong>Rule</strong>: System state measurement must <strong>not disturb the total energy of the system</strong>!</p>
+</div>
+</section>
+<section id="connecting-physical-systems" class="slide level2">
+<h2>Connecting physical systems</h2>
+<p><span class="framesub">One framework across every physical domain.</span></p>
+<p><img data-src="figures/two-systems.svg" class="" style="width:90%; display:block; margin:0 auto;"></p>
+<p>Connecting two systems makes energy exchange <span class="highlight">possible</span> — whether it occurs depends on the mismatch between their port variables - effort <span class="math inline">\(\varepsilon\)</span> and flow <span class="math inline">\(\varphi\)</span>.</p>
+<p>The rate of energy transfer at the connection is:</p>
+<p><span class="math display">\[ \text{power} = \frac{d E}{dt} = \text{effort} \times \text{flow} = \varepsilon \times \varphi \]</span></p>
+</section>
+<section id="connecting-physical-systems-1" class="slide level2">
+<h2>Connecting physical systems</h2>
+<p><span class="framesub">One framework across every physical domain.</span></p>
+<p><img data-src="figures/two-systems.svg" class="" style="width:90%; display:block; margin:0 auto;"></p>
+<p><span class="highlight">Effort</span> and <span class="highlight">flow</span> at a port are determined by the system’s <span class="highlight">states</span> — they are not themselves states, but they expose the states to the outside world.</p>
+<div class="block">
+<p><strong>Consequence</strong>: whenever <span class="math inline">\(\varepsilon \times \varphi \neq 0\)</span> at a port, energy flows and the system’s states change.</p>
+</div>
+</section>
+<section id="connecting-physical-systems-2" class="slide level2">
+<h2>Connecting physical systems</h2>
+<p><span class="framesub">One framework across every physical domain.</span></p>
+<p><img data-src="figures/two-systems.svg" class="" style="width:70%; display:block; margin:0 auto;"></p>
+<p>What are these effort and flow variables in different physical systems?</p>
+<div class="zebra" style="font-size:1.1em; text-align:center; margin:0 auto;">
+<table class="caption-top">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Domain</th>
+<th style="text-align: center;">Effort (<span class="math inline">\(\varepsilon\)</span>)</th>
+<th style="text-align: center;">Flow (<span class="math inline">\(\varphi\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="highlight">Electrical</span></td>
+<td style="text-align: center;">voltage (<span class="math inline">\(v\)</span>)</td>
+<td style="text-align: center;">current (<span class="math inline">\(\dot{q}\)</span>)</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="highlight">Mechanical</span><br><span class="demph"><em>(translation)</em></span></td>
+<td style="text-align: center;">force (<span class="math inline">\(f\)</span>)</td>
+<td style="text-align: center;">velocity (<span class="math inline">\(\dot{x}\)</span>)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="highlight">Mechanical</span><br><span class="demph"><em>(rotation)</em></span></td>
+<td style="text-align: center;">torque (<span class="math inline">\(\tau\)</span>)</td>
+<td style="text-align: center;">angular velocity (<span class="math inline">\(\dot{\theta}\)</span>)</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="highlight">Fluid</span></td>
+<td style="text-align: center;">pressure (<span class="math inline">\(p\)</span>)</td>
+<td style="text-align: center;">volume flow rate (<span class="math inline">\(\dot{v}\)</span>)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="highlight">Thermal</span></td>
+<td style="text-align: center;">temperature (<span class="math inline">\(T\)</span>)</td>
+<td style="text-align: center;">heat-flow rate <span class="math inline">\(\dot{q}\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span class="deemph">(Thermal is the loose one — temperature × heat-flow is not literally power.)</span></p>
+</section>
+<section id="transducers-sensors-and-actuators" class="slide level2">
+<h2>Transducers, sensors, and actuators</h2>
+<p><span class="framesub">The front door of every measurement.</span></p>
+<ul>
+<li>A <span class="highlight">transducer</span> converts energy from one form to another.</li>
+<li>A <span class="highlight">sensor</span> converts a <span class="highlight">measurand</span> into an (electrical) signal.</li>
+<li>An <span class="highlight">actuator</span> converts an input energy or control signal into a <span class="highlight">controlled physical action</span> — motion, force, or flow — that acts on a system.</li>
+</ul>
+<div style="margin-top:-2.0em;">
+<p><img data-src="figures/sensor-block.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
+</div>
+<div style="margin-top:-1.0em;">
+<p>The electrical signal carries information about the measurand.</p>
+<p><span class="math display">\[ \text{Electircal Signal} = \mathcal{F}\left( \text{Measurand} \right) \]</span></p>
+</div>
+</section>
+<section id="sensor-signal-chain" class="slide level2">
+<h2>Sensor signal chain</h2>
+<p><span class="framesub">The spine of this whole course.</span></p>
+<p><img data-src="figures/signal-chain.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
+<ul>
+<li>Effort <span class="math inline">\(\varepsilon_m\)</span> / flow <span class="math inline">\(\varphi_m\)</span> from the signal source (human) contains information about the measurand of interest.</li>
+<li>Effort <span class="math inline">\(V_s\)</span> / flow <span class="math inline">\(I_s\)</span> is the sensor output that is related to the measurand.</li>
+</ul>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ V_s = \mathcal{F}\left( \varepsilon_m \right) \]</span></p>
+</div>
+<p><span class="math inline">\(\mathcal{F}\)</span> represents the <span class="highlight">physics of the sensor</span> relating the measurandto its output voltage/current.</p>
+</section>
+<section id="sensor-signal-chain-when-the-source-must-be-probed" class="slide level2">
+<h2>Sensor signal chain when the source must be probed</h2>
+<p><span class="framesub">Not every source emits the signal on its own.</span></p>
+<p>Usually the <span class="highlight">source emits</span> the signal, and we transduce it directly. <span class="deemph">(ECG, body temperature.)</span></p>
+<p>Sometimes we must <span class="highlight">probe</span> the system — apply a known energy and transduce its <span class="highlight">response</span>.</p>
+<p><img data-src="figures/probing.svg" class="" style="width:92%; display:block; margin:0 auto;"></p>
+<p><span class="highlight">Examples:</span> <span class="deemph">Ultrasound (echo), bioimpedance (inject current, read voltage), pulse oximetry, imaging — structural measurements often work this way.</span></p>
+</section>
+<section id="loading-all-sensors-distrub-measurements" class="slide level2">
+<h2>Loading – all sensors distrub measurements</h2>
+<p><span class="framesub">Loading happens when physical system are connected together</span></p>
+<p>Consider a sensor whose resistance <span class="math inline">\(R_s\)</span> changes in response to compressive force <span class="math inline">\(f_m \geq 0\)</span> applied on the sensor, with the following physics,</p>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ R_s = \mathcal{F}\left( f_m \right) = 10 + 0.5 \cdot \sqrt{f_m} \,\,\, \Omega , \quad f_m \geq 0 \]</span></p>
+</div>
+<div class="columns" style="align-items:center; margin-top:0.5em; width:80%; margin-left:auto; margin-right:auto;">
+<div class="column" style="width:35%;">
+<p><img data-src="figures/loading-circuit.svg" class="" style="width:100%;"></p>
+</div><div class="column" style="width:65%;">
+<iframe src="figures/sensor-ideal-response.html" width="100%" height="360px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div></div>
+</section>
+<section id="loading-all-sensors-distrub-measurements-1" class="slide level2">
+<h2>Loading – all sensors distrub measurements</h2>
+<p><span class="framesub">Loading happens when physical system are connected together</span></p>
+<p>We connect a real voltmeter (input resistance <span class="math inline">\(r_{in}\)</span>) to measure the voltage across the resister <span class="math inline">\(r_s\)</span></p>
+<div class="columns" style="align-items:flex-start; margin-top:0.5em; width:80%; margin-left:auto; margin-right:auto;">
+<div class="column" style="width:40%;">
+<p><img data-src="figures/loading-voltmeter.svg" class="" style="width:100%;"></p>
+<div class="fragment">
+<p>What is <span class="math inline">\(\hat{v}_s\)</span>? <span class="math display">\[\hat{v}_s = i_p \cdot \left( r_s || r_{in}\right) = v_s \cdot \frac{r_{in}}{r_s + r_{in}}\]</span></p>
+</div>
+</div><div class="column" style="width:60%;">
+<iframe src="figures/loading-effect.html" width="100%" height="360px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div></div>
+</section>
+<section id="loading-a-realistic-circuit" class="slide level2">
+<h2>Loading — a realistic circuit</h2>
+<p><span class="framesub">Real current sources, real wires, real voltmeters.</span></p>
+<div class="block">
+<p><strong>Assignment 1.1</strong> — Real sensors have non-ideal sources and wires. Derive <span class="math inline">\(\hat{v}_s\)</span> for the realistic circuit (finite <span class="math inline">\(r_p\)</span>, <span class="math inline">\(r_{w_1}\)</span>, <span class="math inline">\(r_{w_2}\)</span>, <span class="math inline">\(r_{in}\)</span>). Understand the effect of the different resistances, show that the expresion reduces to the ideal case when the resistance have appropraite values.</p>
+</div>
+<p><img data-src="figures/asgn01-01-loading-realistic.svg" class="" style="width:70%; display:block; margin:0 auto;"></p>
+<div class="fragment">
+<p>We have similiar loading effects in all other domains (e.g.&nbsp;mechanical, thermal, egc.). <span class="math inline">\(\implies\)</span> We should be careful when connecting physical systems.</p>
+</div>
+</section>
+<section id="measurements-from-a-real-sensor" class="slide level2">
+<h2>Measurements from a real sensor</h2>
+<p><span class="framesub">General input–output model.</span></p>
+<div class="columns" style="align-items:flex-start; margin-top:0.5em; width:80%; margin-left:auto; margin-right:auto;">
+<div class="column" style="width:65%;">
+<div style="margin-top:-2.0em;">
+<p><img data-src="figures/sensor-block-full.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
+</div>
+</div><div class="column" style="width:35%;">
+<div class="fragment">
+<ul>
+<li><span class="math inline">\(x_m\)</span>: measurand of interest.</li>
+<li><span class="math inline">\(x_i\)</span>: “Known” interferring / modifying inputs.</li>
+<li><span class="math inline">\(e_n\)</span>: Unknown, random noise.</li>
+</ul>
+<p>Each of these components will have an influence on the sesnor output <span class="math inline">\(y\)</span>, which can be represented as the following,</p>
+</div>
+</div></div>
+<div style="margin-top:-1.0em;">
+<div class="fragment">
+<p>The general sensor output <span class="math inline">\(y\)</span> is given by, <span class="math display">\[ y = \mathcal{F}_m\left( x_m \right) + \mathcal{F}_i\left( x_i \right) + e_n\]</span></p>
+</div>
+<div class="fragment">
+<p>Sensor design tries to <span class="highlight">maximize</span> <span class="math inline">\(\frac{\partial f}{\partial x}\)</span>, and <span class="highlight">minimize</span> the <span class="math inline">\(\frac{\partial f}{\partial x}\)</span> and <span class="math inline">\(e_n\)</span>.</p>
+</div>
+</div>
+</section>
+<section id="all-sensors-are-non-linear-dynamical-systems" class="slide level2">
+<h2>All sensors are non-linear dynamical systems</h2>
+<p><span class="framesub">Every sensor has dynamics — output lags, overshoots, or distorts fast inputs.</span></p>
+<p>All sensors are <span class="highlight">non-linear, dynamical systems</span>.</p>
+<div style="margin-top:-1.0em;">
+<p><img data-src="figures/sensor-block.svg" class="" style="width:50%; display:block; margin:0 auto;"></p>
+</div>
+<div class="fragment">
+<iframe src="figures/sensor-dynamics.html" width="100%" height="360px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="all-sensors-are-non-linear-dynamical-systems-1" class="slide level2">
+<h2>All sensors are non-linear dynamical systems</h2>
+<p><span class="framesub">Every sensor has dynamics — output lags, overshoots, or distorts fast inputs.</span></p>
+<p>General sensor behavior or characteristics can be divided into categories:</p>
+<ol type="1">
+<li><span class="highlight">Static characteristics</span> - <span class="deemph">Response to constant inputs.</span></li>
+<li><span class="highlight">Dynamic characteristics</span> - <span class="deemph">Response to time varyng inputs.</span></li>
+<li><span class="highlight">Noise characteristics</span> - <span class="deemph">Response uncertainity associated for a given input.</span></li>
+</ol>
+<p>The knowledge of these three characteristics will inform whether thes sensor is suitable for an application.</p>
+<p>Knowledge of the full functional form would provide complete characterization of the static and dynamic characteristics: <span class="math display">\[ y(t) = \mathcal{F}_m\left( x_m(t) \right) + \mathcal{F}_i\left( x_i(t) \right) + e_n\]</span></p>
+<p>We will need to identify these functions (at least <span class="math inline">\(\mathcal{F}\left(x_m\left(t\right)\right))\)</span> in practice through a calibration procedure.</p>
+</section></section>
+<section>
+<section id="error-analysis-in-measurements" class="title-slide slide level1 center">
+<h1>Error Analysis in Measurements</h1>
+
+</section>
+<section id="errors-in-measurements" class="slide level2">
+<h2>Errors in Measurements</h2>
+<p><span class="framesub">All measurements have errors</span></p>
+<p>All measurements have error associated with them.</p>
+<p>The appropriate interpretation of a measurement requires knowledge of the uncertainity associated with the measurement.</p>
+<div style="width:100%; margin:0 auto; font-size:0.75em;">
+<table class="caption-top">
+<caption>CODATA 2022</caption>
+<colgroup>
+<col style="width: 20%">
+<col style="width: 8%">
+<col style="width: 32%">
+<col style="width: 25%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Constant</th>
+<th>Symbol</th>
+<th>Value</th>
+<th>Abs. uncertainty</th>
+<th>Rel. uncertainty</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Gravitational constant</td>
+<td><span class="math inline">\(G\)</span></td>
+<td><span class="math inline">\(6.674\,30 \times 10^{-11}\ \text{m}^3\text{kg}^{-1}\text{s}^{-2}\)</span></td>
+<td><span class="math inline">\(1.5 \times 10^{-15}\ \text{m}^3\text{kg}^{-1}\text{s}^{-2}\)</span></td>
+<td><span class="math inline">\(2.2 \times 10^{-5}\)</span></td>
+</tr>
+<tr class="even">
+<td>Proton mass</td>
+<td><span class="math inline">\(m_p\)</span></td>
+<td><span class="math inline">\(1.672\,621\,925\,95 \times 10^{-27}\ \text{kg}\)</span></td>
+<td><span class="math inline">\(5.2 \times 10^{-37}\ \text{kg}\)</span></td>
+<td><span class="math inline">\(3.1 \times 10^{-10}\)</span></td>
+</tr>
+<tr class="odd">
+<td>Fine-structure constant</td>
+<td><span class="math inline">\(\alpha\)</span></td>
+<td><span class="math inline">\(7.297\,352\,5643 \times 10^{-3}\)</span></td>
+<td><span class="math inline">\(1.1 \times 10^{-12}\)</span></td>
+<td><span class="math inline">\(1.5 \times 10^{-10}\)</span></td>
+</tr>
+<tr class="even">
+<td>Rydberg constant</td>
+<td><span class="math inline">\(R_\infty\)</span></td>
+<td><span class="math inline">\(10{,}973{,}731.568\,157\ \text{m}^{-1}\)</span></td>
+<td><span class="math inline">\(1.2 \times 10^{-5}\ \text{m}^{-1}\)</span></td>
+<td><span class="math inline">\(1.1 \times 10^{-12}\)</span></td>
+</tr>
+<tr class="odd">
+<td>Speed of light</td>
+<td><span class="math inline">\(c\)</span></td>
+<td><span class="math inline">\(299{,}792{,}458\ \text{m s}^{-1}\)</span></td>
+<td>exact</td>
+<td>exact</td>
+</tr>
+<tr class="even">
+<td>Planck constant</td>
+<td><span class="math inline">\(h\)</span></td>
+<td><span class="math inline">\(6.626\,070\,15 \times 10^{-34}\ \text{J s}\)</span></td>
+<td>exact</td>
+<td>exact</td>
+</tr>
+<tr class="odd">
+<td>Boltzmann constant</td>
+<td><span class="math inline">\(k_B\)</span></td>
+<td><span class="math inline">\(1.380\,649 \times 10^{-23}\ \text{J K}^{-1}\)</span></td>
+<td>exact</td>
+<td>exact</td>
+</tr>
+<tr class="even">
+<td>Elementary charge</td>
+<td><span class="math inline">\(e\)</span></td>
+<td><span class="math inline">\(1.602\,176\,634 \times 10^{-19}\ \text{C}\)</span></td>
+<td>exact</td>
+<td>exact</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="fragment">
+<p><span class="deemph">If all measurements have errors, how can we know some of them exactly?</span></p>
+</div>
+</section>
+<section id="errors-in-measurements-1" class="slide level2">
+<h2>Errors in Measurements</h2>
+<p><span class="framesub">All measurements have errors</span></p>
+<ul>
+<li>What does <span class="math inline">\(G = 6.674\,30 \times 10^{-11}\  \pm 1.5 \times 10^{-15}\ \text{m}^3\text{kg}^{-1}\text{s}^{-2}\)</span> mean?</li>
+</ul>
+<div class="fragment" style="margin-top: -0.5em;">
+<ul>
+<li>Reporting measurements as <span class="math inline">\(x \pm \Delta x\)</span> are probabilistic statements <span class="math inline">\(\implies\)</span> <em>The true value of the parameter or measurements is likely to be in the range <span class="math inline">\(\left[ x - \Delta x, x + \Delta x\right]\)</span> with some probability.</em></li>
+</ul>
+</div>
+<div class="fragment">
+<iframe src="figures/temperature-measurements.html" width="100%" height="420px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="errors-in-measurements-2" class="slide level2">
+<h2>Errors in Measurements</h2>
+<p><span class="framesub">All measurements have errors</span></p>
+<iframe src="figures/temperature-measurements.html" width="100%" height="350px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+<p>Two important ideas are associated with measurements:</p>
+<ul>
+<li><span class="highlight">Precision</span>: Measure of the spread of a cluster of measurements for the same true value of the measurand.</li>
+<li><span class="highlight">Accuracy</span>: Measure of location of the spread of of measurements relatie to the “true” value of the measurand.</li>
+</ul>
+</section>
+<section id="errors-in-measurements-3" class="slide level2">
+<h2>Errors in Measurements</h2>
+<p><span class="framesub">All measurements have errors</span></p>
+<p><span class="highlight">Accuracy</span> and <span class="highlight">Precision</span> naturally bring about two new concepts:</p>
+<p><span class="highlight">Random error</span>: Contributes to the spread of the points — they tend to impact measurements both positively and negatively. <span class="math display">\[ y_i = y_{true} + e_i \]</span></p>
+<div style="font-size: 0.75em; margin-top:-0.5em;">
+<p><span class="math inline">\(e_i\)</span> is the random error; it is equally likely to be positive or negative.</p>
+</div>
+<p><span class="highlight">Systematic error</span>: Contributes to a consistent offset from the true value of the measurand. <span class="math display">\[ y_i = y_{true} + y_{bias} \]</span></p>
+<div style="font-size: 0.75em; margin-top:-0.5em;">
+<p><span class="math inline">\(y_{bias}\)</span> is the systematic error — a constant offset from the true value.</p>
+</div>
+<div class="fragment">
+<p>Overall, the total error in a measurement: <span class="math inline">\(y_i = y_{true} + y_{bias} + e_i\)</span></p>
+<p>Random errors impair <span class="highlight">precision</span>; systematic errors impair <span class="highlight">accuracy</span>.</p>
+</div>
+</section>
+<section id="random-errors-in-measurements" class="slide level2">
+<h2>Random Errors in Measurements</h2>
+<p><span class="framesub">Statistical Analysis of Random Errors</span></p>
+<p>A commonly employed model for random errors in sensor measurements is the <span class="highlight">Gaussian</span> or the <span class="highlight">Normal</span> distribution.</p>
+<div style="margin-top:-1.0em; font-size:0.85em;">
+<p><span class="math display">\[ f\left( x \right) = \frac{1}{\sigma \sqrt{2 \pi}} \exp \left( {-\frac{1}{2} \left( \frac{x - \mu}{\sigma} \right)^2} \right) \]</span></p>
+<iframe src="figures/gaussian-sampling.html" width="100%" height="420px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="random-errors-in-measurements-1" class="slide level2">
+<h2>Random Errors in Measurements</h2>
+<p><span class="framesub">Statistical Analysis of Random Errors</span></p>
+<div style="margin-top:-1.0em; font-size:0.85em;">
+<p><span class="math display">\[ f\left( x \right) = \frac{1}{\sigma \sqrt{2 \pi}} \exp \left( {-\frac{1}{2} \left( \frac{x - \mu}{\sigma} \right)^2} \right) \]</span></p>
+<iframe src="figures/gaussian-area.html" width="100%" height="420px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="random-errors-in-measurements-2" class="slide level2">
+<h2>Random Errors in Measurements</h2>
+<p><span class="framesub">Statistical Analysis of Random Errors</span></p>
+<p><span class="math display">\[ f\left( x \right) = \frac{1}{\sigma \sqrt{2 \pi}} \exp \left( {-\frac{1}{2} \left( \frac{x - \mu}{\sigma} \right)^2} \right) \]</span></p>
+<p>Let <span class="math inline">\(\left[ x_1, x_2, \ldots, x_N \right]\)</span> be a set of <span class="math inline">\(N\)</span> independent measurements of the same measurand. The <span class="highlight">sample mean</span> <span class="math inline">\(\hat{\mu}\)</span> and <span class="highlight">sample standard deviation</span> <span class="math inline">\(\hat{\sigma}\)</span> are given by, <span class="math display">\[ \hat{\mu} = \frac{1}{N} \sum_{i=1}^N x_i \quad \quad  \hat{\sigma} = \sqrt{ \frac{1}{N-1} \sum_{i=1}^N (x_i - \hat{\mu})^2 } \]</span></p>
+<div class="fragment">
+<p>These estimates allow us to quantify the mean and variance of the parent distribution of the measurand.</p>
+<p>Note, that the sample mean <span class="math inline">\(\hat{\mu}\)</span> and sample standard deviation <span class="math inline">\(\hat{\sigma}\)</span> are themselves random variables, and will vary with each set of <span class="math inline">\(N\)</span> measurements.</p>
+</div>
+</section>
+<section id="random-errors-in-measurements-3" class="slide level2">
+<h2>Random Errors in Measurements</h2>
+<p><span class="framesub">Statistical Analysis of Random Errors</span></p>
+<div style="margin-top:-1.0em; font-size:0.85em;">
+<p>The estimates of <span class="math inline">\(\hat{\mu}\)</span> and <span class="math inline">\(\hat{\sigma}\)</span> are closer to the true values of <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\sigma\)</span> as <span class="math inline">\(N\)</span> increases.</p>
+<p><span class="highlight">Sampling distribution of the mean</span></p>
+<iframe src="figures/sampling-dist-mean.html" width="100%" height="420px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+<p>The sample distribution of <span class="math inline">\(\hat{\mu}\)</span> is also a Guassian distribution with the same mean <span class="math inline">\(\mu\)</span> and a standard deviation of <span class="math inline">\(\frac{\sigma}{\sqrt{N}}\)</span>.</p>
+</div>
+</section>
+<section id="random-errors-in-measurements-4" class="slide level2">
+<h2>Random Errors in Measurements</h2>
+<p><span class="framesub">Statistical Analysis of Random Errors</span></p>
+<p><span class="highlight">Sampling distribution of the mean</span></p>
+<iframe src="figures/sampling-dist-mean.html" width="100%" height="250px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+<div style="margin-top:-2.0em; font-size:0.85em;">
+<p>Precision of the sample mean <span class="math inline">\(\hat{\mu}\)</span> increases with <span class="math inline">\(N\)</span>. This is called the <span class="highlight">standard error</span>, <span class="math inline">\(\alpha\)</span>, <span class="math display">\[ \alpha = \frac{\hat{\sigma}}{\sqrt{N}} \]</span></p>
+<p>From <span class="math inline">\(N\)</span> measurements, the true mean lies in the range <span class="math inline">\(\hat{\mu} - \alpha &lt; \mu &lt; \hat{\mu} + \alpha\)</span> with probability <span class="math inline">\(\approx 68\%\)</span>.</p>
+</div>
+</section>
+<section id="random-errors-in-measurements-5" class="slide level2">
+<h2>Random Errors in Measurements</h2>
+<p><span class="framesub">The error bar has its own error</span></p>
+<p><span class="highlight">Error in the Standard Error</span>: <span class="math inline">\(\hat{\sigma}\)</span> (and hence <span class="math inline">\(\alpha\)</span>) is itself estimated from a finite sample — it too is a random variable. Its <span class="highlight">fractional</span> error is,</p>
+<p><span class="math display">\[\beta = \dfrac{1}{\sqrt{2(N-1)}} = \frac{\hat{\sigma} - \sigma}{\sigma}\]</span></p>
+<div class="columns" style="align-items:center; margin-top:0.5em;">
+<div class="column" style="width:45%;">
+<ul>
+<li><span class="math inline">\(\beta\)</span> depends <span class="highlight">only on <span class="math inline">\(N\)</span></span> — not on <span class="math inline">\(\mu\)</span> or <span class="math inline">\(\sigma\)</span>.</li>
+<li>The absolute uncertainty in <span class="math inline">\(\hat{\sigma}\)</span> is <span class="math inline">\(\sigma\beta\)</span>.</li>
+<li><span class="math inline">\(\hat{\sigma} \in [\sigma(1-\beta),\ \sigma(1+\beta)]\)</span> with <span class="math inline">\(\approx 68\%\)</span> probability.</li>
+<li><span class="math inline">\(\beta\)</span> falls <span class="highlight">slowly</span> — as <span class="math inline">\(N^{-1/2}\)</span>.</li>
+</ul>
+</div><div class="column" style="width:55%;">
+<iframe src="figures/beta-vs-n.html" width="100%" height="330px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div></div>
+</section>
+<section id="random-errors-in-measurements-6" class="slide level2">
+<h2>Random Errors in Measurements</h2>
+<p><span class="framesub">The error bar has its own error</span></p>
+<p><span class="highlight">The error in the error bar shrinks slowly.</span></p>
+<div style="margin-top:0.5em;">
+<iframe src="figures/error-in-error.html" width="100%" height="430px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+<div style="font-size:0.75em; margin-top:-2.5em;">
+<p>Move <span class="math inline">\(\mu\)</span>, <span class="math inline">\(\sigma\)</span> — the shape is unchanged. Only <span class="math inline">\(N\)</span> narrows the <span class="math inline">\(\pm\beta\)</span> band. Reaching <span class="math inline">\(\beta \approx 1\%\)</span> (a trustworthy <em>second</em> significant figure in the error) needs <span class="math inline">\(N \approx 10{,}000\)</span>.</p>
+<div class="fragment">
+<p>This discussion is imporant to decide how to report a measurements - <span class="highlight">how many digits are meaningful in the reported value and its error.</span></p>
+</div>
+</div>
+</section>
+<section id="reporting-a-measurement" class="slide level2">
+<h2>Reporting a measurement</h2>
+<p><span class="framesub">Five repeat readings of grip force from a hand dynamometer (kg).</span></p>
+<div class="columns" style="align-items:center;">
+<div class="column" style="width:42%;">
+<div style="width:90%; margin:0 auto;">
+<table class="caption-top">
+<colgroup>
+<col style="width: 40%">
+<col style="width: 60%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Trial</th>
+<th style="text-align: center;">Force (kg)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">24.11</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">23.63</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">24.81</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">23.97</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">24.33</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div><div class="column" style="width:58%;">
+<p><span class="highlight">Compute, then report</span>:</p>
+<ol type="1">
+<li>sample mean <span class="math inline">\(\hat{\mu} = \frac{1}{N}\sum x_i\)</span></li>
+<li>sample SD <span class="math inline">\(\hat{\sigma} = \sqrt{\frac{1}{N-1}\sum (x_i-\hat{\mu})^2}\)</span></li>
+<li>standard error <span class="math inline">\(\alpha = \hat{\sigma}/\sqrt{N}\)</span></li>
+<li>error in the error <span class="math inline">\(\beta = 1/\sqrt{2(N-1)}\)</span></li>
+</ol>
+<p><span class="deemph">How would you write down the final result?</span></p>
+</div></div>
+</section>
+<section id="reporting-a-measurement-work-it-through" class="slide level2">
+<h2>Reporting a measurement — work it through</h2>
+<p><span class="framesub">Reporting grip strength measurements.</span></p>
+<ul>
+<li class="fragment"><span class="math inline">\(\hat{\mu} = 120.85/5 = 24.17\)</span> kg</li>
+<li class="fragment"><span class="math inline">\(\hat{\sigma} = 0.4389\)</span> kg, so <span class="math inline">\(\alpha = 0.4389/\sqrt{5} = 0.1963\)</span> kg</li>
+<li class="fragment"><span class="math inline">\(\beta = 1/\sqrt{8} = 0.354\)</span> → the error itself is only good to <span class="highlight"><span class="math inline">\(\pm 35\%\)</span></span></li>
+<li class="fragment">Uncertainty in the standard error is <span class="math inline">\(\beta \cdot \alpha = 0.354 \cdot 0.1963 = 0.0694\)</span> kg → we are uncertain from the second significant digit onwards after the decimal place.</li>
+<li class="fragment">So round <span class="math inline">\(\alpha\)</span> to <span class="highlight">one significant figure</span>: <span class="math inline">\(\alpha \approx 0.2\)</span> kg</li>
+<li class="fragment">Match the mean to the same decimal place: <span class="math inline">\(\hat{\mu} \to 24.2\)</span> kg</li>
+<li class="fragment">Report <span class="highlight"><span class="math inline">\(\;F = 24.2 \pm 0.2\)</span> kg</span> — <strong>not</strong> <span class="math inline">\(24.17 \pm 0.1963\)</span> kg.</li>
+</ul>
+<div class="fragment">
+<p><span class="highlight">Discuss</span>:</p>
+<ul>
+<li class="fragment">Why is writing <span class="math inline">\(24.17 \pm 0.20\)</span> kg a false claim?</li>
+<li class="fragment">What would it take to earn that second digit?</li>
+</ul>
+</div>
+</section>
+<section id="reporting-a-measurement-the-awkward-case" class="slide level2">
+<h2>Reporting a measurement — the awkward case</h2>
+<p><span class="framesub">Six readings of a pressure sensor (mmHg). Compute <span class="math inline">\(\alpha\)</span>, then decide.</span></p>
+<div class="columns" style="align-items:center;">
+<div class="column" style="width:20%;">
+<div style="width:100%; margin:0 auto; font-size:1.0em;">
+<!-- | Trial | 1 | 2 | 3 | 4 | 5 | 6 |
+|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| $p$ | 97.8 | 98.2 | 98.0 | 97.6 | 98.4 | 98.1 | -->
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Trial</th>
+<th style="text-align: center;"><span class="math inline">\(p\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">97.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">98.2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">98.0</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">97.6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">98.4</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">98.1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div><div class="column" style="width:80%; font-size:0.85em;">
+<ul>
+<li class="fragment"><span class="math inline">\(\hat{\mu} = 98.017\)</span></li>
+<li class="fragment"><span class="math inline">\(\hat{\sigma} = 0.286\)</span>, <span class="math inline">\(\alpha = 0.117\)</span> mmHg</li>
+<li class="fragment">One sig fig → <span class="math inline">\(\alpha \approx 0.1\)</span>: but that rounds <span class="math inline">\(0.117 \to 0.1\)</span>, a <span class="highlight"><span class="math inline">\(\sim 17\%\)</span></span> shift in the stated error</li>
+<li class="fragment"><span class="highlight">Exception</span>: when the first significant figure of <span class="math inline">\(\alpha\)</span> is <strong>1</strong>, keep the second digit</li>
+<li class="fragment">Report <span class="highlight"><span class="math inline">\(\;p = 98.02 \pm 0.12\)</span> mmHg</span></li>
+<li class="fragment">This rule ensures that the error due to round off is not too high.</li>
+</ul>
+</div></div>
+<div class="fragment" style="font-size:1.00em;">
+<p><span class="highlight">Five golden rules</span> <span class="deemph" style="font-size:0.7em;">(Source: Hughes &amp; Hase, Measurements and their Uncertainties)</span></p>
+<ul>
+<li>The best estimate of a parameter is the mean.</li>
+<li>The error is the standard error in the mean.</li>
+<li>Round up the error to the appropriate number of significant figures (typically one significant digit).</li>
+<li>Match the number of decimal places in the mean to the standard error.</li>
+<li>Include units.</li>
+</ul>
+</div>
+</section>
+<section id="propagation-of-uncertainty" class="slide level2">
+<h2>Propagation of Uncertainty</h2>
+<p><span class="framesub">Raw measurements are seldom directly reported</span></p>
+<p>Raw voltage, current measurements from sensors are seldom directly reported.</p>
+<div style="margin-top:-1.0em;">
+<p>The raw measured quantities <span class="math inline">\(x\)</span> are transformed through a mathematical formula to obtain the desired measurand <span class="math inline">\(y\)</span>.</p>
+</div>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ y = f(x) \]</span></p>
+</div>
+<div style="margin-top:-1.0em;">
+<p>If <span class="math inline">\(x\)</span> has an uncertainty <span class="math inline">\(\Delta x\)</span>, what is the uncertainty in <span class="math inline">\(y\)</span>?</p>
+<ul>
+<li class="fragment">Does it depend on the function <span class="math inline">\(f(\cdot)\)</span>? <span class="fragment highlight">Yes</span></li>
+<li class="fragment">Does it depend on <span class="math inline">\(\Delta x\)</span>? <span class="fragment highlight">Yes</span></li>
+</ul>
+<div class="fragment">
+<p>Let the measured value of <span class="math inline">\(x\)</span> be <span class="math inline">\(\overline{x}\)</span> with uncertainty <span class="math inline">\(\Delta x\)</span>, thus the measur will be,</p>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ \begin{split}  y &amp;= f(\overline{x}) \\  y + \Delta y &amp;= f(\overline{x} + \Delta x)  \end{split} \implies \Delta y = f(\overline{x} + \Delta x) - f(\overline{x}) \]</span></p>
+</div>
+</div>
+</div>
+</section>
+<section id="propagation-of-uncertainty-1" class="slide level2">
+<h2>Propagation of Uncertainty</h2>
+<p><span class="framesub"></span></p>
+<iframe src="figures/error-propagation-univariate.html" width="100%" height="550px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+<div class="fragment" style="margin-top:-2.0em; font-size:0.85em;">
+<p>For small <span class="math inline">\(\Delta x\)</span>, we can linearize <span class="math inline">\(f(\cdot)\)</span> about <span class="math inline">\(\overline{x}\)</span> to obtain the uncertainty in <span class="math inline">\(y\)</span>,</p>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ \Delta y \approx \Big\vert \frac{df}{dx} \Big\vert \cdot \Delta x\]</span></p>
+</div>
+</div>
+</section>
+<section id="propagation-of-uncertainty-2" class="slide level2">
+<h2>Propagation of Uncertainty</h2>
+<p><span class="framesub">Propagation through Multivariable functions</span></p>
+<p>We often compute parameters of interest using multiple raw measurements, each with its own uncertainty. Let the measurand <span class="math inline">\(y\)</span> be a function of <span class="math inline">\(n\)</span> measured quantities <span class="math inline">\(x_1, x_2, \ldots, x_n\)</span>, each with uncertainty <span class="math inline">\(\Delta x_i\)</span>,</p>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ y = f\left( x_1, x_2, \ldots, x_n \right) \]</span></p>
+</div>
+<p>The uncertainty in <span class="math inline">\(y\)</span> is given by the <span class="highlight">root-sum-square</span> of the individual uncertainties,</p>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ \Delta y = \sqrt{ \sum_{i=1}^n \left( \frac{\partial f}{\partial x_i} \Delta x_i \right)^2 } \]</span></p>
+</div>
+<div class="fragment">
+<p><span class="highlight">Ammuption</span>: The uncertainties in <span class="math inline">\(x_i\)</span> are mutually independent. If they are correlated, we need to account for them through the covariance terms.</p>
+</div>
+</section>
+<section id="propagation-of-uncertainty-3" class="slide level2">
+<h2>Propagation of Uncertainty</h2>
+<p><span class="framesub">Worked example — centre of pressure on a balance board</span></p>
+<div class="columns" style="align-items:center; font-size:0.8em;">
+<div class="column" style="width:50%;">
+<p><img data-src="figures/balance-board.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
+</div><div class="column" style="width:50%;">
+<p>Two load cells read <span class="math inline">\(F_1, F_2\)</span>; the centre of pressure is</p>
+<p><span class="math display">\[ F = F_1 + F_2 \quad \quad d = \frac{L}{2}\cdot\frac{F_2 - F_1}{F_1 + F_2} \]</span></p>
+<div class="fragment">
+<p>Given the uncertainty in <span class="math inline">\(F_1\)</span> and <span class="math inline">\(F_2\)</span>, what is the uncertainty in <span class="math inline">\(F\)</span> and <span class="math inline">\(d\)</span>?</p>
+</div>
+<div class="fragment">
+<p><span class="math display">\[ \Delta F = \sqrt{ (\Delta F_1)^2 + (\Delta F_2)^2 } \]</span></p>
+<p>Uncertainty in <span class="math inline">\(F\)</span> increases monotonically with that of <span class="math inline">\(F_1, F_2\)</span>.</p>
+</div>
+</div></div>
+<div class="fragment" style="font-size:0.8em; margin-top:-0.5em;">
+<p>The <span class="highlight">COP</span> <span class="math inline">\(d\)</span> is a more interesting case.</p>
+<p><span class="math display">\[ \Delta d = \sqrt{ \left( \frac{\partial d}{\partial F_1} \Delta F_1 \right)^2 + \left( \frac{\partial d}{\partial F_2} \Delta F_2 \right)^2 } = \frac{2 L}{(F_1 + F_2)^2} \sqrt{ F_2^2\,(\Delta F_1)^2 + F_1^2\,(\Delta F_2)^2 } \]</span></p>
+<p>For fixed reading error <span class="math inline">\(\Delta F_i\)</span>, <span class="math inline">\(\Delta d \propto 1/(F_1+F_2)^2\)</span> — as the total load shrinks, the error in <span class="math inline">\(d\)</span> blows up.</p>
+</div>
+</section>
+<section id="propagation-of-uncertainty-4" class="slide level2">
+<h2>Propagation of Uncertainty</h2>
+<p><span class="framesub">Watch the COP error grow as the total load drops</span></p>
+<iframe src="figures/balance-board.html" width="100%" height="550px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</section></section>
+<section>
+<section id="sensor-calibration" class="title-slide slide level1 center">
+<h1>Sensor Calibration</h1>
+
+</section>
+<section id="static-characterization" class="slide level2">
+<h2>Static characterization</h2>
+<p><span class="framesub">Response of a sensor to fixed inputs measurands</span></p>
+<p>When performing static calibration, we must ensure that the sensor’s transient die out before reading the sensor output <span class="math inline">\(y_i\)</span> for the input <span class="math inline">\(x_{m_i}\)</span>.</p>
+<iframe src="figures/settling-response.html" width="100%" height="400px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</section>
+<section id="static-characterization-1" class="slide level2">
+<h2>Static characterization</h2>
+<p><span class="framesub">Response of a sensor to fixed inputs measurands</span></p>
+<div style="margin-top:-1.0em;">
+<p><img data-src="figures/calibration-model.svg" class="" style="width:60%; display:block; margin:0 auto;"></p>
+</div>
+<div class="columns" style="align-items:flex-start; margin-top:0.5em; width:80%; margin-left:auto; margin-right:auto;">
+<div class="column" style="width:40%; font-size:0.9em;">
+<p><span class="highlight">Static Calibration Data</span></p>
+<table class="caption-top">
+<caption>Calibration data</caption>
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Measurand (<span class="math inline">\(x_m\)</span>)</th>
+<th style="text-align: center;">Sensor Output (<span class="math inline">\(y\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(x_1\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(y_1\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(x_2\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(y_2\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(x_3\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(y_3\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\vdots\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(\vdots\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(x_N\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(y_N\)</span></td>
+</tr>
+</tbody>
+</table>
+</div><div class="column" style="width:60%; font-size:0.8em;">
+<p>We fit this data to a function <span class="math inline">\(g(x_m)\)</span> to build the static input-output model of the sensor.</p>
+<p><span class="math display">\[ \hat{g}\left(x_m\right) = \arg \min_{g\left(x_m\right)} \Vert y - g\left( x \right)\Vert_2^2\]</span></p>
+<p>We usually employ a least squares fitting procedure to identify the function <span class="math inline">\(g(x_m)\)</span> or its parameters.</p>
+<p>Polynomial models can generally be employed for capturing smooth non-linearities. <span class="math display">\[ g(x) = \sum_{i=0}^m \beta_i \cdot x^i \]</span></p>
+</div></div>
+</section>
+<section id="static-characterization-calibration-model" class="slide level2">
+<h2>Static characterization — calibration model</h2>
+<p><span class="framesub">Fit a model to the calibration data to obtain <span class="math inline">\(\hat{g}(\cdot)\)</span>, then inspect the residuals.</span></p>
+<iframe src="figures/curve-fitting.html" width="100%" height="460px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+<div style="margin-top:-1.0em;">
+<p>We define the mismatch between measured value and the model prediction as the <em>residual</em> <span class="math inline">\(r\)</span>,</p>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[ r_j = y_j - \hat{g}\left(x_{m_j}\right) \]</span></p>
+</div>
+</div>
+</section>
+<section id="static-characterization-calibration-model-1" class="slide level2">
+<h2>Static characterization — calibration model</h2>
+<p><span class="framesub">Using the static calibration fucntion <span class="math inline">\(\hat{g}\left(\cdot\right)\)</span></span></p>
+<p>Once the function <span class="math inline">\(\hat{g}\left(\cdot\right)\)</span> is esitmated, we can use it to estimate the measurand from the measurement: <span class="math inline">\(\hat{x}_m = \hat{g}^{-1}\left(y\right)\)</span></p>
+<div style="text-align: center; margin-top: 1.5em;">
+<iframe src="figures/curve-fitting-inverse.html" width="100%" height="460px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="static-characterization-calibration-model-2" class="slide level2">
+<h2>Static characterization — calibration model</h2>
+<p><span class="framesub">Some sensors have hysteresis, making it difficult to use them.</span></p>
+<p>Some sensors have <span class="highlight">hysteresis</span>, which is the difference in measurements for the exact same input measurand, depending on whether the input is increasing or decreasing.</p>
+<div style="text-align: center; margin-top: 1.5em;">
+<iframe src="figures/hysteresis-sensor.html" width="100%" height="460px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="dynamic-characterization-calibration-model" class="slide level2">
+<h2>Dynamic characterization — calibration model</h2>
+<p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
+<div class="block">
+<p><strong>Clinical motivation:</strong> A sidestream capnograph designed for adults has a long sampling tube and large analyser chamber — together these create a large time constant τ. A neonate breathes at 50–60 breaths/min (one breath every ~1 s). If an adult sampling line is used, the CO₂ waveform is smeared beyond recognition and ETCO₂ reads near zero — not because the sensor is broken, but because its dynamics are too slow for the signal. <span class="deemph"><em>(numbers to be updated after reading the papers)</em></span></p>
+</div>
+<div style="font-size: 0.90em">
+<p><strong>Static characteristics</strong>:</p>
+<ul>
+<li><span class="highlight"><em>sufficient</em></span> for constant or very slowly varying measurands.</li>
+<li><span class="highlight"><em>insufficient</em></span> for time-varying measurands.</li>
+</ul>
+<p>When the measurand varies with time, the <span class="highlight">sensor dynamics cannot be ignored</span>!</p>
+<p>In general, sensor dynamics can be represented as a <span class="highlight">nonlinear differential equation</span>.</p>
+<p>For a <span class="highlight">linear time invariant (LTI)</span> sensor, the differential equation becomes a linear constant coefficient one.</p>
+</div>
+</section>
+<section id="dynamic-characterization-calibration-model-1" class="slide level2">
+<h2>Dynamic characterization — calibration model</h2>
+<p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
+<p><img data-src="figures/sensor-dynamic-model.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
+<p>The capnographic sensor difference understanding using the above model</p>
+</section>
+<section id="dynamic-characterization-calibration-model-2" class="slide level2">
+<h2>Dynamic characterization — calibration model</h2>
+<p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
+<div style="text-align: center; margin-top: 0.5em;">
+<iframe src="figures/sensor-dynamics-demo.html" width="100%" height="600px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="dynamic-characterization-calibration-model-3" class="slide level2">
+<h2>Dynamic characterization — calibration model</h2>
+<p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
+<p><img data-src="figures/sensor-dynamic-model.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
+<p><span class="highlight">Bandwidth of the singal</span> is commonly used to capture the idea of how quickly a signal varies.</p>
+<p><span class="math display">\[\text{Higher Bandwidth} \iff \text{Faster signal variation}\]</span></p>
+<p><span class="highlight">Bandwidth of the sensor</span> tells the fastest signal that the sensor can track.</p>
+<p><span class="math display">\[\text{Higher Bandwidth} \iff \text{Tracks faster signal variation}\]</span></p>
+<p>For measuring time varying measurands, we must ennsure: <span class="math display">\[\text{Sensor Bandwidth} &gt; \text{Signal bandwidth}\]</span></p>
+</section>
+<section id="dynamic-characterization-calibration-model-4" class="slide level2">
+<h2>Dynamic characterization — calibration model</h2>
+<p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
+<p><strong>Capnograph example:</strong> If we know <span class="math inline">\(\tau\)</span>, we can verify that the sensor’s bandwidth exceeds the signal’s bandwidth — and choose or reject equipment accordingly.</p>
+<p>For LTI sensors, there are several ways dynamic characterization can be done. All these methods follow the same common template:</p>
+<ol type="1">
+<li>Applying a characteristic test input signal <span class="math inline">\(x_m\left(t\right)\)</span>. (<span class="deemph">Example: impulse signal, step signal, sinusoids of different frequencies (chirp), white noise, etc.</span>)</li>
+<li>Record the sensor’s response <span class="math inline">\(y\left(t\right)\)</span></li>
+<li>Estimate dynamic parameters, which contain information about the sensor’s bandwidth. (<span class="deemph">Parameter estimation, spectral estimation, etc.</span>)</li>
+</ol>
+<p>Dynamic characterization is more involved than static calibration.</p>
+<p>Dynamic characterization of non-linear systems is more difficult than for LTI sensors, and we will need to make assumptions about the functional form of the non-linearities.</p>
+
+</section></section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="measurements-basics_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="measurements-basics_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="measurements-basics_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="measurements-basics_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="measurements-basics_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="measurements-basics_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="measurements-basics_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="measurements-basics_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="measurements-basics_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="measurements-basics_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1050,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+          const outerScaffold = trigger.parentElement.cloneNode(true);
+          const codeEl = outerScaffold.querySelector('code');
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
+            }
+          }
+          return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

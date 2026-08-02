@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.5rem 1rem 0.3rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.72rem;
+    flex-wrap: wrap;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.3rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 80px; cursor: pointer; }
+  #mu-slider    { accent-color: #718096; }
+  #sigma-slider { accent-color: #744210; }
+  #n-slider     { accent-color: #C05621; }
+  #n-input {
+    width: 62px; font-size: 0.72rem; font-weight: 700; color: #C05621;
+    border: 1px solid #CBD5E0; border-radius: 4px; padding: 0.1rem 0.3rem;
+    text-align: right;
+  }
+  .val { font-weight: 700; min-width: 2rem; }
+  .val-mu    { color: #718096; }
+  .val-sigma { color: #744210; }
+  .val-n     { color: #C05621; }
+  #resample-btn {
+    padding: 0.15rem 0.7rem;
+    background: #2B6CB0; color: #fff;
+    border: none; border-radius: 4px;
+    font-size: 0.72rem; font-weight: 600; cursor: pointer;
+  }
+  #resample-btn:hover { background: #2c5282; }
+  #plot { flex: 1; min-height: 0; }
+  .readout {
+    display: flex; gap: 1.8rem; font-size: 0.72rem;
+    justify-content: center; padding-bottom: 0.1rem; flex-wrap: wrap;
+  }
+  .readout span { color: #718096; }
+  .r-beta { color: #2B6CB0 !important; font-weight: 700; }
+  .r-exact { color: #A51C30 !important; font-weight: 700; }
+  .r-mc   { color: #C05621 !important; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>True &mu;</label>
+    <input type="range" id="mu-slider" min="-10" max="10" step="0.5" value="0">
+    <span id="mu-val" class="val val-mu">0.0</span>
+  </div>
+  <div class="ctrl">
+    <label>True &sigma;</label>
+    <input type="range" id="sigma-slider" min="0.5" max="5.0" step="0.1" value="2.0">
+    <span id="sigma-val" class="val val-sigma">2.0</span>
+  </div>
+  <div class="ctrl">
+    <label>N&nbsp;(per experiment)</label>
+    <input type="number" id="n-input" min="2" max="10000" step="1" value="10">
+  </div>
+  <div class="ctrl">
+    <button id="resample-btn">Resample</button>
+  </div>
+</div>
+
+<div id="plot"></div>
+
+<div class="readout">
+  <div><span>&beta; = 1/&#8730;(2(N&minus;1)) = </span><strong class="r-beta" id="beta-readout">&mdash;</strong></div>
+  <div><span>abs. error &plusmn;&sigma;&beta;: </span><strong class="r-beta" id="abs-readout">&mdash;</strong></div>
+  <div><span>&sigma;&#770; range [&sigma;(1&minus;&beta;), &sigma;(1+&beta;)]: </span><strong class="r-beta" id="range-readout">&mdash;</strong></div>
+  <div><span>Exact P(|frac| &le; &beta;) [&chi;&sup2;]: </span><strong class="r-exact" id="exact-readout">&mdash;</strong></div>
+  <div><span>Monte-Carlo P: </span><strong class="r-mc" id="mc-readout">&mdash;</strong></div>
+  <div><span>mean bias: </span><strong id="bias-readout">&mdash;</strong></div>
+</div>
+
+<script>
+// ── Monte-Carlo config ───────────────────────────────────────
+// Keep total random draws bounded so large N stays responsive.
+function nExperiments(N) {
+  return Math.max(600, Math.min(20000, Math.floor(2e6 / N)));
+}
+let poolSeed = 42;
+
+function seededRand(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+function gaussNoise(rng) {
+  const u1 = Math.max(rng(), 1e-12), u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+function linspace(a, b, n) {
+  return Array.from({length: n}, (_, i) => a + (b - a) * i / (n - 1));
+}
+
+// ── Special functions: chi-square PDF / CDF ──────────────────
+function gammaln(x) {
+  const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+             771.32342877765313, -176.61502916214059, 12.507343278686905,
+             -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - gammaln(1 - x);
+  x -= 1; let a = c[0]; const t = x + 7.5;
+  for (let i = 1; i < 9; i++) a += c[i] / (x + i);
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+function lowerRegGamma(s, x) {          // P(s, x)
+  if (x <= 0) return 0;
+  if (x < s + 1) {                       // series expansion
+    let term = 1 / s, sum = term;
+    for (let n = 1; n < 300; n++) {
+      term *= x / (s + n); sum += term;
+      if (Math.abs(term) < Math.abs(sum) * 1e-14) break;
+    }
+    return sum * Math.exp(-x + s * Math.log(x) - gammaln(s));
+  }
+  // continued fraction for the upper part Q(s,x), then P = 1 - Q
+  const FPMIN = 1e-300;
+  let b = x + 1 - s, c = 1 / FPMIN, d = 1 / b, h = d;
+  for (let i = 1; i <= 300; i++) {
+    const an = -i * (i - s);
+    b += 2;
+    d = an * d + b; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = b + an / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d; const del = d * c; h *= del;
+    if (Math.abs(del - 1) < 1e-14) break;
+  }
+  const Q = Math.exp(-x + s * Math.log(x) - gammaln(s)) * h;
+  return 1 - Q;
+}
+function chi2cdf(x, k) { return lowerRegGamma(k / 2, x / 2); }
+function chi2pdf(y, k) {
+  if (y <= 0) return 0;
+  return Math.exp((k / 2 - 1) * Math.log(y) - y / 2
+                  - (k / 2) * Math.log(2) - gammaln(k / 2));
+}
+// PDF of the fractional error u = sigma_hat/sigma - 1, given N.
+// sigma_hat/sigma = sqrt(Y/(N-1)), Y ~ chi2(N-1).  Change of variable:
+//   Y = (N-1)(1+u)^2,  dY/du = 2(N-1)(1+u)
+function fracPDF(u, N) {
+  if (u <= -1) return 0;
+  const k = N - 1, y = k * (1 + u) * (1 + u);
+  return chi2pdf(y, k) * 2 * k * (1 + u);
+}
+
+const cfg = { displayModeBar: false, responsive: true };
+
+function update() {
+  const mu    = parseFloat(document.getElementById('mu-slider').value);
+  const sigma = parseFloat(document.getElementById('sigma-slider').value);
+  let   N     = parseInt(document.getElementById('n-input').value);
+  if (!Number.isFinite(N)) N = 10;
+  N = Math.max(2, Math.min(10000, N));
+  const df    = N - 1;
+  const beta  = 1 / Math.sqrt(2 * df);
+  const M_EXP = nExperiments(N);
+
+  document.getElementById('mu-val').textContent    = mu.toFixed(1);
+  document.getElementById('sigma-val').textContent = sigma.toFixed(1);
+
+  // ── Monte-Carlo: distribution of sigma_hat over M experiments ──
+  const rng = seededRand(poolSeed);
+  const frac = new Float64Array(M_EXP);
+  let mcHits = 0, biasSum = 0;
+  for (let e = 0; e < M_EXP; e++) {
+    let s1 = 0, s2 = 0;
+    for (let j = 0; j < N; j++) {
+      const x = mu + sigma * gaussNoise(rng);
+      s1 += x; s2 += x * x;
+    }
+    const mean = s1 / N;
+    const varHat = (s2 - N * mean * mean) / df;   // ddof = 1
+    const sHat = Math.sqrt(Math.max(varHat, 0));
+    const f = (sHat - sigma) / sigma;
+    frac[e] = f;
+    biasSum += f;
+    if (Math.abs(f) <= beta) mcHits++;
+  }
+  const mcP = mcHits / M_EXP;
+  const bias = biasSum / M_EXP;
+
+  // ── Exact probability inside +/- beta via chi2 CDF ─────────────
+  const lo = df * (1 - beta) * (1 - beta);
+  const hi = df * (1 + beta) * (1 + beta);
+  const exactP = chi2cdf(hi, df) - chi2cdf(lo, df);
+
+  document.getElementById('beta-readout').textContent  = beta.toFixed(3);
+  document.getElementById('abs-readout').textContent   = '±' + (sigma * beta).toFixed(3);
+  document.getElementById('range-readout').textContent =
+    `[${(sigma * (1 - beta)).toFixed(2)}, ${(sigma * (1 + beta)).toFixed(2)}]`;
+  document.getElementById('exact-readout').textContent = (exactP * 100).toFixed(1) + '%';
+  document.getElementById('mc-readout').textContent    = (mcP * 100).toFixed(1) + '%';
+  document.getElementById('bias-readout').textContent  = bias.toFixed(3);
+
+  // ── Plot window (fractional error is bounded below by -1) ──────
+  const hw   = Math.min(1.2, 4.2 * beta);
+  const xLo  = Math.max(-1, -hw);
+  const xHi  = Math.min(3, 4.2 * beta);
+  const xPDF = linspace(xLo + 1e-4, xHi, 400);
+  const yPDF = xPDF.map(u => fracPDF(u, N));
+  const peak = Math.max(...yPDF);
+
+  const traces = [
+    // Histogram of the Monte-Carlo fractional errors
+    {
+      x: Array.from(frac),
+      type: 'histogram',
+      histnorm: 'probability density',
+      xbins: { start: xLo, end: xHi, size: (xHi - xLo) / 60 },
+      marker: { color: 'rgba(192,86,33,0.30)',
+                line: { color: '#C05621', width: 0.5 } },
+      name: 'Monte-Carlo σ̂',
+      hovertemplate: 'frac = %{x:.3f}<extra></extra>',
+    },
+    // Exact density of the fractional error (transformed χ²)
+    {
+      x: xPDF, y: yPDF,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 2 },
+      name: 'Exact density (χ²)',
+      hovertemplate: 'frac = %{x:.3f}  p = %{y:.3f}<extra></extra>',
+    },
+  ];
+
+  const layout = {
+    margin: { l: 48, r: 12, t: 26, b: 44 },
+    xaxis: {
+      range: [xLo, xHi],
+      title: { text: 'Fractional error in σ̂ :  (σ̂ − σ) / σ',
+               font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#4A5568', size: 11 },
+    },
+    yaxis: {
+      range: [0, peak * 1.15],
+      title: { text: 'Density', font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#4A5568', size: 11 },
+    },
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    shapes: [
+      // shaded +/- beta band
+      { type: 'rect', xref: 'x', yref: 'paper',
+        x0: -beta, x1: beta, y0: 0, y1: 1,
+        fillcolor: 'rgba(43,108,176,0.10)', line: { width: 0 }, layer: 'below' },
+      // +/- beta boundary lines
+      { type: 'line', xref: 'x', yref: 'paper',
+        x0: -beta, x1: -beta, y0: 0, y1: 1,
+        line: { color: '#2B6CB0', width: 1.5, dash: 'dash' } },
+      { type: 'line', xref: 'x', yref: 'paper',
+        x0: beta, x1: beta, y0: 0, y1: 1,
+        line: { color: '#2B6CB0', width: 1.5, dash: 'dash' } },
+      // zero reference (unbiased target)
+      { type: 'line', xref: 'x', yref: 'paper',
+        x0: 0, x1: 0, y0: 0, y1: 1,
+        line: { color: '#A0AEC0', width: 1, dash: 'dot' } },
+    ],
+    annotations: [
+      { x: 0, y: 1.06, xref: 'x', yref: 'paper', showarrow: false,
+        text: `±β band  →  exact ${(exactP*100).toFixed(1)}%`,
+        font: { size: 12, color: '#2B6CB0' } },
+    ],
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.98, xanchor: 'right', y: 1.06,
+      bgcolor: 'rgba(255,255,255,0.85)', font: { size: 10, color: '#4A5568' },
+    },
+    bargap: 0.02,
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  };
+
+  Plotly.react('plot', traces, layout, cfg);
+}
+
+update();
+document.getElementById('mu-slider').addEventListener('input', update);
+document.getElementById('sigma-slider').addEventListener('input', update);
+document.getElementById('n-input').addEventListener('input', update);
+document.getElementById('resample-btn').addEventListener('click', () => {
+  poolSeed = (poolSeed * 1664525 + 1013904223) & 0x7fffffff;
+  update();
+});
+</script>
+</body>
+</html>

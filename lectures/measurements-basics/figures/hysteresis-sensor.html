@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff; color: #2D3748;
+    padding: 0.6rem 1rem 0.4rem;
+    height: 100vh; display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  #controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 2rem; flex-wrap: nowrap; font-size: 0.88rem;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.45rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 110px; cursor: pointer; }
+  #H-sl  { accent-color: #C05621; }
+  #deg-sl { accent-color: #276749; }
+  .val { font-weight: 700; min-width: 2.4rem; }
+  .val-H   { color: #C05621; }
+  .val-deg { color: #276749; }
+  #plots { display: flex; gap: 0.5rem; flex: 1; min-height: 0; }
+  #plot-fit, #plot-res { flex: 1; min-width: 0; }
+  .readout {
+    display: flex; gap: 2.5rem; font-size: 0.83rem;
+    justify-content: center; padding-bottom: 0.1rem;
+  }
+  .readout span { color: #718096; }
+  .readout strong { color: #2D3748; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>Hysteresis  H</label>
+    <input type="range" id="H-sl" min="0" max="1.2" step="0.02" value="0.6">
+    <span id="H-val" class="val val-H">0.60</span>
+  </div>
+  <div class="ctrl">
+    <label>Noise  σ</label>
+    <input type="range" id="noise-sl" min="0" max="0.3" step="0.01" value="0.06" style="accent-color:#2B6CB0;">
+    <span id="noise-val" class="val" style="color:#2B6CB0;">0.06</span>
+  </div>
+  <div class="ctrl">
+    <label>Fit degree</label>
+    <input type="range" id="deg-sl" min="1" max="5" step="1" value="1">
+    <span id="deg-val" class="val val-deg">1</span>
+  </div>
+</div>
+
+<div id="plots">
+  <div id="plot-fit"></div>
+  <div id="plot-res"></div>
+</div>
+
+<div class="readout">
+  <div><span>RMS residual: </span><strong id="rms-val">—</strong></div>
+</div>
+
+<script>
+// ── Model ─────────────────────────────────────────────────────────────────────
+// Mean:       smoothstep S-curve through (φ_min, φ_min) and (φ_max, φ_max)
+// Ascending:  mean(x) + H·sin(π·(x−1)/4)   — loop closes at both endpoints
+// Descending: mean(x) − H·sin(π·(x−1)/4)
+
+const PHI_MIN = 1, PHI_MAX = 5;
+const N_CURVE = 300;
+
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+function meanCurve(x) {
+  const t = (x - PHI_MIN) / (PHI_MAX - PHI_MIN);
+  return PHI_MIN + (PHI_MAX - PHI_MIN) * smoothstep(t);
+}
+function offset(x, H) {
+  return H * Math.sin(Math.PI * (x - PHI_MIN) / (PHI_MAX - PHI_MIN));
+}
+function upCurve(x, H) { return meanCurve(x) + offset(x, H); }
+function dnCurve(x, H) { return meanCurve(x) - offset(x, H); }
+
+const xCurve = Array.from({length: N_CURVE},
+    (_, i) => PHI_MIN + (PHI_MAX - PHI_MIN) * i / (N_CURVE - 1));
+
+// ── Stable noise pool ─────────────────────────────────────────────────────────
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+const rng    = seededRand(7);
+const LEVELS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+const REPS   = 4;
+const NOISE  = 0.06;
+const noiseUp = Array.from({length: LEVELS.length * REPS}, () => (rng()-0.5)*2*NOISE);
+const noiseDn = Array.from({length: LEVELS.length * REPS}, () => (rng()-0.5)*2*NOISE);
+
+// ── Polynomial fit ────────────────────────────────────────────────────────────
+function gaussSolve(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++)
+      if (Math.abs(M[row][col]) > Math.abs(M[maxRow][col])) maxRow = row;
+    [M[col], M[maxRow]] = [M[maxRow], M[col]];
+    for (let row = col + 1; row < n; row++) {
+      const f = M[row][col] / M[col][col];
+      for (let k = col; k <= n; k++) M[row][k] -= f * M[col][k];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = M[i][n];
+    for (let j = i + 1; j < n; j++) x[i] -= M[i][j] * x[j];
+    x[i] /= M[i][i];
+  }
+  return x;
+}
+
+function polyfit(xs, ys, deg) {
+  const n = deg + 1;
+  const ATA = Array.from({length: n}, () => new Array(n).fill(0));
+  const ATy = new Array(n).fill(0);
+  for (let i = 0; i < xs.length; i++) {
+    const phi = Array.from({length: n}, (_, k) => Math.pow(xs[i], k));
+    for (let j = 0; j < n; j++) {
+      ATy[j] += phi[j] * ys[i];
+      for (let k = 0; k < n; k++) ATA[j][k] += phi[j] * phi[k];
+    }
+  }
+  return gaussSolve(ATA, ATy);
+}
+
+function polyEval(coeffs, x) {
+  return coeffs.reduce((acc, c, k) => acc + c * Math.pow(x, k), 0);
+}
+
+// ── Plotly config ─────────────────────────────────────────────────────────────
+const cfg = { displayModeBar: false, responsive: true };
+const axStyle = {
+  showgrid: true, gridcolor: '#EDF2F7', linecolor: '#CBD5E0',
+  zeroline: false, tickfont: { color: '#718096', size: 10 },
+};
+const base = {
+  plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+  hovermode: 'closest',
+  font: { family: 'Segoe UI, system-ui, sans-serif' },
+};
+const XRANGE = [PHI_MIN - 0.15, PHI_MAX + 0.15];
+const YRANGE = [PHI_MIN - 0.6,  PHI_MAX + 0.6];
+
+// ── Update ────────────────────────────────────────────────────────────────────
+function update() {
+  const H     = parseFloat(document.getElementById('H-sl').value);
+  const sigma = parseFloat(document.getElementById('noise-sl').value);
+  const deg   = parseInt(document.getElementById('deg-sl').value);
+
+  document.getElementById('H-val').textContent     = H.toFixed(2);
+  document.getElementById('noise-val').textContent = sigma.toFixed(2);
+  document.getElementById('deg-val').textContent   = deg;
+
+  // Hysteresis rail curves
+  const yUp = xCurve.map(x => upCurve(x, H));
+  const yDn = xCurve.map(x => dnCurve(x, H));
+
+  // Calibration data: ascending + descending measurements at each level
+  const xUp = [], yDataUp = [];
+  const xDn = [], yDataDn = [];
+  LEVELS.forEach((lv, li) => {
+    for (let r = 0; r < REPS; r++) {
+      xUp.push(lv); yDataUp.push(upCurve(lv, H) + sigma * noiseUp[li * REPS + r] / NOISE);
+      xDn.push(lv); yDataDn.push(dnCurve(lv, H) + sigma * noiseDn[li * REPS + r] / NOISE);
+    }
+  });
+
+  // Combined data for polynomial fit
+  const xAll = [...xUp, ...xDn];
+  const yAll = [...yDataUp, ...yDataDn];
+  const coeffs = polyfit(xAll, yAll, deg);
+  const yFit   = xCurve.map(x => polyEval(coeffs, x));
+
+  // Residuals (by direction)
+  const residUp = yDataUp.map((y, i) => y - polyEval(coeffs, xUp[i]));
+  const residDn = yDataDn.map((y, i) => y - polyEval(coeffs, xDn[i]));
+  const allResid = [...residUp, ...residDn];
+  const rms = Math.sqrt(allResid.reduce((s, r) => s + r*r, 0) / allResid.length);
+  document.getElementById('rms-val').textContent = rms.toFixed(4);
+
+  const resAbsMax = Math.max(0.05, ...allResid.map(r => Math.abs(r))) * 1.3;
+
+  // ── Left: sensor characteristic + data + fit ──────────────────────────────
+  Plotly.react('plot-fit', [
+    // Ascending rail (faint blue)
+    {
+      x: xCurve, y: yUp,
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(37,99,235,0.25)', width: 1.5, dash: 'dash' },
+      name: 'Ascending path',
+    },
+    // Descending rail (faint red)
+    {
+      x: xCurve, y: yDn,
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(229,62,62,0.25)', width: 1.5, dash: 'dash' },
+      name: 'Descending path',
+    },
+    // Calibration data (all measurements, black ×)
+    {
+      x: xAll, y: yAll,
+      type: 'scatter', mode: 'markers',
+      marker: { symbol: 'x', size: 7, color: '#2D3748', line: { width: 1.0 } },
+      name: 'Calibration data',
+    },
+    // Polynomial fit (green)
+    {
+      x: xCurve, y: yFit,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#276749', width: 2.0 },
+      name: `Degree-${deg} fit`,
+    },
+  ], {
+    ...base,
+    margin: { l: 52, r: 12, t: 40, b: 52 },
+    title: {
+      text: '(a) Sensor Characteristic',
+      font: { size: 13, color: '#4A5568' }, x: 0.5, xanchor: 'center',
+    },
+    xaxis: {
+      ...axStyle,
+      title: { text: 'φ<sub>t</sub>', font: { size: 13, color: '#4A5568' } },
+      range: XRANGE,
+    },
+    yaxis: {
+      ...axStyle,
+      title: { text: 'φ<sub>a</sub>', font: { size: 13, color: '#4A5568' } },
+      range: YRANGE,
+    },
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
+      bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' },
+    },
+  }, cfg);
+
+  // ── Right: residuals (ascending blue, descending red) ─────────────────────
+  Plotly.react('plot-res', [
+    // Zero line
+    {
+      x: XRANGE, y: [0, 0],
+      type: 'scatter', mode: 'lines',
+      line: { color: '#CBD5E0', width: 1.0 },
+      showlegend: false, hoverinfo: 'skip',
+    },
+    // All residuals
+    {
+      x: [...xUp, ...xDn], y: [...residUp, ...residDn],
+      type: 'scatter', mode: 'markers',
+      marker: { symbol: 'x', size: 7, color: '#2B6CB0', line: { width: 1.0 } },
+      showlegend: false,
+    },
+  ], {
+    ...base,
+    margin: { l: 56, r: 12, t: 40, b: 52 },
+    title: {
+      text: '(b) Fit Residuals',
+      font: { size: 13, color: '#4A5568' }, x: 0.5, xanchor: 'center',
+    },
+    xaxis: {
+      ...axStyle,
+      title: { text: 'φ<sub>t</sub>', font: { size: 13, color: '#4A5568' } },
+      range: XRANGE,
+    },
+    yaxis: {
+      ...axStyle, zeroline: true, zerolinecolor: '#CBD5E0',
+      title: { text: 'Residual', font: { size: 12, color: '#4A5568' } },
+      range: [-resAbsMax, resAbsMax],
+    },
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
+      bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' },
+    },
+  }, cfg);
+}
+
+update();
+document.getElementById('H-sl').addEventListener('input', update);
+document.getElementById('noise-sl').addEventListener('input', update);
+document.getElementById('deg-sl').addEventListener('input', update);
+</script>
+</body>
+</html>

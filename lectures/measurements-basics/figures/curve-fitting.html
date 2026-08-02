@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.6rem 1rem 0.4rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    flex-wrap: nowrap;
+    font-size: 0.88rem;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.45rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 110px; cursor: pointer; }
+  #reps-slider { accent-color: #2B6CB0; }
+  #deg-slider  { accent-color: #276749; }
+  .val { font-weight: 700; min-width: 2.4rem; }
+  .val-reps { color: #2B6CB0; }
+  .val-deg  { color: #276749; }
+  .unit { color: #A0AEC0; font-size: 0.82rem; }
+  #plots { display: flex; gap: 0.5rem; flex: 1; min-height: 0; }
+  #plot-fit, #plot-res { flex: 1; min-width: 0; }
+  .readout {
+    display: flex; gap: 2.5rem; font-size: 0.84rem;
+    justify-content: center; padding-bottom: 0.1rem;
+  }
+  .readout span { color: #718096; }
+  .readout strong { color: #2D3748; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>Measurements per input</label>
+    <input type="range" id="reps-slider" min="1" max="20" step="1" value="1">
+    <span id="reps-val" class="val val-reps">1</span>
+  </div>
+  <div class="ctrl">
+    <label>Fit degree</label>
+    <input type="range" id="deg-slider" min="1" max="5" step="1" value="1">
+    <span id="deg-val" class="val val-deg">1</span>
+  </div>
+</div>
+
+<div id="plots">
+  <div id="plot-fit"></div>
+  <div id="plot-res"></div>
+</div>
+
+<div class="readout">
+  <div><span>RMS residual: </span><strong id="rms-val">—</strong><span> Ω</span></div>
+  <!-- <div><span>Max bias from truth: </span><strong id="bias-val">—</strong><span> Ω</span></div> -->
+</div>
+
+<script>
+const NOISE_AMP = 0.4;
+
+function trueRs(fm) { return 10 + 0.5 * Math.sqrt(fm); }
+
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+
+function gaussNoise(rng) {
+  const u1 = Math.max(rng(), 1e-10), u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+const N_LEVELS  = 8;
+const MAX_REPS  = 20;
+const X_MIN = 0, X_MAX = 400;
+const N_CURVE = 300;
+
+const xLevels = Array.from({length: N_LEVELS}, (_, i) => X_MIN + (X_MAX - X_MIN) * i / (N_LEVELS - 1));
+
+// Pre-generate max noise pool (stable across refreshes)
+const rng       = seededRand(42);
+const noisePool = Array.from({length: N_LEVELS * MAX_REPS}, () => gaussNoise(rng));
+
+const xCurve = Array.from({length: N_CURVE}, (_, i) => X_MIN + (X_MAX - X_MIN) * i / (N_CURVE - 1));
+const yCurve = xCurve.map(trueRs);
+
+function gaussSolve(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++)
+      if (Math.abs(M[row][col]) > Math.abs(M[maxRow][col])) maxRow = row;
+    [M[col], M[maxRow]] = [M[maxRow], M[col]];
+    for (let row = col + 1; row < n; row++) {
+      const f = M[row][col] / M[col][col];
+      for (let k = col; k <= n; k++) M[row][k] -= f * M[col][k];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = M[i][n];
+    for (let j = i + 1; j < n; j++) x[i] -= M[i][j] * x[j];
+    x[i] /= M[i][i];
+  }
+  return x;
+}
+
+function polyfit(xs, ys, deg) {
+  const n = deg + 1;
+  const ATA = Array.from({length: n}, () => new Array(n).fill(0));
+  const ATy = new Array(n).fill(0);
+  for (let i = 0; i < xs.length; i++) {
+    const phi = Array.from({length: n}, (_, k) => Math.pow(xs[i], k));
+    for (let j = 0; j < n; j++) {
+      ATy[j] += phi[j] * ys[i];
+      for (let k = 0; k < n; k++) ATA[j][k] += phi[j] * phi[k];
+    }
+  }
+  return gaussSolve(ATA, ATy);
+}
+
+function polyEval(coeffs, x) {
+  return coeffs.reduce((acc, c, k) => acc + c * Math.pow(x, k), 0);
+}
+
+const MARKER = { color: '#2B6CB0', size: 9, symbol: 'circle-open', line: { width: 2.0 } };
+const cfg    = { displayModeBar: false, responsive: true };
+
+function update() {
+  const nReps = parseInt(document.getElementById('reps-slider').value);
+  const deg   = parseInt(document.getElementById('deg-slider').value);
+
+  document.getElementById('reps-val').textContent = nReps;
+  document.getElementById('deg-val').textContent  = deg;
+
+  // Build data from noise pool for current nReps
+  const xData = xLevels.flatMap(x => Array(nReps).fill(x));
+  const yData = xLevels.flatMap((x, li) =>
+    Array.from({length: nReps}, (_, ri) => trueRs(x) + NOISE_AMP * noisePool[li * MAX_REPS + ri])
+  );
+
+  const coeffs = polyfit(xData, yData, deg);
+  const yFit   = xCurve.map(x => polyEval(coeffs, x));
+  const resid  = yData.map((y, i) => y - polyEval(coeffs, xData[i]));
+
+  const rms     = Math.sqrt(resid.reduce((s, r) => s + r*r, 0) / resid.length);
+  const maxBias = Math.max(...xCurve.map(x => Math.abs(polyEval(coeffs, x) - trueRs(x))));
+
+  document.getElementById('rms-val').textContent  = rms.toFixed(3);
+  // document.getElementById('bias-val').textContent = maxBias.toFixed(3);
+
+  // --- Fit plot ---
+  Plotly.react('plot-fit', [
+    {
+      x: xCurve, y: yCurve,
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(165,28,48,0.35)', width: 1.5 },
+      name: 'True R<sub>s</sub>',
+    },
+    {
+      x: xData, y: yData,
+      type: 'scatter', mode: 'markers',
+      marker: MARKER,
+      name: 'Calibration data',
+    },
+    {
+      x: xCurve, y: yFit,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#276749', width: 2.0 },
+      name: `Degree-${deg} fit`,
+    },
+  ], {
+    margin: { l: 58, r: 12, t: 36, b: 50 },
+    title: { text: '(a) Sensor IO Model', font: { size: 13, color: '#4A5568' }, x: 0.5, xanchor: 'center' },
+    xaxis: {
+      title: { text: 'f<sub>m</sub>  (N)', font: { size: 12, color: '#4A5568' } },
+      range: [X_MIN - 10, X_MAX + 10],
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 10 },
+    },
+    yaxis: {
+      title: { text: 'R<sub>s</sub>  (Ω)', font: { size: 12, color: '#4A5568' } },
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 10 },
+    },
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
+      bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' },
+    },
+    hovermode: 'closest',
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  }, cfg);
+
+  // --- Residuals plot ---
+  const resAbsMax = Math.max(0.08, Math.max(...resid.map(r => Math.abs(r)))) * 1.25;
+
+  Plotly.react('plot-res', [
+    {
+      x: [X_MIN - 10, X_MAX + 10], y: [0, 0],
+      type: 'scatter', mode: 'lines',
+      line: { color: '#CBD5E0', width: 1.0 },
+      hoverinfo: 'skip', showlegend: false,
+    },
+    {
+      x: xData, y: resid,
+      type: 'scatter', mode: 'markers',
+      marker: MARKER,
+      name: 'Residuals',
+      hovertemplate: 'f<sub>m</sub>=%{x:.0f}  res=%{y:.3f} Ω<extra></extra>',
+    },
+  ], {
+    margin: { l: 62, r: 12, t: 36, b: 50 },
+    title: { text: '(b) Model Fit Residuals', font: { size: 13, color: '#4A5568' }, x: 0.5, xanchor: 'center' },
+    xaxis: {
+      title: { text: 'f<sub>m</sub>  (N)', font: { size: 12, color: '#4A5568' } },
+      range: [X_MIN - 10, X_MAX + 10],
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 10 },
+    },
+    yaxis: {
+      title: { text: 'Residual  (Ω)', font: { size: 12, color: '#4A5568' } },
+      range: [-resAbsMax, resAbsMax],
+      showgrid: false, linecolor: '#CBD5E0', zeroline: false,
+      tickfont: { color: '#718096', size: 10 },
+    },
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    showlegend: false,
+    hovermode: 'closest',
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  }, cfg);
+}
+
+update();
+document.getElementById('reps-slider').addEventListener('input', update);
+document.getElementById('deg-slider').addEventListener('input', update);
+</script>
+</body>
+</html>

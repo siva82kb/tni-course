@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.6rem 1rem 0.4rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    font-size: 0.88rem;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.45rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 110px; cursor: pointer; }
+  #T-slider   { accent-color: #2B6CB0; }
+  #t1-slider  { accent-color: #D69E2E; }
+  #t2-slider  { accent-color: #D69E2E; }
+  .val { font-weight: 700; min-width: 2.8rem; }
+  .val-T  { color: #2B6CB0; }
+  .val-t1 { color: #D69E2E; }
+  .val-t2 { color: #D69E2E; }
+  .unit { color: #A0AEC0; font-size: 0.82rem; }
+  #plot { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>Wait time</label>
+    <input type="range" id="T-slider" min="0.4" max="4.0" step="0.05" value="0.8">
+    <span id="T-val" class="val val-T">0.80</span>
+    <span class="unit">s</span>
+  </div>
+  <div class="ctrl">
+    <label>Read from</label>
+    <input type="range" id="t1-slider" min="0" max="95" step="1" value="60">
+    <span id="t1-val" class="val val-t1">60</span>
+    <span class="unit">%</span>
+  </div>
+  <div class="ctrl">
+    <label>Read to</label>
+    <input type="range" id="t2-slider" min="5" max="100" step="1" value="90">
+    <span id="t2-val" class="val val-t2">90</span>
+    <span class="unit">%</span>
+  </div>
+</div>
+
+<div id="plot"></div>
+
+<script>
+const ZETA    = 0.35;
+const WN      = 2 * Math.PI * 2.0;
+const WD      = WN * Math.sqrt(1 - ZETA * ZETA);
+const DT      = 0.005;
+const T_TOTAL = 10.0;
+const N_STEPS = 50;
+
+// --- Seeded PRNG ---
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+
+// --- Random up-down targets (fixed) ---
+const rng = seededRand(42);
+const TARGETS = [0];
+let lastSign = 1;
+for (let i = 0; i < N_STEPS + 2; i++) {
+  const prev = TARGETS[TARGETS.length - 1];
+  if (rng() < 0.75) lastSign = -lastSign;
+  const jump = rng() * 1.3 + 0.6;
+  TARGETS.push(Math.max(0.2, prev + lastSign * jump));
+}
+const minT = Math.min(...TARGETS);
+for (let i = 0; i < TARGETS.length; i++) TARGETS[i] -= (minT - 0.3);
+
+// --- Pre-generated noise ---
+const rngN = seededRand(137);
+const NOISE_AMP = 0.035;
+const N_NOISE   = 5000;
+const NOISE = Array.from({length: N_NOISE}, () => {
+  const u1 = Math.max(rngN(), 1e-10), u2 = rngN();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * NOISE_AMP;
+});
+
+// --- Step response ---
+function stepResp(t, from, to) {
+  if (t <= 0) return from;
+  const delta = to - from;
+  const e   = Math.exp(-ZETA * WN * t);
+  const phi = ZETA / Math.sqrt(1 - ZETA * ZETA);
+  return to - delta * e * (Math.cos(WD * t) + phi * Math.sin(WD * t));
+}
+
+function buildData(T, frac1, frac2) {
+  const nPtsStep = Math.round(T / DT);
+  const i1 = Math.round(frac1 * nPtsStep);   // index within step for window start
+  const i2 = Math.round(frac2 * nPtsStep);   // index within step for window end
+
+  // --- Full output + highlighted window segments ---
+  const tArr = [], outArr = [];
+  const hilT = [], hilY = [];       // highlighted window (NaN-gapped)
+  const mT = [], mY = [];           // reading dots (mean over window)
+  const meanLT = [], meanLY = [];   // horizontal mean lines (NaN-gapped)
+
+  let y0 = TARGETS[0], noiseIdx = 0;
+
+  for (let s = 0; s < N_STEPS; s++) {
+    const yF   = TARGETS[s + 1];
+    const stepVals = [];   // noisy values for this step
+
+    for (let i = 0; i <= nPtsStep; i++) {
+      const t = s * T + i * DT;
+      if (t > T_TOTAL + 1e-9) break;
+      const v = stepResp(i * DT, y0, yF) + NOISE[noiseIdx % N_NOISE];
+      noiseIdx++;
+      tArr.push(t);
+      outArr.push(v);
+      stepVals.push({ t, v, i });
+    }
+
+    // Highlighted window points
+    const winPts = stepVals.filter(p => p.i >= i1 && p.i <= i2 && p.t <= T_TOTAL + 1e-9);
+    if (winPts.length > 0) {
+      winPts.forEach(p => { hilT.push(p.t); hilY.push(p.v); });
+      hilT.push(NaN); hilY.push(NaN);   // gap between steps
+
+      // Mean reading
+      const mean = winPts.reduce((s, p) => s + p.v, 0) / winPts.length;
+      const tMid = winPts[Math.floor(winPts.length / 2)].t;
+      mT.push(tMid);
+      mY.push(mean);
+
+      // Horizontal mean line across the window
+      meanLT.push(winPts[0].t, winPts[winPts.length - 1].t, NaN);
+      meanLY.push(mean, mean, NaN);
+    }
+
+    y0 = stepResp(T, y0, yF);
+    if ((s + 1) * T >= T_TOTAL) break;
+  }
+
+  // --- Staircase input ---
+  const inpT = [], inpY = [];
+  for (let s = 0; s < N_STEPS; s++) {
+    const t0 = s * T;
+    if (t0 >= T_TOTAL) break;
+    inpT.push(t0);
+    inpY.push(TARGETS[s + 1]);
+  }
+  inpT.push(T_TOTAL);
+  const lastVisibleStep = Math.min(Math.floor(T_TOTAL / T), N_STEPS - 1);
+  inpY.push(TARGETS[lastVisibleStep + 1]);
+
+  // --- Vertical lines at step changes ---
+  const shapes = [];
+  for (let s = 0; s < N_STEPS; s++) {
+    const x = s * T;
+    if (x >= T_TOTAL) break;
+    shapes.push({
+      type: 'line', xref: 'x', yref: 'paper',
+      x0: x, x1: x, y0: 0, y1: 1,
+      line: { color: 'rgba(165,28,48,0.25)', width: 1, dash: 'dot' },
+    });
+  }
+
+  const visibleTargets = TARGETS.slice(0, lastVisibleStep + 2);
+  return {
+    tArr, outArr, hilT, hilY, mT, mY, meanLT, meanLY,
+    inpT, inpY, shapes,
+    yMin: Math.min(...visibleTargets) - 0.6,
+    yMax: Math.max(...visibleTargets) + 0.6,
+  };
+}
+
+function buildTraces(d) {
+  return [
+    {
+      x: d.inpT, y: d.inpY,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 1.0, shape: 'hv' },
+      name: 'True value', hoverinfo: 'skip',
+    },
+    {
+      x: d.tArr, y: d.outArr,
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(43,108,176,0.45)', width: 1.0 },
+      name: 'Sensor output',
+      hovertemplate: 't=%{x:.2f} s  y=%{y:.3f}<extra></extra>',
+    },
+    {
+      x: d.hilT, y: d.hilY,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#D69E2E', width: 1.5 },
+      name: 'Averaging window',
+      hoverinfo: 'skip',
+      connectgaps: false,
+    },
+    {
+      x: d.meanLT, y: d.meanLY,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#1A202C', width: 1.5 },
+      name: 'Mean', hoverinfo: 'skip',
+      connectgaps: false,
+    },
+  ];
+}
+
+function buildLayout(d) {
+  return {
+    margin: { l: 55, r: 20, t: 12, b: 50 },
+    xaxis: {
+      title: { text: 'Time  (s)', font: { size: 12, color: '#4A5568' } },
+      range: [0, T_TOTAL],
+      showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 10 },
+    },
+    yaxis: {
+      title: { text: 'Signal', font: { size: 12, color: '#4A5568' } },
+      range: [d.yMin, d.yMax],
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 10 },
+    },
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    showlegend: true,
+    legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.08, bgcolor: 'rgba(255,255,255,0.85)', font: { size: 11, color: '#4A5568' } },
+    hovermode: 'closest',
+    shapes: d.shapes,
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  };
+}
+
+const cfg = { displayModeBar: false, responsive: true };
+
+const sliderT  = document.getElementById('T-slider');
+const sliderT1 = document.getElementById('t1-slider');
+const sliderT2 = document.getElementById('t2-slider');
+const tValEl   = document.getElementById('T-val');
+const t1ValEl  = document.getElementById('t1-val');
+const t2ValEl  = document.getElementById('t2-val');
+
+function getParams() {
+  const T    = parseFloat(sliderT.value);
+  let   f1   = parseInt(sliderT1.value) / 100;
+  let   f2   = parseInt(sliderT2.value) / 100;
+  if (f1 >= f2) f2 = Math.min(1, f1 + 0.05);
+  return { T, f1, f2 };
+}
+
+function update() {
+  const { T, f1, f2 } = getParams();
+  tValEl.textContent  = T.toFixed(2);
+  t1ValEl.textContent = Math.round(f1 * 100);
+  t2ValEl.textContent = Math.round(f2 * 100);
+  const d = buildData(T, f1, f2);
+  Plotly.react('plot', buildTraces(d), buildLayout(d), cfg);
+}
+
+const { T: T0, f1: f10, f2: f20 } = getParams();
+const d0 = buildData(T0, f10, f20);
+Plotly.newPlot('plot', buildTraces(d0), buildLayout(d0), cfg);
+
+sliderT.addEventListener('input', update);
+sliderT1.addEventListener('input', update);
+sliderT2.addEventListener('input', update);
+</script>
+</body>
+</html>

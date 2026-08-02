@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.6rem 1rem 0.4rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  #controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: nowrap;
+    font-size: 0.88rem;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.45rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 100px; cursor: pointer; }
+  #reps-slider { accent-color: #2B6CB0; }
+  #deg-slider  { accent-color: #276749; }
+  #rs-slider   { accent-color: #7C3AED; width: 140px; }
+  .val { font-weight: 700; min-width: 2.6rem; }
+  .val-reps { color: #2B6CB0; }
+  .val-deg  { color: #276749; }
+  .val-rs   { color: #7C3AED; }
+  .sep { color: #CBD5E0; font-size: 1.1rem; }
+  #plots { display: flex; gap: 0.5rem; flex: 1; min-height: 0; }
+  #plot-fit, #plot-inv { flex: 1; min-width: 0; }
+  .readout {
+    display: flex; gap: 2.5rem; font-size: 0.82rem;
+    justify-content: center; padding-bottom: 0.1rem; flex-wrap: wrap;
+  }
+  .readout span  { color: #718096; }
+  .readout strong { color: #2D3748; }
+  .readout .hl   { color: #7C3AED; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>Meas. per input</label>
+    <input type="range" id="reps-slider" min="1" max="20" step="1" value="1">
+    <span id="reps-val" class="val val-reps">1</span>
+  </div>
+  <div class="ctrl">
+    <label>Fit degree</label>
+    <input type="range" id="deg-slider" min="1" max="5" step="1" value="1">
+    <span id="deg-val" class="val val-deg">1</span>
+  </div>
+  <span class="sep">|</span>
+  <div class="ctrl">
+    <label>R<sub>s</sub> measurement (Ω)</label>
+    <input type="range" id="rs-slider" min="10" max="20" step="0.05" value="15">
+    <span id="rs-val" class="val val-rs">15.00</span>
+  </div>
+</div>
+
+<div id="plots">
+  <div id="plot-fit"></div>
+  <div id="plot-inv"></div>
+</div>
+
+<div class="readout">
+  <div>
+    <span>Fit RMS: </span>
+    <strong id="rms-fit-val">—</strong>
+    <span> Ω</span>
+  </div>
+  <div>
+    <span>Overall est. RMS: </span>
+    <strong id="rms-est-val">—</strong>
+    <span> N</span>
+  </div>
+  <span class="sep">|</span>
+  <div>
+    <span>R<sub>s</sub> = </span>
+    <strong class="hl" id="rs-curr-val">—</strong>
+    <span> ± </span>
+    <strong class="hl" id="sigma-rs-val">—</strong>
+    <span> Ω  →  f&#770;<sub>m</sub> = </span>
+    <strong class="hl" id="fm-curr-val">—</strong>
+    <span> ± </span>
+    <strong class="hl" id="sigma-fm-val">—</strong>
+    <span> N</span>
+  </div>
+</div>
+
+<script>
+// ── Sensor model ──────────────────────────────────────────────────────────────
+// True forward:  Rs = g(fm) = 10 + 0.5·√fm     [fm in N, Rs in Ω]
+// True inverse:  fm = g⁻¹(Rs) = 4·(Rs − 10)²
+const NOISE_AMP = 0.4;   // Ω
+
+function trueRs(fm) { return 10 + 0.5 * Math.sqrt(fm); }
+function trueFm(rs) { const d = rs - 10; return 4 * d * d; }
+
+// ── RNG (stable across refreshes) ────────────────────────────────────────────
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+function gaussNoise(rng) {
+  const u1 = Math.max(rng(), 1e-10), u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const N_LEVELS = 8, MAX_REPS = 20, N_CURVE = 400;
+const X_MIN = 0, X_MAX = 400;
+
+const xLevels = Array.from({length: N_LEVELS},
+    (_, i) => X_MIN + (X_MAX - X_MIN) * i / (N_LEVELS - 1));
+
+const rng       = seededRand(42);
+const noisePool = Array.from({length: N_LEVELS * MAX_REPS}, () => gaussNoise(rng));
+
+const xCurve = Array.from({length: N_CURVE},
+    (_, i) => X_MIN + (X_MAX - X_MIN) * i / (N_CURVE - 1));
+const yCurve = xCurve.map(trueRs);
+
+const RS_MIN = trueRs(X_MIN), RS_MAX = trueRs(X_MAX);   // 10, 20
+const rsCurve = Array.from({length: N_CURVE},
+    (_, i) => RS_MIN + (RS_MAX - RS_MIN) * i / (N_CURVE - 1));
+const fmTrueInv = rsCurve.map(trueFm);
+
+// ── Polynomial least-squares ──────────────────────────────────────────────────
+function gaussSolve(A, b) {
+  const n = b.length;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let maxRow = col;
+    for (let row = col + 1; row < n; row++)
+      if (Math.abs(M[row][col]) > Math.abs(M[maxRow][col])) maxRow = row;
+    [M[col], M[maxRow]] = [M[maxRow], M[col]];
+    for (let row = col + 1; row < n; row++) {
+      const f = M[row][col] / M[col][col];
+      for (let k = col; k <= n; k++) M[row][k] -= f * M[col][k];
+    }
+  }
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = M[i][n];
+    for (let j = i + 1; j < n; j++) x[i] -= M[i][j] * x[j];
+    x[i] /= M[i][i];
+  }
+  return x;
+}
+
+function polyfit(xs, ys, deg) {
+  const n = deg + 1;
+  const ATA = Array.from({length: n}, () => new Array(n).fill(0));
+  const ATy = new Array(n).fill(0);
+  for (let i = 0; i < xs.length; i++) {
+    const phi = Array.from({length: n}, (_, k) => Math.pow(xs[i], k));
+    for (let j = 0; j < n; j++) {
+      ATy[j] += phi[j] * ys[i];
+      for (let k = 0; k < n; k++) ATA[j][k] += phi[j] * phi[k];
+    }
+  }
+  return gaussSolve(ATA, ATy);
+}
+
+function polyEval(coeffs, x) {
+  return coeffs.reduce((acc, c, k) => acc + c * Math.pow(x, k), 0);
+}
+
+// ── Numerical inverse of g_hat via bisection ──────────────────────────────────
+function invertFit(coeffs, rs) {
+  let lo = X_MIN - 50, hi = X_MAX + 50;
+  for (let i = 0; i < 64; i++) {
+    const mid = (lo + hi) / 2;
+    if (polyEval(coeffs, mid) < rs) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// ── Plotly config ─────────────────────────────────────────────────────────────
+const MARKER_DATA = {
+  color: '#2B6CB0', size: 8, symbol: 'circle-open', line: { width: 1.8 }
+};
+const cfg = { displayModeBar: false, responsive: true };
+const axStyle = {
+  showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
+  tickfont: { color: '#718096', size: 10 },
+};
+const baseLayout = {
+  plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+  hovermode: 'closest',
+  font: { family: 'Segoe UI, system-ui, sans-serif' },
+};
+
+// ── Main update ───────────────────────────────────────────────────────────────
+function update() {
+  const nReps  = parseInt(document.getElementById('reps-slider').value);
+  const deg    = parseInt(document.getElementById('deg-slider').value);
+  const Rs_curr = parseFloat(document.getElementById('rs-slider').value);
+
+  document.getElementById('reps-val').textContent = nReps;
+  document.getElementById('deg-val').textContent  = deg;
+  document.getElementById('rs-val').textContent   = Rs_curr.toFixed(2);
+
+  // ── Calibration data ──────────────────────────────────────────────────────
+  const xData = xLevels.flatMap(x => Array(nReps).fill(x));
+  const yData = xLevels.flatMap((x, li) =>
+    Array.from({length: nReps}, (_, ri) =>
+      trueRs(x) + NOISE_AMP * noisePool[li * MAX_REPS + ri])
+  );
+
+  // ── Fit g_hat: fm → Rs ────────────────────────────────────────────────────
+  const coeffs = polyfit(xData, yData, deg);
+  const yFit   = xCurve.map(x => polyEval(coeffs, x));
+
+  const resid  = yData.map((y, i) => y - polyEval(coeffs, xData[i]));
+  const rmsFit = Math.sqrt(resid.reduce((s, r) => s + r * r, 0) / resid.length);
+
+  // ── RMS estimation error (over all calibration points) ───────────────────
+  const fmEst     = yData.map(rs => invertFit(coeffs, rs));
+  const estErrors = fmEst.map((fmHat, i) => fmHat - xData[i]);
+  const rmsEst    = Math.sqrt(estErrors.reduce((s, e) => s + e * e, 0) / estErrors.length);
+
+  // ── Crosshair at current Rs measurement ──────────────────────────────────
+  const fm_curr   = invertFit(coeffs, Rs_curr);
+
+  // Measurement uncertainty: σ_Rs = rmsFit (residual spread ≈ noise level)
+  const sigma_Rs  = rmsFit;
+  const Rs_lo     = Rs_curr - sigma_Rs;
+  const Rs_hi     = Rs_curr + sigma_Rs;
+
+  // Project ±σ_Rs through g_hat⁻¹ to get the uncertainty in f̂_m
+  const fm_at_lo  = invertFit(coeffs, Rs_lo);
+  const fm_at_hi  = invertFit(coeffs, Rs_hi);
+  const fm_band_lo = Math.min(fm_at_lo, fm_at_hi);
+  const fm_band_hi = Math.max(fm_at_lo, fm_at_hi);
+  const sigma_fm  = (fm_band_hi - fm_band_lo) / 2;
+
+  // ── Update readouts ───────────────────────────────────────────────────────
+  document.getElementById('rms-fit-val').textContent  = rmsFit.toFixed(3);
+  document.getElementById('rms-est-val').textContent  = rmsEst.toFixed(2);
+  document.getElementById('rs-curr-val').textContent  = Rs_curr.toFixed(2);
+  document.getElementById('fm-curr-val').textContent  = fm_curr.toFixed(1);
+  document.getElementById('sigma-rs-val').textContent = sigma_Rs.toFixed(3);
+  document.getElementById('sigma-fm-val').textContent = sigma_fm.toFixed(1);
+
+  // ── LEFT PLOT: g_hat (fm → Rs) ───────────────────────────────────────────
+  Plotly.react('plot-fit', [
+    {
+      x: xCurve, y: yCurve,
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(165,28,48,0.35)', width: 1.5, dash: 'dot' },
+      name: 'True g(f<sub>m</sub>)',
+    },
+    {
+      x: xData, y: yData,
+      type: 'scatter', mode: 'markers',
+      marker: MARKER_DATA,
+      name: 'Calibration data',
+    },
+    {
+      x: xCurve, y: yFit,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#276749', width: 2.0 },
+      name: `g&#771; (degree ${deg})`,
+    },
+  ], {
+    ...baseLayout,
+    margin: { l: 58, r: 12, t: 36, b: 50 },
+    title: {
+      text: '(a) Calibration: g&#771;(f<sub>m</sub>)',
+      font: { size: 13, color: '#4A5568' }, x: 0.5, xanchor: 'center',
+    },
+    xaxis: {
+      ...axStyle,
+      title: { text: 'f<sub>m</sub>  (N)', font: { size: 12, color: '#4A5568' } },
+      range: [X_MIN - 10, X_MAX + 10],
+    },
+    yaxis: {
+      ...axStyle,
+      title: { text: 'R<sub>s</sub>  (Ω)', font: { size: 12, color: '#4A5568' } },
+    },
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
+      bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' },
+    },
+  }, cfg);
+
+  // ── RIGHT PLOT: g_hat⁻¹ (Rs → f̂_m) ─────────────────────────────────────
+  const invFitPairs = xCurve
+      .map((fm, i) => ({ x: yFit[i], y: fm }))
+      .sort((a, b) => a.x - b.x);
+  const xInvFit = invFitPairs.map(p => p.x);
+  const yInvFit = invFitPairs.map(p => p.y);
+
+  const rsPlotMin = RS_MIN - 0.4, rsPlotMax = RS_MAX + 0.4;
+  const fmPlotMin = X_MIN - 10,   fmPlotMax = X_MAX + 10;
+
+  // Clamp fm annotation positions to stay inside plot
+  const fm_label_y  = Math.max(fmPlotMin + 15, Math.min(fmPlotMax - 15, fm_curr));
+  const rs_label_x  = Math.max(rsPlotMin + 0.15, Math.min(rsPlotMax - 0.15, Rs_curr));
+
+  // Which Rs value corresponds to fm_band_lo / fm_band_hi
+  // (handles both increasing and decreasing curve)
+  const rs_at_fm_lo = (fm_at_lo <= fm_at_hi) ? Rs_lo : Rs_hi;
+  const rs_at_fm_hi = (fm_at_lo <= fm_at_hi) ? Rs_hi : Rs_lo;
+
+  Plotly.react('plot-inv', [
+    // 0: true inverse (faint)
+    {
+      x: rsCurve, y: fmTrueInv,
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(165,28,48,0.15)', width: 1.2, dash: 'dot' },
+      name: 'True g<sup>−1</sup>(R<sub>s</sub>)',
+    },
+    // 1: calibration data (faint)
+    {
+      x: yData, y: xData,
+      type: 'scatter', mode: 'markers',
+      marker: { color: 'rgba(43,108,176,0.1)', size: 5, symbol: 'circle-open',
+                line: { width: 1.0, color: 'rgba(43,108,176,0.15)' } },
+      name: 'Calibration data',
+      hovertemplate: 'R<sub>s</sub>=%{x:.2f} Ω  f<sub>m</sub>=%{y:.0f} N<extra></extra>',
+    },
+    // 2: g_hat⁻¹ (primary)
+    {
+      x: xInvFit, y: yInvFit,
+      type: 'scatter', mode: 'lines',
+      line: { color: '#276749', width: 2.2 },
+      name: `g&#771;<sup>−1</sup> (degree ${deg})`,
+    },
+    // 3: vertical trapezoid — Rs uncertainty band below the curve
+    // Vertices: bottom-left → top-left (curve at Rs_lo) → top-right (curve at Rs_hi) → bottom-right
+    {
+      x: [Rs_lo,    Rs_lo,    Rs_hi,    Rs_hi,    Rs_lo   ],
+      y: [fmPlotMin, fm_at_lo, fm_at_hi, fmPlotMin, fmPlotMin],
+      type: 'scatter', mode: 'none',
+      fill: 'toself', fillcolor: 'rgba(124,58,237,0.13)',
+      line: { width: 0 },
+      showlegend: false, hoverinfo: 'skip',
+    },
+    // 4: horizontal trapezoid — projected fm uncertainty band left of the curve
+    // Vertices: bottom-left (y-axis) → bottom-right (curve at fm_band_lo) → top-right (curve at fm_band_hi) → top-left (y-axis)
+    {
+      x: [rsPlotMin,   rs_at_fm_lo, rs_at_fm_hi, rsPlotMin,   rsPlotMin  ],
+      y: [fm_band_lo,  fm_band_lo,  fm_band_hi,  fm_band_hi,  fm_band_lo ],
+      type: 'scatter', mode: 'none',
+      fill: 'toself', fillcolor: 'rgba(124,58,237,0.13)',
+      line: { width: 0 },
+      showlegend: false, hoverinfo: 'skip',
+    },
+    // 5: intersection point
+    {
+      x: [Rs_curr], y: [fm_curr],
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#7C3AED', size: 9, symbol: 'circle',
+                line: { color: '#ffffff', width: 1.5 } },
+      showlegend: false, hoverinfo: 'skip',
+    },
+  ], {
+    ...baseLayout,
+    margin: { l: 62, r: 12, t: 36, b: 50 },
+    title: {
+      text: '(b) Inverse Model: g&#771;<sup>−1</sup>(R<sub>s</sub>)',
+      font: { size: 13, color: '#4A5568' }, x: 0.5, xanchor: 'center',
+    },
+    xaxis: {
+      ...axStyle,
+      title: { text: 'R<sub>s</sub>  (Ω)', font: { size: 12, color: '#4A5568' } },
+      range: [rsPlotMin, rsPlotMax],
+    },
+    yaxis: {
+      ...axStyle,
+      title: { text: 'f&#770;<sub>m</sub>  (N)', font: { size: 12, color: '#4A5568' } },
+      range: [fmPlotMin, fmPlotMax],
+    },
+    showlegend: true,
+    legend: {
+      orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
+      bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' },
+    },
+    shapes: [
+      // Vertical crosshair: Rs up to the curve
+      {
+        type: 'line', xref: 'x', yref: 'y',
+        x0: Rs_curr, y0: fmPlotMin, x1: Rs_curr, y1: fm_curr,
+        line: { color: '#7C3AED', width: 1.4, dash: 'dash' },
+      },
+      // Horizontal crosshair: fm back to y-axis
+      {
+        type: 'line', xref: 'x', yref: 'y',
+        x0: rsPlotMin, y0: fm_curr, x1: Rs_curr, y1: fm_curr,
+        line: { color: '#7C3AED', width: 1.4, dash: 'dash' },
+      },
+    ],
+    annotations: [
+      {
+        xref: 'x', yref: 'y',
+        x: rs_label_x, y: fmPlotMin + 12,
+        text: `${Rs_curr.toFixed(2)} Ω`,
+        showarrow: false,
+        font: { color: '#7C3AED', size: 10, family: 'Segoe UI, sans-serif' },
+        xanchor: 'center', yanchor: 'bottom',
+        bgcolor: 'rgba(0,0,0,0)',
+      },
+      {
+        xref: 'x', yref: 'y',
+        x: rsPlotMin + 0.12, y: fm_label_y,
+        text: `${fm_curr.toFixed(0)} N`,
+        showarrow: false,
+        font: { color: '#7C3AED', size: 10, family: 'Segoe UI, sans-serif' },
+        xanchor: 'left', yanchor: 'bottom',
+        bgcolor: 'rgba(0,0,0,0)',
+      },
+    ],
+  }, cfg);
+}
+
+update();
+document.getElementById('reps-slider').addEventListener('input', update);
+document.getElementById('deg-slider').addEventListener('input', update);
+document.getElementById('rs-slider').addEventListener('input', update);
+</script>
+</body>
+</html>
