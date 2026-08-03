@@ -10,7 +10,6 @@
   <meta name="generator" content="quarto-1.9.38">
 
   <meta name="author" content="Sivakumar Balasubramanian">
-  <meta name="dcterms.date" content="2026-08-01">
   <title>Transducers &amp; Instrumentation</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -33,7 +32,7 @@
       vertical-align: middle;
     }
   </style>
-  <link rel="stylesheet" href="measurements-basics_files/libs/revealjs/dist/theme/quarto-05d206714c4bd6f8472f1932fddeb39e.css">
+  <link rel="stylesheet" href="measurements-basics_files/libs/revealjs/dist/theme/quarto-0a64d9d9ab8ff96c6ebda1bca4eebefb.css">
   <link href="measurements-basics_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="measurements-basics_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="measurements-basics_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -146,7 +145,6 @@ Sivakumar Balasubramanian
     </div>
 </div>
 
-  <p class="date">August 1, 2026</p>
 </section>
 <section>
 <section id="ubiquity-of-biomedical-measurements" class="title-slide slide level1 center">
@@ -262,7 +260,7 @@ Sivakumar Balasubramanian
 <p><span class="highlight">1. How is this quantity actually measured?</span></p>
 </div>
 <div class="block">
-<p><span class="highlight">2. How do we know we can trust the number?</span> <span class="deemph">Is it accurate? Precise? Repeatable?</span></p>
+<p><span class="highlight">2. How do we know we can trust the number?</span> <span class="deemph">Is it accurate? Precise?</span></p>
 </div>
 <p><span class="deemph">This module takes on question 2 — what makes a measurement trustworthy. The rest of the course takes on question 1 — one measurement problem at a time.</span></p>
 </section></section>
@@ -560,7 +558,7 @@ Sivakumar Balasubramanian
 <div style="margin-top:-1.0em;">
 <p><span class="math display">\[ V_s = \mathcal{F}\left( \varepsilon_m \right) \]</span></p>
 </div>
-<p><span class="math inline">\(\mathcal{F}\)</span> represents the <span class="highlight">physics of the sensor</span> relating the measurandto its output voltage/current.</p>
+<p><span class="math inline">\(\mathcal{F}\)</span> represents the <span class="highlight">physics of the sensor</span> relating the measurand to its output voltage/current.</p>
 </section>
 <section id="sensor-signal-chain-when-the-source-must-be-probed" class="slide level2">
 <h2>Sensor signal chain when the source must be probed</h2>
@@ -570,8 +568,8 @@ Sivakumar Balasubramanian
 <p><img data-src="figures/probing.svg" class="" style="width:92%; display:block; margin:0 auto;"></p>
 <p><span class="highlight">Examples:</span> <span class="deemph">Ultrasound (echo), bioimpedance (inject current, read voltage), pulse oximetry, imaging — structural measurements often work this way.</span></p>
 </section>
-<section id="loading-all-sensors-distrub-measurements" class="slide level2">
-<h2>Loading – all sensors distrub measurements</h2>
+<section id="loading-all-sensors-disturb-measurements" class="slide level2">
+<h2>Loading – all sensors disturb measurements</h2>
 <p><span class="framesub">Loading happens when physical system are connected together</span></p>
 <p>Consider a sensor whose resistance <span class="math inline">\(R_s\)</span> changes in response to compressive force <span class="math inline">\(f_m \geq 0\)</span> applied on the sensor, with the following physics,</p>
 <div style="margin-top:-1.0em;">
@@ -585,7 +583,7 @@ Sivakumar Balasubramanian
 </iframe>
 </div></div>
 </section>
-<section id="loading-all-sensors-distrub-measurements-1" class="slide level2">
+<section id="loading-all-sensors-distrub-measurements" class="slide level2">
 <h2>Loading – all sensors distrub measurements</h2>
 <p><span class="framesub">Loading happens when physical system are connected together</span></p>
 <p>We connect a real voltmeter (input resistance <span class="math inline">\(r_{in}\)</span>) to measure the voltage across the resister <span class="math inline">\(r_s\)</span></p>
@@ -634,7 +632,7 @@ Sivakumar Balasubramanian
 <p>The general sensor output <span class="math inline">\(y\)</span> is given by, <span class="math display">\[ y = \mathcal{F}_m\left( x_m \right) + \mathcal{F}_i\left( x_i \right) + e_n\]</span></p>
 </div>
 <div class="fragment">
-<p>Sensor design tries to <span class="highlight">maximize</span> <span class="math inline">\(\frac{\partial f}{\partial x}\)</span>, and <span class="highlight">minimize</span> the <span class="math inline">\(\frac{\partial f}{\partial x}\)</span> and <span class="math inline">\(e_n\)</span>.</p>
+<p>Sensor design tries to <span class="highlight">maximize</span> <span class="math inline">\(\frac{\partial f}{\partial x_m}\)</span>, and <span class="highlight">minimize</span> the <span class="math inline">\(\frac{\partial f}{\partial x_i}\)</span> and <span class="math inline">\(e_n\)</span>.</p>
 </div>
 </div>
 </section>
@@ -659,7 +657,7 @@ Sivakumar Balasubramanian
 <li><span class="highlight">Dynamic characteristics</span> - <span class="deemph">Response to time varyng inputs.</span></li>
 <li><span class="highlight">Noise characteristics</span> - <span class="deemph">Response uncertainity associated for a given input.</span></li>
 </ol>
-<p>The knowledge of these three characteristics will inform whether thes sensor is suitable for an application.</p>
+<p>The knowledge of these three characteristics will inform whether these sensor is suitable for an application.</p>
 <p>Knowledge of the full functional form would provide complete characterization of the static and dynamic characteristics: <span class="math display">\[ y(t) = \mathcal{F}_m\left( x_m(t) \right) + \mathcal{F}_i\left( x_i(t) \right) + e_n\]</span></p>
 <p>We will need to identify these functions (at least <span class="math inline">\(\mathcal{F}\left(x_m\left(t\right)\right))\)</span> in practice through a calibration procedure.</p>
 </section></section>
@@ -780,7 +778,7 @@ Sivakumar Balasubramanian
 <p>Two important ideas are associated with measurements:</p>
 <ul>
 <li><span class="highlight">Precision</span>: Measure of the spread of a cluster of measurements for the same true value of the measurand.</li>
-<li><span class="highlight">Accuracy</span>: Measure of location of the spread of of measurements relatie to the “true” value of the measurand.</li>
+<li><span class="highlight">Accuracy</span>: Measure of location of the spread of of measurements relative to the “true” value of the measurand.</li>
 </ul>
 </section>
 <section id="errors-in-measurements-3" class="slide level2">
@@ -1069,7 +1067,7 @@ Sivakumar Balasubramanian
 <p><span class="math display">\[ \Delta y = \sqrt{ \sum_{i=1}^n \left( \frac{\partial f}{\partial x_i} \Delta x_i \right)^2 } \]</span></p>
 </div>
 <div class="fragment">
-<p><span class="highlight">Ammuption</span>: The uncertainties in <span class="math inline">\(x_i\)</span> are mutually independent. If they are correlated, we need to account for them through the covariance terms.</p>
+<p><span class="highlight">Assumption</span>: The uncertainties in <span class="math inline">\(x_i\)</span> are mutually independent. If they are correlated, we need to account for them through the covariance terms.</p>
 </div>
 </section>
 <section id="propagation-of-uncertainty-3" class="slide level2">
@@ -1229,11 +1227,11 @@ Sivakumar Balasubramanian
 <h2>Dynamic characterization — calibration model</h2>
 <p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
 <p><img data-src="figures/sensor-dynamic-model.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
-<p><span class="highlight">Bandwidth of the singal</span> is commonly used to capture the idea of how quickly a signal varies.</p>
+<p><span class="highlight">Bandwidth of the signal</span> is commonly used to capture the idea of how quickly a signal varies.</p>
 <p><span class="math display">\[\text{Higher Bandwidth} \iff \text{Faster signal variation}\]</span></p>
 <p><span class="highlight">Bandwidth of the sensor</span> tells the fastest signal that the sensor can track.</p>
 <p><span class="math display">\[\text{Higher Bandwidth} \iff \text{Tracks faster signal variation}\]</span></p>
-<p>For measuring time varying measurands, we must ennsure: <span class="math display">\[\text{Sensor Bandwidth} &gt; \text{Signal bandwidth}\]</span></p>
+<p>For measuring time varying measurands, we must ensure: <span class="math display">\[\text{Sensor Bandwidth} &gt; \text{Signal bandwidth}\]</span></p>
 </section>
 <section id="dynamic-characterization-calibration-model-4" class="slide level2">
 <h2>Dynamic characterization — calibration model</h2>
