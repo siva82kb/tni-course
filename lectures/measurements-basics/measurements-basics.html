@@ -32,7 +32,7 @@
       vertical-align: middle;
     }
   </style>
-  <link rel="stylesheet" href="measurements-basics_files/libs/revealjs/dist/theme/quarto-0a64d9d9ab8ff96c6ebda1bca4eebefb.css">
+  <link rel="stylesheet" href="measurements-basics_files/libs/revealjs/dist/theme/quarto-86d2a9b6ac47fdfd7a52b2846d279a44.css">
   <link href="measurements-basics_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="measurements-basics_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="measurements-basics_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -201,7 +201,7 @@ Sivakumar Balasubramanian
 </tbody>
 </table>
 </div>
-<p><span class="deemph">In-class: a live SpO<sub>2</sub> / ECG reading on the bench — the same numbers, in front of us.</span></p>
+<!-- [In-class: a live SpO~2~ / ECG reading on the bench — the same numbers, in front of us.]{.deemph} -->
 </section>
 <section id="every-number-triggers-a-decision" class="slide level2">
 <h2>Every number triggers a decision</h2>
@@ -245,13 +245,16 @@ Sivakumar Balasubramanian
 <section id="these-map-onto-what-we-will-focus-on" class="slide level2">
 <h2>These map onto what we will focus on</h2>
 <p><span class="framesub">The course is organised around how each kind of number is obtained.</span></p>
-<p>We focus on five types of biomedical variables:</p>
+<p>We focus on four types of biomedical variables:</p>
 <ul>
 <li><span class="highlight">Kinematics &amp; kinetics</span> <span class="deemph">— movement, force, complex movement quantity and quality measures</span></li>
-<li><span class="highlight">Biopotentials</span> <span class="deemph">— electrical potentials from bioelectric phenomena (ECG, EEG, EMG), and bioimpedance</span></li>
 <li><span class="highlight">Pressure, flow, volume</span> <span class="deemph">— blood pressure, airway pressure, spirometry, cardiac output</span></li>
 <li><span class="highlight">Thermal</span> <span class="deemph">— body and core temperature</span></li>
-<li><span class="highlight">Optical</span> <span class="deemph">— SpO<sub>2</sub>, tissue perfusion, bilirubin</span></li>
+<li><span class="highlight">Biopotentials</span> <span class="deemph">— electrical potentials from bioelectric phenomena (ECG, EEG, EMG), and bioimpedance</span></li>
+</ul>
+<p>The last module will not be on measurement but an important class of medical devices used to diagnose and treat different conditions:</p>
+<ul>
+<li><span class="highlight">Electrical Stimulation</span> <span class="deemph">— electrode–tissue interface for stimulation; monophasic vs biphasic stimulation; functional electrical stimulation (FES); TENS; cardiac pacing</span> <!-- - [Optical]{.highlight} [— SpO~2~, tissue perfusion, bilirubin]{.deemph} --></li>
 </ul>
 </section>
 <section id="two-questions-behind-every-number" class="slide level2">
@@ -303,25 +306,25 @@ Sivakumar Balasubramanian
 </thead>
 <tbody>
 <tr class="odd">
-<td>Nominal</td>
+<td><span class="highlight">Nominal</span></td>
 <td>labels only; no order</td>
 <td>Blood type (A, B, AB, O)</td>
 <td>Only evaluate equalities. <span class="math inline">\(x_1 = x_2\)</span> or <span class="math inline">\(x_1 \neq x_2\)</span></td>
 </tr>
 <tr class="even">
-<td>Ordinal</td>
+<td><span class="highlight">Ordinal</span></td>
 <td>ordered, gaps incomparable</td>
 <td>mRS (0–6); Pain (0–10)</td>
 <td>Only evaluate inequalities. <span class="math inline">\(x_1 &gt; x_2\)</span>, <span class="math inline">\(y_1 = y_2\)</span></td>
 </tr>
 <tr class="odd">
-<td>Interval</td>
+<td><span class="highlight">Interval</span></td>
 <td>equal gaps; no true zero</td>
 <td>Temperature in °C</td>
 <td>All arithmetic operations only on differences. <span class="math inline">\(x_2 - x_1\)</span></td>
 </tr>
 <tr class="even">
-<td>Ratio</td>
+<td><span class="highlight">Ratio</span></td>
 <td>equal gaps <em>and</em> a true zero</td>
 <td>Force, pressure, flow, temperature in °K</td>
 <td>All arithmetic operations on the measurements directly.</td>
@@ -331,6 +334,7 @@ Sivakumar Balasubramanian
 </div>
 <p><span class="deemph">0°C does not mean “no temperature”; 0 N does mean “no force”. That is the interval/ratio distinction.</span></p>
 <p>Physical measurands are almost all <span class="highlight">ratio</span> (force, pressure, flow, current) or <span class="highlight">interval</span> (°C). Clinical assessments are often <span class="highlight">ordinal</span> (mRS, pain, MRC strength).</p>
+<p><span class="cite">mRS — Modified Rankin Scale: a 7-point ordinal scale (0 = no symptoms; 6 = death) for post-stroke disability. van Swieten JC et al., <em>Stroke</em> 1988;19:604–7. · MRC — Medical Research Council muscle strength scale: 6-point ordinal scale (0 = no contraction; 5 = normal power). MRC, <em>Aids to the Examination of the Peripheral Nervous System</em>, HMSO 1981.</span></p>
 </section>
 <section id="quiz-name-the-scale" class="slide level2">
 <h2>Quiz — name the scale</h2>
@@ -365,16 +369,16 @@ Sivakumar Balasubramanian
 <td><span class="fragment highlight">Nominal</span></td>
 </tr>
 <tr class="odd">
-<td>Heart rate (<span class="math inline">\(bpm\)</span>)</td>
+<td>Age of a person (<span class="math inline">\(years\)</span>)</td>
 <td><span class="fragment highlight">Ratio</span></td>
 </tr>
 <tr class="even">
-<td>HIV status (<span class="math inline">\(+ve, -ve\)</span>)</td>
-<td><span class="fragment highlight">Nominal</span></td>
+<td>Heart rate (<span class="math inline">\(bpm\)</span>)</td>
+<td><span class="fragment highlight">Ratio</span></td>
 </tr>
 <tr class="odd">
-<td>Age of a person (<span class="math inline">\(years\)</span>)</td>
-<td><span class="fragment highlight">Ratio</span></td>
+<td>HIV status (<span class="math inline">\(+ve, -ve\)</span>)</td>
+<td><span class="fragment highlight">Nominal</span></td>
 </tr>
 <tr class="even">
 <td>RGB colors (<span class="math inline">\(\#FE0034\)</span>)</td>
@@ -384,10 +388,14 @@ Sivakumar Balasubramanian
 <td>Wavelength of light (<span class="math inline">\(m\)</span>)</td>
 <td><span class="fragment highlight">Ratio</span></td>
 </tr>
+<tr class="even">
+<td>Time since stroke (<span class="math inline">\(days\)</span>)</td>
+<td><span class="fragment highlight">Ratio</span></td>
+</tr>
 </tbody>
 </table>
 </div>
-<p><span class="deemph">Click to reveal — then ask: <em>what does that scale let you do with the number?</em></span></p>
+<!-- [Click to reveal — then ask: *what does that scale let you do with the number?*]{.deemph} -->
 </section></section>
 <section>
 <section id="sensors-and-the-signal-chain-model" class="title-slide slide level1 center">
@@ -401,8 +409,11 @@ Sivakumar Balasubramanian
 <li><span class="highlight">Energy</span> — what drives its dynamic behaviour.</li>
 <li><span class="highlight">State</span> — what tells how the system will evolve with time.</li>
 </ul>
-<p><img data-src="figures/physical-system.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
 <p><span class="deemph">States are what we are primarily interested in measuring:</span> <span class="highlight">voltage, charge, position, velocity, temperature,</span> …</p>
+<div class="fragment">
+<p>Information about a system’s states are available through its <span class="highlight">ports</span> – <span class="deemph">interface through which energy, information (and possibly matter) is exchanged with the outside world.</span></p>
+<p><img data-src="figures/physical-system.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
+</div>
 </section>
 <section id="physical-systems-energy-and-states-are-connected" class="slide level2">
 <h2>Physical systems: energy and states are connected</h2>
@@ -476,9 +487,15 @@ Sivakumar Balasubramanian
 <h2>Connecting physical systems</h2>
 <p><span class="framesub">One framework across every physical domain.</span></p>
 <p><img data-src="figures/two-systems.svg" class="" style="width:90%; display:block; margin:0 auto;"></p>
-<p><span class="highlight">Effort</span> and <span class="highlight">flow</span> at a port are determined by the system’s <span class="highlight">states</span> — they are not themselves states, but they expose the states to the outside world.</p>
+<p><span class="highlight">Effort</span> and <span class="highlight">flow</span> at a port are determined by the system’s <span class="highlight">states</span> — they need not be states themselves, but they expose information about the states to the outside world.</p>
 <div class="block">
 <p><strong>Consequence</strong>: whenever <span class="math inline">\(\varepsilon \times \varphi \neq 0\)</span> at a port, energy flows and the system’s states change.</p>
+</div>
+<div class="question fragment">
+<p><strong>Question:</strong> But states change all the time. Why does this change due to energy flow matter?]</p>
+</div>
+<div class="answer fragment">
+<p><strong>Answer:</strong> Because, this not a natural change. It occured because we connected something else to the system.</p>
 </div>
 </section>
 <section id="connecting-physical-systems-2" class="slide level2">
