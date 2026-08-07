@@ -479,23 +479,21 @@ Sivakumar Balasubramanian
 <h2>Connecting physical systems</h2>
 <p><span class="framesub">One framework across every physical domain.</span></p>
 <p><img data-src="figures/two-systems.svg" class="" style="width:90%; display:block; margin:0 auto;"></p>
-<p>Connecting two systems makes energy exchange <span class="highlight">possible</span> — whether it occurs depends on the mismatch between their port variables - effort <span class="math inline">\(\varepsilon\)</span> and flow <span class="math inline">\(\varphi\)</span>.</p>
-<p>The rate of energy transfer at the connection is:</p>
-<p><span class="math display">\[ \text{power} = \frac{d E}{dt} = \text{effort} \times \text{flow} = \varepsilon \times \varphi \]</span></p>
+<p>When we connect the ports of two systems together, the combined port assumes a single <span class="highlight">effort</span> and a single <span class="highlight">flow</span>.</p>
+<p>These values are <span class="highlight">not free</span> — they are set <span class="highlight">jointly</span> by the physics of <em>both</em> systems: what each can supply, and what each will accept.</p>
+<div class="block">
+<p><strong>Consequence</strong>: neither system is left where it was before the connection.</p>
+</div>
 </section>
 <section id="connecting-physical-systems-1" class="slide level2">
 <h2>Connecting physical systems</h2>
 <p><span class="framesub">One framework across every physical domain.</span></p>
 <p><img data-src="figures/two-systems.svg" class="" style="width:90%; display:block; margin:0 auto;"></p>
-<p><span class="highlight">Effort</span> and <span class="highlight">flow</span> at a port are determined by the system’s <span class="highlight">states</span> — they need not be states themselves, but they expose information about the states to the outside world.</p>
+<p>Connecting two systems makes energy exchange <span class="highlight">possible</span>.</p>
+<p>The rate of energy transfer at the connection is determined by the common effort and flow variables:</p>
+<p><span class="math display">\[ \text{power} = \frac{d E}{dt} = \text{effort} \times \text{flow} = \varepsilon \times \varphi \]</span></p>
 <div class="block">
 <p><strong>Consequence</strong>: whenever <span class="math inline">\(\varepsilon \times \varphi \neq 0\)</span> at a port, energy flows and the system’s states change.</p>
-</div>
-<div class="question fragment">
-<p><strong>Question:</strong> But states change all the time. Why does this change due to energy flow matter?]</p>
-</div>
-<div class="answer fragment">
-<p><strong>Answer:</strong> Because, this not a natural change. It occured because we connected something else to the system.</p>
 </div>
 </section>
 <section id="connecting-physical-systems-2" class="slide level2">
@@ -547,6 +545,46 @@ Sivakumar Balasubramanian
 </table>
 </div>
 <p><span class="deemph">(Thermal is the loose one — temperature × heat-flow is not literally power.)</span></p>
+</section>
+<section id="connecting-physical-systems-a-worked-case" class="slide level2">
+<h2>Connecting physical systems — a worked case</h2>
+<p><span class="framesub">A voltage source and a resistor.</span></p>
+<p><span class="highlight">Seperately</span>, each sits at its own free condition:</p>
+<div class="zebra" style="width:55%; margin:0 auto;">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: center;">Effort (<span class="math inline">\(V\)</span>)</th>
+<th style="text-align: center;">Flow (<span class="math inline">\(I\)</span>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Voltage source</td>
+<td style="text-align: center;"><span class="math inline">\(V_s\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(0\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Resistor</td>
+<td style="text-align: center;"><span class="math inline">\(0\)</span></td>
+<td style="text-align: center;"><span class="math inline">\(0\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><span class="highlight">Each carries its own constraint</span> — its physics, regardless of what it is attached to:</p>
+<ul>
+<li>Voltage source: <span class="math inline">\(\;V = V_s\;\)</span> <span class="deemph">— the current can be anything</span></li>
+<li>Resistor: <span class="math inline">\(\;V = IR\;\)</span> <span class="deemph">— neither variable is fixed on its own</span></li>
+</ul>
+<div class="fragment" style="margin-top:-1.0em;">
+<p>When we connect the two systems, the port must satisfy both constraints at once: <span class="math display">\[ \Longrightarrow \qquad \varepsilon = V_s, \qquad \varphi = \frac{V_s}{R} \]</span></p>
+</div>
+<div class="fragment" style="margin-top:-1.0em;">
+<p>What would happen if had a current source and a resistor?</p>
+<p><span class="math display">\[ \Longrightarrow \qquad \varepsilon = I_s R, \qquad \varphi = I_s \]</span></p>
+</div>
 </section>
 <section id="transducers-sensors-and-actuators" class="slide level2">
 <h2>Transducers, sensors, and actuators</h2>
@@ -600,8 +638,8 @@ Sivakumar Balasubramanian
 </iframe>
 </div></div>
 </section>
-<section id="loading-all-sensors-distrub-measurements" class="slide level2">
-<h2>Loading – all sensors distrub measurements</h2>
+<section id="loading-all-sensors-distrub-measurands" class="slide level2">
+<h2>Loading – all sensors distrub measurands</h2>
 <p><span class="framesub">Loading happens when physical system are connected together</span></p>
 <p>We connect a real voltmeter (input resistance <span class="math inline">\(r_{in}\)</span>) to measure the voltage across the resister <span class="math inline">\(r_s\)</span></p>
 <div class="columns" style="align-items:flex-start; margin-top:0.5em; width:80%; margin-left:auto; margin-right:auto;">
@@ -676,7 +714,7 @@ Sivakumar Balasubramanian
 </ol>
 <p>The knowledge of these three characteristics will inform whether these sensor is suitable for an application.</p>
 <p>Knowledge of the full functional form would provide complete characterization of the static and dynamic characteristics: <span class="math display">\[ y(t) = \mathcal{F}_m\left( x_m(t) \right) + \mathcal{F}_i\left( x_i(t) \right) + e_n\]</span></p>
-<p>We will need to identify these functions (at least <span class="math inline">\(\mathcal{F}\left(x_m\left(t\right)\right))\)</span> in practice through a calibration procedure.</p>
+<p>We will need to identify these functions (at least <span class="math inline">\(\mathcal{F}\left(x_m\left(t\right)\right))\)</span> in practice through a characterisation procedure.</p>
 </section></section>
 <section>
 <section id="error-analysis-in-measurements" class="title-slide slide level1 center">
