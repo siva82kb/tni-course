@@ -657,11 +657,11 @@ Sivakumar Balasubramanian
 <h2>Loading — a realistic circuit</h2>
 <p><span class="framesub">Real current sources, real wires, real voltmeters.</span></p>
 <div class="block">
-<p><strong>Assignment 1.1</strong> — Real sensors have non-ideal sources and wires. Derive <span class="math inline">\(\hat{v}_s\)</span> for the realistic circuit (finite <span class="math inline">\(r_p\)</span>, <span class="math inline">\(r_{w_1}\)</span>, <span class="math inline">\(r_{w_2}\)</span>, <span class="math inline">\(r_{in}\)</span>). Understand the effect of the different resistances, show that the expresion reduces to the ideal case when the resistance have appropraite values.</p>
+<p><strong>Assignment 1.1</strong> — Real sensors have non-ideal sources and wires. Derive <span class="math inline">\(\hat{v}_s\)</span> for the realistic circuit (finite <span class="math inline">\(r_p\)</span>, <span class="math inline">\(r_{w_1}\)</span>, <span class="math inline">\(r_{w_2}\)</span>, <span class="math inline">\(r_{in}\)</span>). Understand the effect of the different resistances, and under what conditions (<span class="math inline">\(r_{w*}\)</span> and <span class="math inline">\(r_{in}\)</span>) is there no loading.</p>
 </div>
 <p><img data-src="figures/asgn01-01-loading-realistic.svg" class="" style="width:70%; display:block; margin:0 auto;"></p>
 <div class="fragment">
-<p>We have similiar loading effects in all other domains (e.g.&nbsp;mechanical, thermal, egc.). <span class="math inline">\(\implies\)</span> We should be careful when connecting physical systems.</p>
+<p>We have similiar loading effects in other domains as well (e.g.&nbsp;mechanical, thermal, egc.). <span class="math inline">\(\implies\)</span> We should be careful when connecting physical systems.</p>
 </div>
 </section>
 <section id="measurements-from-a-real-sensor" class="slide level2">
@@ -724,9 +724,13 @@ Sivakumar Balasubramanian
 <section id="errors-in-measurements" class="slide level2">
 <h2>Errors in Measurements</h2>
 <p><span class="framesub">All measurements have errors</span></p>
+<div style="margin-top:-0.5em;">
 <p>All measurements have error associated with them.</p>
+</div>
+<div style="margin-top:-0.5em;">
 <p>The appropriate interpretation of a measurement requires knowledge of the uncertainity associated with the measurement.</p>
-<div style="width:100%; margin:0 auto; font-size:0.75em;">
+</div>
+<div style="width:100%; margin-top:-0.5em; font-size:0.75em;">
 <table class="caption-top">
 <caption>CODATA 2022</caption>
 <colgroup>
@@ -805,8 +809,12 @@ Sivakumar Balasubramanian
 </tbody>
 </table>
 </div>
-<div class="fragment">
+<div class="fragment" style="margin-top:-0.5em">
 <p><span class="deemph">If all measurements have errors, how can we know some of them exactly?</span></p>
+</div>
+<div class="answer fragment" style="font-size:0.7em;">
+<p><strong>Answer:</strong> Because those four are not <span class="highlight">measured</span> — they are <span class="highlight">defined</span>. In the SI, their numerical values are <span class="highlight">fixed by convention</span> and the units derived from them: <span class="math inline">\(c\)</span> defines the metre (1983), while <span class="math inline">\(h\)</span>, <span class="math inline">\(e\)</span> and <span class="math inline">\(k_B\)</span> define the kilogram, ampere and kelvin (2019 revision).</p>
+<p>The uncertainty has not disappeared — it has <span class="highlight">moved</span>. We no longer ask how well we know <span class="math inline">\(c\)</span>; we ask how well we can <span class="highlight">reproduce a metre in the lab</span>.</p>
 </div>
 </section>
 <section id="errors-in-measurements-1" class="slide level2">
