@@ -1167,11 +1167,31 @@ Sivakumar Balasubramanian
 <h1>Sensor Calibration</h1>
 
 </section>
+<section id="sensor-characterization" class="slide level2">
+<h2>Sensor characterization</h2>
+<p><span class="framesub">What is the input-output relationship of a sensor?</span></p>
+<p><img data-src="figures/sensor-io.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
+<p>We measure and know <span class="math inline">\(y\)</span>, which will be used to infer the unknown measurand <span class="math inline">\(x_m\)</span>.</p>
+<p>The relationship between the measurement and measurand is given by, <span class="math display">\[ y = f\left( x_m \right) \]</span></p>
+<p>But, in practice we know <span class="math inline">\(y\)</span> and wish to determine <span class="math inline">\(x_m\)</span>, thus we need <span class="math inline">\(f^{-1}\)</span>, <span class="math display">\[ x_m = f^{-1}\left( y \right)\]</span></p>
+</section>
+<section id="sensor-characterization-1" class="slide level2">
+<h2>Sensor characterization</h2>
+<p><span class="framesub">What is the input-output relationship of a sensor?</span></p>
+<p><img data-src="figures/sensor-io.svg" class="" style="width:60%; display:block; margin:0 auto;"></p>
+<p>All sensors are <span class="highlight">non-linear dynamical system</span>, <span class="math display">\[ y(t) = f\left( x_m (t) \right) \]</span></p>
+<p>In some cases, we can ignore:</p>
+<ul>
+<li>the dynamics and treat the sensor as a <span class="highlight">static system</span> – <span class="highlight"><em>memoryless system</em></span>.</li>
+<li>non-linearity and treat the system as <span class="highlight">linear</span>.</li>
+</ul>
+<p>In all cases, we will assume the sensor is <span class="highlight">time-invariant</span>.</p>
+</section>
 <section id="static-characterization" class="slide level2">
 <h2>Static characterization</h2>
 <p><span class="framesub">Response of a sensor to fixed inputs measurands</span></p>
 <p>When performing static calibration, we must ensure that the sensor’s transient die out before reading the sensor output <span class="math inline">\(y_i\)</span> for the input <span class="math inline">\(x_{m_i}\)</span>.</p>
-<iframe src="figures/settling-response.html" width="100%" height="400px" style="border:none;" sandbox="allow-scripts">
+<iframe src="figures/settling-response.html" width="100%" height="450px" style="border:none;" sandbox="allow-scripts">
 </iframe>
 </section>
 <section id="static-characterization-1" class="slide level2">
@@ -1255,11 +1275,11 @@ Sivakumar Balasubramanian
 </iframe>
 </div>
 </section>
-<section id="dynamic-characterization-calibration-model" class="slide level2">
-<h2>Dynamic characterization — calibration model</h2>
+<section id="dynamic-characterization" class="slide level2">
+<h2>Dynamic characterization</h2>
 <p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
 <div class="block">
-<p><strong>Clinical motivation:</strong> A sidestream capnograph designed for adults has a long sampling tube and large analyser chamber — together these create a large time constant τ. A neonate breathes at 50–60 breaths/min (one breath every ~1 s). If an adult sampling line is used, the CO₂ waveform is smeared beyond recognition and ETCO₂ reads near zero — not because the sensor is broken, but because its dynamics are too slow for the signal. <span class="deemph"><em>(numbers to be updated after reading the papers)</em></span></p>
+<p><strong>Clinical motivation:</strong> A sidestream capnograph designed for adults has a long sampling tube and large analyser chamber — together these create a large time constant τ. A neonate breathes at 50–60 breaths/min (one breath every ~1 s). If an adult sampling line is used, the CO₂ waveform is smeared beyond recognition and ETCO₂ reads near zero — not because the sensor is broken, but because its dynamics are too slow for the signal.</p>
 </div>
 <div style="font-size: 0.90em">
 <p><strong>Static characteristics</strong>:</p>
@@ -1272,23 +1292,23 @@ Sivakumar Balasubramanian
 <p>For a <span class="highlight">linear time invariant (LTI)</span> sensor, the differential equation becomes a linear constant coefficient one.</p>
 </div>
 </section>
-<section id="dynamic-characterization-calibration-model-1" class="slide level2">
-<h2>Dynamic characterization — calibration model</h2>
+<section id="dynamic-characterization-1" class="slide level2">
+<h2>Dynamic characterization</h2>
 <p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
 <p><img data-src="figures/sensor-dynamic-model.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
 <p>The capnographic sensor difference understanding using the above model</p>
 </section>
-<section id="dynamic-characterization-calibration-model-2" class="slide level2">
-<h2>Dynamic characterization — calibration model</h2>
+<section id="dynamic-characterization-2" class="slide level2">
+<h2>Dynamic characterization</h2>
 <p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
 <div style="text-align: center; margin-top: 0.5em;">
 <iframe src="figures/sensor-dynamics-demo.html" width="100%" height="600px" style="border:none;" sandbox="allow-scripts">
 </iframe>
 </div>
 </section>
-<section id="dynamic-characterization-calibration-model-3" class="slide level2">
-<h2>Dynamic characterization — calibration model</h2>
-<p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
+<section id="dynamic-characterization-3" class="slide level2">
+<h2>Dynamic characterization</h2>
+<p><span class="framesub">The bandwidths of the measurand and sensor matter</span></p>
 <p><img data-src="figures/sensor-dynamic-model.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
 <p><span class="highlight">Bandwidth of the signal</span> is commonly used to capture the idea of how quickly a signal varies.</p>
 <p><span class="math display">\[\text{Higher Bandwidth} \iff \text{Faster signal variation}\]</span></p>
@@ -1296,8 +1316,19 @@ Sivakumar Balasubramanian
 <p><span class="math display">\[\text{Higher Bandwidth} \iff \text{Tracks faster signal variation}\]</span></p>
 <p>For measuring time varying measurands, we must ensure: <span class="math display">\[\text{Sensor Bandwidth} &gt; \text{Signal bandwidth}\]</span></p>
 </section>
-<section id="dynamic-characterization-calibration-model-4" class="slide level2">
-<h2>Dynamic characterization — calibration model</h2>
+<section id="dynamic-characterization-4" class="slide level2">
+<h2>Dynamic characterization</h2>
+<p><span class="framesub">The bandwidths of the measurand and sensor matter</span></p>
+<div style="font-size:0.8em">
+<p>For measuring time varying measurands, we must ensure: <span class="math display">\[\text{Sensor Bandwidth} &gt; \text{Signal bandwidth}\]</span></p>
+</div>
+<div style="text-align: center; margin-top: 0.5em;">
+<iframe src="figures/sensor-bandwidth.html" width="100%" height="500px" style="border:none;" sandbox="allow-scripts">
+</iframe>
+</div>
+</section>
+<section id="dynamic-characterization-5" class="slide level2">
+<h2>Dynamic characterization</h2>
 <p><span class="framesub">Identifying the dynamic characteristics of the sensor</span></p>
 <p><strong>Capnograph example:</strong> If we know <span class="math inline">\(\tau\)</span>, we can verify that the sensor’s bandwidth exceeds the signal’s bandwidth — and choose or reject equipment accordingly.</p>
 <p>For LTI sensors, there are several ways dynamic characterization can be done. All these methods follow the same common template:</p>

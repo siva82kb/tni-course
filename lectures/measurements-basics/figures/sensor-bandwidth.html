@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #ffffff;
+    color: #2D3748;
+    padding: 0.6rem 1rem 0.4rem;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  #controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 2rem; flex-wrap: wrap; font-size: 0.88rem;
+  }
+  .ctrl { display: flex; align-items: center; gap: 0.45rem; }
+  .ctrl label { color: #718096; font-weight: 600; white-space: nowrap; }
+  input[type="range"] { width: 130px; cursor: pointer; }
+  #fm-slider { accent-color: #2B6CB0; }
+  #fs-slider { accent-color: #A51C30; }
+  .val { font-weight: 700; min-width: 2.6rem; }
+  .val-fm { color: #2B6CB0; }
+  .val-fs { color: #A51C30; }
+  .unit { color: #A0AEC0; font-size: 0.82rem; }
+  #readout {
+    display: flex; justify-content: center; gap: 1.6rem;
+    font-size: 0.85rem; color: #4A5568;
+  }
+  #readout b { font-weight: 700; }
+  .good { color: #2F855A; }
+  .warn { color: #A51C30; }
+  #plot { flex: 1; min-height: 0; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <div class="ctrl">
+    <label>Measurand BW</label>
+    <input type="range" id="fm-slider" min="0.3" max="1.6" step="0.02" value="0.7">
+    <span id="fm-val" class="val val-fm">5.0</span>
+    <span class="unit">Hz</span>
+  </div>
+  <div class="ctrl">
+    <label>Sensor BW (&minus;3 dB)</label>
+    <input type="range" id="fs-slider" min="0.0" max="2.3" step="0.02" value="1.7">
+    <span id="fs-val" class="val val-fs">50</span>
+    <span class="unit">Hz</span>
+  </div>
+</div>
+
+<div id="readout">
+  <span>BW ratio <b id="ratio-val">10.0&times;</b></span>
+  <span>RMS error <b id="err-val">&mdash;</b></span>
+  <span>of which shape <b id="amp-val">&mdash;</b></span>
+  <span>delay <b id="del-val">&mdash;</b></span>
+</div>
+
+<div id="plot"></div>
+
+<script>
+// ── Simulation constants ──────────────────────────────────────────────
+const T_PERIOD = 2.0;          // s  — signal period (so the sum is exact)
+const DT       = 0.001;        // s  — 1 kHz sampling
+const N_T      = Math.round(T_PERIOD / DT);
+const DF       = 1 / T_PERIOD; // Hz — harmonic spacing (0.5 Hz)
+const N_COMP   = 250;          // components, up to 125 Hz
+const BW_ORDER = 4;            // Butterworth order of the measurand spectrum
+
+// Critically damped 2nd-order:  H(s) = wn^2 / (s + wn)^2
+//   |H(jw)| = wn^2 / (w^2 + wn^2)     ->  -6 dB at w = wn
+//   -3 dB point is at w = sqrt(sqrt(2)-1) * wn = 0.6436 * wn
+const K3DB = Math.sqrt(Math.SQRT2 - 1);   // 0.643594...
+
+// ── Random phases, redrawn on every page load ─────────────────────────
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+const SEED  = Math.floor(Math.random() * 1e6);
+const rngP  = seededRand(SEED);
+const FREQ  = [], PHASE = [];
+for (let k = 1; k <= N_COMP; k++) {
+  FREQ.push(k * DF);
+  PHASE.push(2 * Math.PI * rngP());
+}
+
+// Pre-compute cos/sin of the phase-advanced argument for speed
+const TIME = Array.from({length: N_T}, (_, i) => i * DT);
+
+// ── Model ─────────────────────────────────────────────────────────────
+function measurandMag(f, fm) {                    // Butterworth envelope
+  return 1 / Math.sqrt(1 + Math.pow(f / fm, 2 * BW_ORDER));
+}
+function sensorResp(f, f3db) {                    // critically damped 2nd order
+  const wn = 2 * Math.PI * f3db / K3DB;
+  const w  = 2 * Math.PI * f;
+  return { mag: wn * wn / (w * w + wn * wn),
+           phase: -2 * Math.atan2(w, wn) };
+}
+
+function build(fm, f3db) {
+  // --- component amplitudes and the sensor acting on each ---
+  const A = [], M = [], TH = [];
+  for (let k = 0; k < N_COMP; k++) {
+    A.push(measurandMag(FREQ[k], fm));
+    const h = sensorResp(FREQ[k], f3db);
+    M.push(h.mag); TH.push(h.phase);
+  }
+  // normalise the measurand to unit RMS so the waveform stays comparable
+  let p = 0;
+  for (let k = 0; k < N_COMP; k++) p += 0.5 * A[k] * A[k];
+  const norm = 1 / Math.sqrt(p);
+  for (let k = 0; k < N_COMP; k++) A[k] *= norm;
+
+  // --- time series ---
+  const wn  = 2 * Math.PI * f3db / K3DB;
+  const tau = 2 / wn;                    // group delay at DC, seconds
+  const x = new Float64Array(N_T), y = new Float64Array(N_T),
+        yA = new Float64Array(N_T);      // output with the bulk delay removed
+  for (let k = 0; k < N_COMP; k++) {
+    const wk = 2 * Math.PI * FREQ[k], ak = A[k], mk = ak * M[k];
+    const ph = PHASE[k], th = ph + TH[k], ta = th + wk * tau;
+    // one step of phase per sample, applied as a rotation
+    const c = Math.cos(wk * DT), sn = Math.sin(wk * DT);
+    let xr = Math.cos(ph), xi = Math.sin(ph);
+    let yr = Math.cos(th), yi = Math.sin(th);
+    let ar = Math.cos(ta), ai = Math.sin(ta);
+    for (let i = 0; i < N_T; i++) {
+      x[i]  += ak * xr;
+      y[i]  += mk * yr;
+      yA[i] += mk * ar;
+      let t;
+      t = xr * c - xi * sn; xi = xr * sn + xi * c; xr = t;
+      t = yr * c - yi * sn; yi = yr * sn + yi * c; yr = t;
+      t = ar * c - ai * sn; ai = ar * sn + ai * c; ar = t;
+    }
+  }
+
+  // --- error metrics ---
+  let se = 0, sa = 0, sx = 0, pk = 0, pkx = 0;
+  for (let i = 0; i < N_T; i++) {
+    const e = y[i] - x[i], ea = yA[i] - x[i];
+    se += e * e; sa += ea * ea; sx += x[i] * x[i];
+    if (Math.abs(e) > pk) pk = Math.abs(e);
+    if (Math.abs(x[i]) > pkx) pkx = Math.abs(x[i]);
+  }
+  const rmsErr = Math.sqrt(se / sx) * 100;
+  const ampErr = Math.sqrt(sa / sx) * 100;   // error with delay taken out
+  const pkErr  = pk / pkx * 100;
+  const delay  = tau * 1000;                 // ms
+
+  // --- spectra (dB) ---
+  const fGrid = [], xdB = [], hdB = [], ydB = [];
+  for (let i = 0; i <= 300; i++) {
+    const f = Math.pow(10, -1 + 3.4 * i / 300);            // 0.1 .. 250 Hz
+    const mx = measurandMag(f, fm);
+    const mh = sensorResp(f, f3db).mag;
+    fGrid.push(f);
+    xdB.push(20 * Math.log10(Math.max(mx, 1e-6)));
+    hdB.push(20 * Math.log10(Math.max(mh, 1e-6)));
+    ydB.push(20 * Math.log10(Math.max(mx * mh, 1e-6)));
+  }
+
+  // --- sensor step response.  The axis is scaled to the SENSOR's own
+  //     timescale, so this panel depends only on the sensor.  The measurand's
+  //     period is marked separately when the two timescales are comparable. ---
+  const tStepMax = 7 / wn;
+  const stepT = [], stepY = [];
+  for (let i = 0; i < 240; i++) {
+    const t = tStepMax * i / 239;
+    stepT.push(t);
+    stepY.push(1 - Math.exp(-wn * t) * (1 + wn * t));
+  }
+
+  return { x, y, fGrid, xdB, hdB, ydB, rmsErr, ampErr, pkErr, delay,
+           stepT, stepY, tStepMax, tMeas: 1 / fm };
+}
+
+// ── Traces ────────────────────────────────────────────────────────────
+function traces(d, fm, f3db) {
+  return [
+    { x: TIME, y: Array.from(d.x), type: 'scattergl', mode: 'lines',
+      line: { color: '#2B6CB0', width: 1.4 }, name: 'Measurand',
+      hovertemplate: 't=%{x:.2f}s  x=%{y:.3f}<extra></extra>' },
+    { x: TIME, y: Array.from(d.y), type: 'scattergl', mode: 'lines',
+      line: { color: '#A51C30', width: 1.4 }, name: 'Sensor output',
+      hovertemplate: 't=%{x:.2f}s  y=%{y:.3f}<extra></extra>' },
+
+    { x: d.fGrid, y: d.xdB, xaxis: 'x2', yaxis: 'y2',
+      type: 'scatter', mode: 'lines',
+      line: { color: '#2B6CB0', width: 1.6 },
+      name: 'Measurand spectrum', hoverinfo: 'skip' },
+    { x: d.fGrid, y: d.hdB, xaxis: 'x2', yaxis: 'y2',
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 1.6, dash: 'dash' },
+      name: 'Sensor response', hoverinfo: 'skip' },
+    { x: d.fGrid, y: d.ydB, xaxis: 'x2', yaxis: 'y2',
+      type: 'scatter', mode: 'lines',
+      line: { color: '#1A202C', width: 1.1 },
+      name: 'Output spectrum', hoverinfo: 'skip' },
+
+    { x: d.stepT, y: d.stepY, xaxis: 'x3', yaxis: 'y3',
+      type: 'scatter', mode: 'lines',
+      line: { color: '#A51C30', width: 1.6 },
+      name: 'Step response', showlegend: false,
+      hovertemplate: 't=%{x:.3f}s  %{y:.2f}<extra></extra>' },
+  ];
+}
+
+function layout(d, fm, f3db) {
+  return {
+    margin: { l: 50, r: 12, t: 10, b: 44 },
+    xaxis: { title: { text: 'Time  (s)', font: { size: 12, color: '#4A5568' } },
+             range: [0, T_PERIOD], domain: [0, 0.60],
+             showgrid: false, linecolor: '#CBD5E0',
+             tickfont: { color: '#718096', size: 10 } },
+    yaxis: { title: { text: 'Signal', font: { size: 12, color: '#4A5568' } },
+             anchor: 'x', domain: [0, 1], showgrid: false, linecolor: '#CBD5E0',
+             tickfont: { color: '#718096', size: 10 } },
+    xaxis2: { title: { text: 'Frequency  (Hz)', font: { size: 11, color: '#4A5568' } },
+              type: 'log', domain: [0.70, 1.0], anchor: 'y2',
+              range: [-1, 2.4],
+              showgrid: true, gridcolor: '#EDF2F7', linecolor: '#CBD5E0',
+              tickfont: { color: '#718096', size: 9 } },
+    yaxis2: { title: { text: 'Magnitude (dB)', font: { size: 11, color: '#4A5568' } },
+              anchor: 'x2', domain: [0.50, 1.0], range: [-60, 8],
+              showgrid: true, gridcolor: '#EDF2F7', linecolor: '#CBD5E0',
+              tickfont: { color: '#718096', size: 9 } },
+    xaxis3: { title: { text: 'Time  (s)', font: { size: 11, color: '#4A5568' } },
+              domain: [0.70, 1.0], anchor: 'y3',
+              range: [0, d.tStepMax],
+              showgrid: false, linecolor: '#CBD5E0',
+              tickfont: { color: '#718096', size: 9 } },
+    yaxis3: { title: { text: 'Step resp.', font: { size: 11, color: '#4A5568' } },
+              anchor: 'x3', domain: [0, 0.30], range: [-0.05, 1.15],
+              showgrid: false, linecolor: '#CBD5E0',
+              tickfont: { color: '#718096', size: 9 } },
+    plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+    showlegend: true,
+    legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.13,
+              bgcolor: 'rgba(255,255,255,0.85)',
+              font: { size: 10, color: '#4A5568' } },
+    hovermode: 'closest',
+    uirevision: 'bw',
+    shapes: [
+      { type: 'line', xref: 'x2', yref: 'y2', x0: fm, x1: fm, y0: -60, y1: 8,
+        line: { color: 'rgba(43,108,176,0.45)', width: 1, dash: 'dot' } },
+      { type: 'line', xref: 'x2', yref: 'y2', x0: f3db, x1: f3db, y0: -60, y1: 8,
+        line: { color: 'rgba(165,28,48,0.45)', width: 1, dash: 'dot' } },
+      { type: 'line', xref: 'paper', yref: 'y2', x0: 0.70, x1: 1.0,
+        y0: -3, y1: -3,
+        line: { color: 'rgba(113,128,150,0.5)', width: 1, dash: 'dot' } },
+      { type: 'line', xref: 'paper', yref: 'y3', x0: 0.70, x1: 1.0,
+        y0: 1, y1: 1,
+        line: { color: 'rgba(113,128,150,0.45)', width: 1, dash: 'dot' } },
+      ...(d.tMeas <= d.tStepMax ? [{
+        type: 'line', xref: 'x3', yref: 'y3',
+        x0: d.tMeas, x1: d.tMeas, y0: -0.05, y1: 1.15,
+        line: { color: 'rgba(43,108,176,0.55)', width: 1.2, dash: 'dash' },
+      }] : []),
+    ],
+    annotations: [
+      { xref: 'paper', yref: 'paper', x: 0.85, y: 0.345, xanchor: 'center',
+        text: 'Sensor step response', showarrow: false,
+        font: { size: 10, color: '#718096' } },
+      ...(d.tMeas <= d.tStepMax ? [{
+        xref: 'x3', yref: 'y3', x: d.tMeas, y: 1.10,
+        text: '1/f<sub>m</sub>', showarrow: false, xanchor: 'left',
+        font: { size: 9, color: '#2B6CB0' },
+      }] : []),
+    ],
+    font: { family: 'Segoe UI, system-ui, sans-serif' },
+  };
+}
+
+// ── Wiring ────────────────────────────────────────────────────────────
+const cfg = { displayModeBar: false, responsive: true };
+const sFm = document.getElementById('fm-slider');
+const sFs = document.getElementById('fs-slider');
+const vFm = document.getElementById('fm-val');
+const vFs = document.getElementById('fs-val');
+const vRatio = document.getElementById('ratio-val');
+const vErr = document.getElementById('err-val');
+const vAmp = document.getElementById('amp-val');
+const vDel = document.getElementById('del-val');
+
+function params() {                       // sliders are log10(Hz)
+  return { fm: Math.pow(10, parseFloat(sFm.value)),
+           fs: Math.pow(10, parseFloat(sFs.value)) };
+}
+function fmt(f) { return f >= 10 ? f.toFixed(0) : f.toFixed(1); }
+
+function update(first) {
+  const { fm, fs } = params();
+  vFm.textContent = fmt(fm);
+  vFs.textContent = fmt(fs);
+  const d = build(fm, fs);
+
+  const ratio = fs / fm;
+  vRatio.textContent = ratio.toFixed(1) + '×';
+  vErr.textContent   = d.rmsErr.toFixed(1) + '%';
+  vAmp.textContent   = d.ampErr.toFixed(1) + '%';
+  vDel.textContent   = d.delay.toFixed(1) + ' ms';
+  const cls = d.rmsErr < 5 ? 'good' : 'warn';
+  [vRatio, vErr, vAmp].forEach(el => { el.className = cls; });
+
+  const fn = first ? Plotly.newPlot : Plotly.react;
+  fn('plot', traces(d, fm, fs), layout(d, fm, fs), cfg);
+}
+
+update(true);
+sFm.addEventListener('input', () => update(false));
+sFs.addEventListener('input', () => update(false));
+</script>
+</body>
+</html>

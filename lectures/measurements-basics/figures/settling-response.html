@@ -29,17 +29,38 @@
   #T-slider   { accent-color: #2B6CB0; }
   #t1-slider  { accent-color: #D69E2E; }
   #t2-slider  { accent-color: #D69E2E; }
+  #z-slider   { accent-color: #A51C30; }
+  #fn-slider  { accent-color: #A51C30; }
+  #nl-slider  { accent-color: #2B6CB0; }
   .val { font-weight: 700; min-width: 2.8rem; }
   .val-T  { color: #2B6CB0; }
   .val-t1 { color: #D69E2E; }
   .val-t2 { color: #D69E2E; }
+  .val-z  { color: #A51C30; }
+  .val-fn { color: #A51C30; }
+  .val-nl { color: #2B6CB0; }
   .unit { color: #A0AEC0; font-size: 0.82rem; }
+  .opt { display: flex; align-items: center; gap: 0.2rem;
+         font-weight: 500; color: #4A5568; cursor: pointer; }
+  .opt input { cursor: pointer; accent-color: #2F855A; }
+  .ctrl.off { opacity: 0.35; }
+  .ctrl.off input { cursor: not-allowed; }
   #plot { flex: 1; min-height: 0; }
 </style>
 </head>
 <body>
 
 <div id="controls">
+  <div class="ctrl">
+    <label>Sensor</label>
+    <label class="opt"><input type="radio" name="lin" value="lin" checked> linear</label>
+    <label class="opt"><input type="radio" name="lin" value="nl"> nonlinear</label>
+  </div>
+  <div class="ctrl">
+    <label>Response</label>
+    <label class="opt"><input type="radio" name="dyn" value="stat"> static</label>
+    <label class="opt"><input type="radio" name="dyn" value="dyn" checked> dynamic</label>
+  </div>
   <div class="ctrl">
     <label>Wait time</label>
     <input type="range" id="T-slider" min="0.4" max="4.0" step="0.05" value="0.8">
@@ -58,17 +79,33 @@
     <span id="t2-val" class="val val-t2">90</span>
     <span class="unit">%</span>
   </div>
+  <div class="ctrl" id="ctrl-z">
+    <label>&zeta;</label>
+    <input type="range" id="z-slider" min="0.10" max="1.60" step="0.05" value="0.50">
+    <span id="z-val" class="val val-z">0.50</span>
+  </div>
+  <div class="ctrl" id="ctrl-fn">
+    <label>f<sub>n</sub></label>
+    <input type="range" id="fn-slider" min="0.4" max="10.0" step="0.1" value="1.5">
+    <span id="fn-val" class="val val-fn">1.5</span>
+    <span class="unit">Hz</span>
+  </div>
+  <div class="ctrl" id="ctrl-nl">
+    <label>Saturation a</label>
+    <input type="range" id="nl-slider" min="2.0" max="30.0" step="0.5" value="8.00">
+    <span id="nl-val" class="val val-nl">8.00</span>
+  </div>
 </div>
 
 <div id="plot"></div>
 
 <script>
-const ZETA    = 0.35;
-const WN      = 2 * Math.PI * 2.0;
-const WD      = WN * Math.sqrt(1 - ZETA * ZETA);
 const DT      = 0.005;
-const T_TOTAL = 10.0;
-const N_STEPS = 50;
+const T_TOTAL = 100.0;
+const N_STEPS = 300;
+const X_MIN   = 0.5;    // input range
+const X_MAX   = 10.0;
+const T_VIEW  = 12.0;   // initial visible time window
 
 // --- Seeded PRNG ---
 function seededRand(seed) {
@@ -76,38 +113,64 @@ function seededRand(seed) {
   return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
 }
 
-// --- Random up-down targets (fixed) ---
-const rng = seededRand(42);
-const TARGETS = [0];
-let lastSign = 1;
+// --- Random up-down targets. The seed is drawn once per page load, so the
+//     staircase differs on every refresh but stays fixed while sliders move. ---
+const SEED = Math.floor(Math.random() * 1e6);
+const rng = seededRand(SEED);
+const TARGETS = [X_MIN + rng() * (X_MAX - X_MIN)];
 for (let i = 0; i < N_STEPS + 2; i++) {
   const prev = TARGETS[TARGETS.length - 1];
-  if (rng() < 0.75) lastSign = -lastSign;
-  const jump = rng() * 1.3 + 0.6;
-  TARGETS.push(Math.max(0.2, prev + lastSign * jump));
+  let v, tries = 0;
+  do {                                   // sample the whole input range,
+    v = X_MIN + rng() * (X_MAX - X_MIN); // rejecting steps that are too small
+    tries++;
+  } while (Math.abs(v - prev) < 1.2 && tries < 10);
+  TARGETS.push(v);
 }
-const minT = Math.min(...TARGETS);
-for (let i = 0; i < TARGETS.length; i++) TARGETS[i] -= (minT - 0.3);
 
 // --- Pre-generated noise ---
-const rngN = seededRand(137);
+const rngN = seededRand(SEED + 977);
 const NOISE_AMP = 0.035;
-const N_NOISE   = 5000;
+const N_NOISE   = 40000;
 const NOISE = Array.from({length: N_NOISE}, () => {
   const u1 = Math.max(rngN(), 1e-10), u2 = rngN();
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * NOISE_AMP;
 });
 
-// --- Step response ---
-function stepResp(t, from, to) {
-  if (t <= 0) return from;
-  const delta = to - from;
-  const e   = Math.exp(-ZETA * WN * t);
-  const phi = ZETA / Math.sqrt(1 - ZETA * ZETA);
-  return to - delta * e * (Math.cos(WD * t) + phi * Math.sin(WD * t));
+// --- Unit step response of the 2nd-order LTI block, any damping ---
+function unitStep(t, zeta, wn) {
+  if (t <= 0) return 0;
+  if (zeta < 1 - 1e-6) {                       // underdamped
+    const wd  = wn * Math.sqrt(1 - zeta * zeta);
+    const phi = zeta / Math.sqrt(1 - zeta * zeta);
+    return 1 - Math.exp(-zeta * wn * t) *
+               (Math.cos(wd * t) + phi * Math.sin(wd * t));
+  }
+  if (zeta <= 1 + 1e-6) {                      // critically damped
+    return 1 - Math.exp(-wn * t) * (1 + wn * t);
+  }
+  const r  = Math.sqrt(zeta * zeta - 1);       // overdamped
+  const s1 = -wn * (zeta - r);
+  const s2 = -wn * (zeta + r);
+  return 1 + (s2 * Math.exp(s1 * t) - s1 * Math.exp(s2 * t)) / (s1 - s2);
 }
 
-function buildData(T, frac1, frac2) {
+// --- LTI dynamics: response of the internal state z ---
+function stepResp(t, from, to, zeta, wn) {
+  return from + (to - from) * unitStep(t, zeta, wn);
+}
+
+// --- Static sensor characteristic, applied AFTER the dynamics (Wiener form).
+//     Sensitivity K is deliberately NOT unity: the sensor output is a
+//     different quantity from the measurand, and must be calibrated.
+//       linear:     y = K*z
+//       nonlinear:  y = a*tanh(K*z/a)   (saturating; large a => linear)
+const K = 0.75;                       // static sensitivity  [output / input]
+function g(z, a, nonlinear) {
+  return nonlinear ? a * Math.tanh(K * z / a) : K * z;
+}
+
+function buildData(T, frac1, frac2, zeta, wn, a, nonlinear, dynamic) {
   const nPtsStep = Math.round(T / DT);
   const i1 = Math.round(frac1 * nPtsStep);   // index within step for window start
   const i2 = Math.round(frac2 * nPtsStep);   // index within step for window end
@@ -116,6 +179,7 @@ function buildData(T, frac1, frac2) {
   const tArr = [], outArr = [];
   const hilT = [], hilY = [];       // highlighted window (NaN-gapped)
   const mT = [], mY = [];           // reading dots (mean over window)
+  const calX = [], calY = [];       // calibration pairs: (input, mean reading)
   const meanLT = [], meanLY = [];   // horizontal mean lines (NaN-gapped)
 
   let y0 = TARGETS[0], noiseIdx = 0;
@@ -127,7 +191,8 @@ function buildData(T, frac1, frac2) {
     for (let i = 0; i <= nPtsStep; i++) {
       const t = s * T + i * DT;
       if (t > T_TOTAL + 1e-9) break;
-      const v = stepResp(i * DT, y0, yF) + NOISE[noiseIdx % N_NOISE];
+      const z = dynamic ? stepResp(i * DT, y0, yF, zeta, wn) : yF;
+      const v = g(z, a, nonlinear) + NOISE[noiseIdx % N_NOISE];
       noiseIdx++;
       tArr.push(t);
       outArr.push(v);
@@ -145,17 +210,19 @@ function buildData(T, frac1, frac2) {
       const tMid = winPts[Math.floor(winPts.length / 2)].t;
       mT.push(tMid);
       mY.push(mean);
+      calX.push(yF);                // the input level held during this step
+      calY.push(mean);              // what we actually read
 
       // Horizontal mean line across the window
       meanLT.push(winPts[0].t, winPts[winPts.length - 1].t, NaN);
       meanLY.push(mean, mean, NaN);
     }
 
-    y0 = stepResp(T, y0, yF);
+    y0 = dynamic ? stepResp(T, y0, yF, zeta, wn) : yF;
     if ((s + 1) * T >= T_TOTAL) break;
   }
 
-  // --- Staircase input ---
+  // --- Input (measurand) staircase ---
   const inpT = [], inpY = [];
   for (let s = 0; s < N_STEPS; s++) {
     const t0 = s * T;
@@ -179,12 +246,26 @@ function buildData(T, frac1, frac2) {
     });
   }
 
-  const visibleTargets = TARGETS.slice(0, lastVisibleStep + 2);
+  // --- True static characteristic y = g(x) over the input range ---
+  const xLo = Math.min(...TARGETS.slice(0, lastVisibleStep + 2));
+  const xHi = Math.max(...TARGETS.slice(0, lastVisibleStep + 2));
+  const curveX = [], curveY = [];
+  for (let i = 0; i <= 140; i++) {
+    const x = xLo + (xHi - xLo) * i / 140;
+    curveX.push(x);
+    curveY.push(g(x, a, nonlinear));
+  }
+
+  const visIn  = TARGETS.slice(0, lastVisibleStep + 2);
+  const visOut = visIn.map(v => g(v, a, nonlinear));
+  const visibleTargets = visIn.concat(visOut);
+  const pad = 0.12 * (Math.max(...visibleTargets) - Math.min(...visibleTargets)) + 0.2;
   return {
     tArr, outArr, hilT, hilY, mT, mY, meanLT, meanLY,
-    inpT, inpY, shapes,
-    yMin: Math.min(...visibleTargets) - 0.6,
-    yMax: Math.max(...visibleTargets) + 0.6,
+    inpT, inpY, shapes, calX, calY, curveX, curveY,
+    xLo, xHi,
+    yMin: Math.min(...visibleTargets) - pad,
+    yMax: Math.max(...visibleTargets) + pad,
   };
 }
 
@@ -194,11 +275,11 @@ function buildTraces(d) {
       x: d.inpT, y: d.inpY,
       type: 'scatter', mode: 'lines',
       line: { color: '#A51C30', width: 1.0, shape: 'hv' },
-      name: 'True value', hoverinfo: 'skip',
+      name: 'Input (measurand)', hoverinfo: 'skip',
     },
     {
       x: d.tArr, y: d.outArr,
-      type: 'scatter', mode: 'lines',
+      type: 'scattergl', mode: 'lines',
       line: { color: 'rgba(43,108,176,0.45)', width: 1.0 },
       name: 'Sensor output',
       hovertemplate: 't=%{x:.2f} s  y=%{y:.3f}<extra></extra>',
@@ -214,32 +295,65 @@ function buildTraces(d) {
     {
       x: d.meanLT, y: d.meanLY,
       type: 'scatter', mode: 'lines',
-      line: { color: '#1A202C', width: 1.5 },
+      line: { color: '#1A202C', width: 0.9 },
       name: 'Mean', hoverinfo: 'skip',
       connectgaps: false,
+    },
+    {
+      x: d.curveX, y: d.curveY,
+      xaxis: 'x2', yaxis: 'y2',
+      type: 'scatter', mode: 'lines',
+      line: { color: 'rgba(165,28,48,0.35)', width: 3 },
+      name: 'True static characteristic', hoverinfo: 'skip',
+    },
+    {
+      x: d.calX, y: d.calY,
+      xaxis: 'x2', yaxis: 'y2',
+      type: 'scatter', mode: 'markers',
+      marker: { color: '#1A202C', size: 3.2, symbol: 'circle',
+                line: { color: '#ffffff', width: 0.4 } },
+      name: 'Calibration points',
+      hovertemplate: 'x=%{x:.2f}  y=%{y:.3f}<extra></extra>',
     },
   ];
 }
 
 function buildLayout(d) {
   return {
-    margin: { l: 55, r: 20, t: 12, b: 50 },
+    margin: { l: 55, r: 15, t: 12, b: 38 },
     xaxis: {
       title: { text: 'Time  (s)', font: { size: 12, color: '#4A5568' } },
-      range: [0, T_TOTAL],
+      range: [0, T_VIEW], domain: [0, 0.63],
       showgrid: false, linecolor: '#CBD5E0', zerolinecolor: '#CBD5E0',
       tickfont: { color: '#718096', size: 10 },
+      rangeslider: { visible: true, thickness: 0.12,
+                     bgcolor: '#F7FAFC', bordercolor: '#CBD5E0', borderwidth: 1 },
     },
     yaxis: {
       title: { text: 'Signal', font: { size: 12, color: '#4A5568' } },
-      range: [d.yMin, d.yMax],
+      range: [d.yMin, d.yMax], anchor: 'x',
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 10 },
+    },
+    xaxis2: {
+      title: { text: 'Input  x', font: { size: 12, color: '#4A5568' } },
+      domain: [0.73, 1.0], anchor: 'y2',
+      range: [d.xLo - 0.25, d.xHi + 0.25],
+      showgrid: false, linecolor: '#CBD5E0',
+      tickfont: { color: '#718096', size: 10 },
+    },
+    yaxis2: {
+      title: { text: 'Output  y', font: { size: 12, color: '#4A5568' } },
+      anchor: 'x2', range: [d.yMin, d.yMax],
       showgrid: false, linecolor: '#CBD5E0',
       tickfont: { color: '#718096', size: 10 },
     },
     plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
     showlegend: true,
-    legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.08, bgcolor: 'rgba(255,255,255,0.85)', font: { size: 11, color: '#4A5568' } },
+    legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12, bgcolor: 'rgba(255,255,255,0.85)', font: { size: 10, color: '#4A5568' } },
     hovermode: 'closest',
+    dragmode: 'pan',
+    uirevision: 'settling',      // preserve scroll/zoom across slider updates
     shapes: d.shapes,
     font: { family: 'Segoe UI, system-ui, sans-serif' },
   };
@@ -250,34 +364,71 @@ const cfg = { displayModeBar: false, responsive: true };
 const sliderT  = document.getElementById('T-slider');
 const sliderT1 = document.getElementById('t1-slider');
 const sliderT2 = document.getElementById('t2-slider');
+const sliderZ  = document.getElementById('z-slider');
+const sliderFn = document.getElementById('fn-slider');
+const sliderNL = document.getElementById('nl-slider');
 const tValEl   = document.getElementById('T-val');
 const t1ValEl  = document.getElementById('t1-val');
 const t2ValEl  = document.getElementById('t2-val');
+const zValEl   = document.getElementById('z-val');
+const fnValEl  = document.getElementById('fn-val');
+const nlValEl  = document.getElementById('nl-val');
+
+const ctrlZ  = document.getElementById('ctrl-z');
+const ctrlFn = document.getElementById('ctrl-fn');
+const ctrlNL = document.getElementById('ctrl-nl');
+const radLin = document.querySelectorAll('input[name="lin"]');
+const radDyn = document.querySelectorAll('input[name="dyn"]');
+
+function picked(nodes) {
+  for (const n of nodes) if (n.checked) return n.value;
+  return nodes[0].value;
+}
 
 function getParams() {
   const T    = parseFloat(sliderT.value);
   let   f1   = parseInt(sliderT1.value) / 100;
   let   f2   = parseInt(sliderT2.value) / 100;
   if (f1 >= f2) f2 = Math.min(1, f1 + 0.05);
-  return { T, f1, f2 };
+  const zeta = parseFloat(sliderZ.value);
+  const fn   = parseFloat(sliderFn.value);
+  const a    = parseFloat(sliderNL.value);
+  const nonlinear = picked(radLin) === 'nl';
+  const dynamic   = picked(radDyn) === 'dyn';
+  return { T, f1, f2, zeta, wn: 2 * Math.PI * fn, fn, a, nonlinear, dynamic };
+}
+
+// Dim and disable the controls that do not apply to the current sensor
+function syncEnabled(nonlinear, dynamic) {
+  ctrlZ.classList.toggle('off', !dynamic);
+  ctrlFn.classList.toggle('off', !dynamic);
+  ctrlNL.classList.toggle('off', !nonlinear);
+  sliderZ.disabled  = !dynamic;
+  sliderFn.disabled = !dynamic;
+  sliderNL.disabled = !nonlinear;
 }
 
 function update() {
-  const { T, f1, f2 } = getParams();
+  const { T, f1, f2, zeta, wn, fn, a, nonlinear, dynamic } = getParams();
   tValEl.textContent  = T.toFixed(2);
   t1ValEl.textContent = Math.round(f1 * 100);
   t2ValEl.textContent = Math.round(f2 * 100);
-  const d = buildData(T, f1, f2);
+  zValEl.textContent  = zeta.toFixed(2);
+  fnValEl.textContent = fn.toFixed(1);
+  nlValEl.textContent = a.toFixed(2);
+  syncEnabled(nonlinear, dynamic);
+  const d = buildData(T, f1, f2, zeta, wn, a, nonlinear, dynamic);
   Plotly.react('plot', buildTraces(d), buildLayout(d), cfg);
 }
 
-const { T: T0, f1: f10, f2: f20 } = getParams();
-const d0 = buildData(T0, f10, f20);
+const p0 = getParams();
+syncEnabled(p0.nonlinear, p0.dynamic);
+const d0 = buildData(p0.T, p0.f1, p0.f2, p0.zeta, p0.wn, p0.a, p0.nonlinear, p0.dynamic);
 Plotly.newPlot('plot', buildTraces(d0), buildLayout(d0), cfg);
 
-sliderT.addEventListener('input', update);
-sliderT1.addEventListener('input', update);
-sliderT2.addEventListener('input', update);
+[sliderT, sliderT1, sliderT2, sliderZ, sliderFn, sliderNL]
+  .forEach(s => s.addEventListener('input', update));
+[...radLin, ...radDyn].forEach(r => r.addEventListener('change', update));
 </script>
 </body>
 </html>
