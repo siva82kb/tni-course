@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One point, two reference frames</title>
+
+<!-- Same macros as the deck, so \v and \m mean here what they mean there. -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)']],
+      macros: {
+        v: ['{\\mathbf{#1}}', 1],
+        m: ['{\\begin{bmatrix}#1\\end{bmatrix}}', 1]
+      }
+    },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --a-mid:    #2B6CB0;
+    --b-mid:    #A51C30;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  #stage.panning  { cursor: move; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .lbl {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 14px; font-style: italic; white-space: nowrap;
+    pointer-events: none; user-select: none;
+  }
+  .lbl b { font-style: normal; font-weight: 700; }
+  .lbl sub { font-size: 0.68em; font-style: normal; }
+  .lbl.ip { font-size: 11.5px; }
+  .lbl.ip .num { font-variant-numeric: tabular-nums; font-style: normal;
+                 font-weight: 700; padding-left: 2px; }
+
+  /* Compact by design: this sits on a slide. */
+  #panel {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #E2E8F0; border-radius: 5px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel .hd.a { color: var(--a-mid); }
+  #panel .hd.b { color: var(--b-mid); }
+
+  /* The native range thumb keeps its ~16px size whatever height is set, so it
+     overflows a tight row. Track and thumb are drawn explicitly instead. */
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 74px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px; margin-top: -3.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .sl { margin-bottom: 4px; }
+  #panel .sl.a input[type=range]::-webkit-slider-thumb { background: var(--a-mid); }
+  #panel .sl.a input[type=range]::-moz-range-thumb     { background: var(--a-mid); }
+  #panel .sl.b input[type=range]::-webkit-slider-thumb { background: var(--b-mid); }
+  #panel .sl.b input[type=range]::-moz-range-thumb     { background: var(--b-mid); }
+
+  #panel input[type=checkbox] {
+    width: 11px; height: 11px; vertical-align: -1px; margin: 0 2px 0 0;
+  }
+  #panel .k { display: inline-block; width: 2.5em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .val { display: inline-block; width: 2.6em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel .cbrow { white-space: nowrap; }
+  #panel .cbrow label { display: inline-block; margin-right: 6px; }
+  #panel .ax { font-family: "Linux Libertine O", Georgia, serif;
+               font-weight: 700; font-style: normal; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin-top: 3px;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel .hint { font-size: 9.5px; color: var(--warmgray); margin-top: 3px; }
+  #panel button.vp {
+    font-family: "Linux Libertine O", Georgia, serif; font-size: 12px;
+    font-weight: 700; width: 30px; margin: 0 3px 0 0; padding: 1px 0;
+  }
+  #panel button.vp.on { color: #fff; border-color: transparent; }
+  #panel button#vpA.on { background: var(--a-mid); }
+  #panel button#vpB.on { background: var(--b-mid); }
+
+  #readout {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 18px; font-size: 14px;
+  }
+  #readout .item { display: flex; align-items: center; gap: 5px; }
+  #readout .bmat {
+    display: inline-flex; flex-direction: column; align-items: center;
+    padding: 1px 5px; line-height: 1.2;
+    font-variant-numeric: tabular-nums; font-size: 12px;
+  }
+  #readout .a .bmat { border-left: 1.2px solid var(--a-mid);
+                      border-right: 1.2px solid var(--a-mid); color: var(--a-mid); }
+  #readout .b .bmat { border-left: 1.2px solid var(--b-mid);
+                      border-right: 1.2px solid var(--b-mid); color: var(--b-mid); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">draw the world in frame</div>
+      <button id="vpA" class="vp on">A</button><button id="vpB" class="vp">B</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">point P &mdash; in frame A</div>
+      <label class="sl"><span class="k">x</span>
+        <input type="range" id="spx" min="-8" max="8" step="0.5" value="3">
+        <span class="val" id="vpx">3</span></label>
+      <label class="sl"><span class="k">y</span>
+        <input type="range" id="spy" min="-8" max="8" step="0.5" value="4">
+        <span class="val" id="vpy">4</span></label>
+      <label class="sl"><span class="k">z</span>
+        <input type="range" id="spz" min="-8" max="8" step="0.5" value="3">
+        <span class="val" id="vpz">3</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd b">frame B &mdash; origin o<sub>B</sub><sup>A</sup></div>
+      <label class="sl b"><span class="k">x</span>
+        <input type="range" id="sox" min="-6" max="6" step="0.5" value="3">
+        <span class="val" id="vox">3</span></label>
+      <label class="sl b"><span class="k">y</span>
+        <input type="range" id="soy" min="-6" max="6" step="0.5" value="-2">
+        <span class="val" id="voy">-2</span></label>
+      <label class="sl b"><span class="k">z</span>
+        <input type="range" id="soz" min="-6" max="6" step="0.5" value="1">
+        <span class="val" id="voz">1</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd b">frame B &mdash; rotation R<sub>B</sub><sup>A</sup></div>
+      <label class="sl b"><span class="k">roll</span>
+        <input type="range" id="srr" min="-180" max="180" step="5" value="0">
+        <span class="val" id="vrr">0&deg;</span></label>
+      <label class="sl b"><span class="k">pitch</span>
+        <input type="range" id="srp" min="-180" max="180" step="5" value="0">
+        <span class="val" id="vrp">0&deg;</span></label>
+      <label class="sl b"><span class="k">yaw</span>
+        <input type="range" id="sry" min="-180" max="180" step="5" value="35">
+        <span class="val" id="vry">35&deg;</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">project r<sub>P</sub> onto</div>
+      <div class="cbrow"><span class="ax" style="color:#2B6CB0">A:</span>
+        <label><input type="checkbox" id="cpax"> x</label>
+        <label><input type="checkbox" id="cpay"> y</label>
+        <label><input type="checkbox" id="cpaz"> z</label></div>
+      <div class="cbrow"><span class="ax" style="color:#A51C30">B:</span>
+        <label><input type="checkbox" id="cpbx"> x</label>
+        <label><input type="checkbox" id="cpby"> y</label>
+        <label><input type="checkbox" id="cpbz"> z</label></div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">coordinate box</div>
+      <div class="cbrow">
+        <label><input type="checkbox" id="cbxa">
+          <span class="ax" style="color:#2B6CB0">A</span></label>
+        <label><input type="checkbox" id="cbxb">
+          <span class="ax" style="color:#A51C30">B</span></label></div>
+    </div>
+
+    <div class="grp">
+      <label><input type="checkbox" id="cgrid" checked> ground grid</label>
+      <label><input type="checkbox" id="clink" checked> show o<sub>B</sub><sup>A</sup></label>
+      <button id="reset">reset view</button>
+      <div class="hint">drag &middot; shift-drag pans &middot; scroll</div>
+    </div>
+  </div>
+
+  <div id="readout">
+    <span class="item a"><span id="symA">\(\v{r}_{P}^{A} =\)</span>
+      <span class="bmat"><span id="max">3</span><span id="may">4</span><span id="maz">3</span></span></span>
+    <span class="item b"><span id="symB">\(\v{r}_{P}^{B} =\)</span>
+      <span class="bmat"><span id="mbx">0</span><span id="mby">0</span><span id="mbz">0</span></span></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  // Two frames on screen, so colour encodes the FRAME: A blues, B reds.
+  // Axes within a frame are separated by lightness and by their labels.
+  // (In the single-frame widget colour encodes the axis instead — there is
+  // no frame to confuse, and x/y/z = r/g/b is the convention students meet
+  // in every robotics tool. The two rules must not be mixed in one figure.)
+  var COL = {
+    A: { x: "#2C5282", y: "#2B6CB0", z: "#7EB2E4", vec: "#1A365D" },
+    B: { x: "#742A2A", y: "#A51C30", z: "#E06B7A", vec: "#5C1220" }
+  };
+  var GRAY = "#718096", GRID = "#CBD5E0";
+
+  // ---- state ---------------------------------------------------------
+  var DEF  = { az: 40 * Math.PI / 180, el: 22 * Math.PI / 180, scale: 42,
+               px: 0, py: 0 };
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: 0, py: 0 };
+  var P    = { x: 3, y: 4, z: 3 };          // r_P^A, set directly
+  var OB   = { x: 3, y: -2, z: 1 };          // o_B^A
+  var ROT  = { roll: 0, pitch: 0, yaw: 35 };
+  var showProj = { Ax: false, Ay: false, Az: false,
+                   Bx: false, By: false, Bz: false };
+  var showGrid = true, showLink = true;
+  var showBox  = { A: false, B: false };
+
+  var AXIS = 8.5, W = 0, H = 0, DPR = 1;
+  var KEYS = ["x", "y", "z"];
+
+  // ---- rotation: R = Rz(yaw) Ry(pitch) Rx(roll), columns = B's basis in A --
+  function rotMat() {
+    var d = Math.PI / 180;
+    var cr = Math.cos(ROT.roll * d),  sr = Math.sin(ROT.roll * d);
+    var cp = Math.cos(ROT.pitch * d), sp = Math.sin(ROT.pitch * d);
+    var cy = Math.cos(ROT.yaw * d),   sy = Math.sin(ROT.yaw * d);
+    return [
+      [cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr],
+      [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr],
+      [-sp,     cp * sr,                cp * cr]
+    ];
+  }
+  function col(R, j) { return [R[0][j], R[1][j], R[2][j]]; }
+  function tmul(R, v) {                       // R^T v
+    return [R[0][0] * v[0] + R[1][0] * v[1] + R[2][0] * v[2],
+            R[0][1] * v[0] + R[1][1] * v[1] + R[2][1] * v[2],
+            R[0][2] * v[0] + R[1][2] * v[1] + R[2][2] * v[2]];
+  }
+  function add(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+  function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function scl(a, s) { return [a[0] * s, a[1] * s, a[2] * s]; }
+
+  // ---- orthographic projection ---------------------------------------
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    return { right: [-sa, ca, 0],
+             up:    [-ca * se, -sa * se, ce],
+             dir:   [ca * ce, sa * ce, se] };
+  }
+  function dot(a, p) { return a[0] * p[0] + a[1] * p[1] + a[2] * p[2]; }
+
+  var B3 = basis();
+  function project(p) {
+    return { x: W / 2 + view.px + dot(B3.right, p) * view.scale,
+             y: H / 2 + view.py - dot(B3.up, p) * view.scale,
+             d: dot(B3.dir, p) };
+  }
+
+  // ---- which frame the world is drawn in ------------------------------
+  // Everything is built in A's coordinates. Choosing B re-expresses every
+  // point as R^T(q - o) before it is drawn, so B's axes come out upright and
+  // axis-aligned and A is the one that looks rotated and displaced. Nothing
+  // physical changes — only which frame the picture is told from.
+  var VP = "A", VIEW_R = null, VIEW_O = null;
+  function toView(q) {
+    return (VP === "A") ? q : tmul(VIEW_R, sub(q, VIEW_O));
+  }
+
+  // ---- scene ----------------------------------------------------------
+  var scene = [];
+  function seg(a, b, s) {
+    var ta = toView(a), tb = toView(b);
+    scene.push({ a: ta, b: tb, s: s,
+                 d: (dot(B3.dir, ta) + dot(B3.dir, tb)) / 2 });
+  }
+  // Already in display coordinates — used for the ground grid, which belongs
+  // to whichever frame the world is currently drawn in.
+  function segRaw(a, b, s) {
+    scene.push({ a: a, b: b, s: s, d: (dot(B3.dir, a) + dot(B3.dir, b)) / 2 });
+  }
+  function strokeSeg(it) {
+    var s = it.s, A = project(it.a), Bp = project(it.b);
+    ctx.save();
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.width || 1;
+    ctx.setLineDash(s.dash || []);
+    ctx.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(Bp.x, Bp.y); ctx.stroke();
+    if (s.arrow) {
+      var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = s.arrow, w = 0.42;
+      ctx.setLineDash([]); ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.moveTo(Bp.x, Bp.y);
+      ctx.lineTo(Bp.x - L * Math.cos(ang - w), Bp.y - L * Math.sin(ang - w));
+      ctx.lineTo(Bp.x - L * Math.cos(ang + w), Bp.y - L * Math.sin(ang + w));
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function disc(p, color, r) {
+    var s = project(toView(p));
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2 * Math.PI); ctx.fill();
+  }
+
+  // ---- labels ---------------------------------------------------------
+  var labels = {};
+  function mkLabel(key, html, color) {
+    var d = document.createElement("div");
+    d.className = "lbl";
+    d.innerHTML = html;
+    if (color) d.style.color = color;
+    stage.appendChild(d);
+    labels[key] = d;
+  }
+  ["A", "B"].forEach(function (F) {
+    KEYS.forEach(function (a) {
+      mkLabel(F + a, "\\(\\v{" + a + "}_{" + F + "}\\)", COL[F][a]);
+    });
+    mkLabel("O" + F, "\\(O_{" + F + "}\\)", COL[F].vec);
+  });
+  mkLabel("P", "\\(P\\)", "#2D3748");
+
+  ["A", "B"].forEach(function (F) {
+    KEYS.forEach(function (a) {
+      var d = document.createElement("div");
+      d.className = "lbl ip";
+      d.innerHTML = '<span class="sym">\\(\\v{' + a + '}_{' + F +
+                    '}^{\\top}\\,\\v{r}_{P}^{' + F + '} =\\)</span>' +
+                    '<span class="num"></span>';
+      d.style.color = COL[F][a];
+      stage.appendChild(d);
+      labels["ip" + F + a] = d;
+    });
+  });
+
+  function placeLabel(key, p, dx, dy, show) {
+    var d = labels[key];
+    if (show === false) { d.style.display = "none"; return; }
+    d.style.display = "";
+    var s = project(toView(p));
+    d.style.left = (s.x + (dx || 0)) + "px";
+    d.style.top  = (s.y + (dy || 0)) + "px";
+  }
+
+  function fmt(v) {
+    if (Math.abs(v) < 5e-3) v = 0;
+    return (Math.abs(v % 1) < 1e-9) ? String(v) : v.toFixed(2);
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    B3 = basis();
+    scene = [];
+
+    var R  = rotMat();
+    var oB = [OB.x, OB.y, OB.z];
+    VIEW_R = R; VIEW_O = oB;
+    var p  = [P.x, P.y, P.z];
+    var rB = tmul(R, sub(p, oB));            // r_P^B = R^T (r_P^A - o_B^A)
+
+    var origin = { A: [0, 0, 0], B: oB };
+    var uvec   = {
+      A: { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] },
+      B: { x: col(R, 0), y: col(R, 1), z: col(R, 2) }
+    };
+    var coord  = { A: { x: p[0], y: p[1], z: p[2] },
+                   B: { x: rB[0], y: rB[1], z: rB[2] } };
+
+    if (showGrid) {
+      for (var g = -8; g <= 8; g++) {
+        var al = (g === 0) ? 0.85 : 0.45;
+        segRaw([g, -8, 0], [g, 8, 0], { color: GRID, width: 0.6, alpha: al });
+        segRaw([-8, g, 0], [8, g, 0], { color: GRID, width: 0.6, alpha: al });
+      }
+    }
+
+    // faint full-length axis lines, then the unit basis arrows
+    ["A", "B"].forEach(function (F) {
+      var O = origin[F];
+      KEYS.forEach(function (a) {
+        var u = uvec[F][a];
+        seg(sub(O, scl(u, AXIS)), add(O, scl(u, AXIS)),
+            { color: COL[F][a], width: 0.8, dash: [1, 4], alpha: 0.45 });
+        seg(O, add(O, u), { color: COL[F][a], width: 2.4, arrow: 8.5 });
+      });
+    });
+
+    // the displacement of B's origin
+    if (showLink) {
+      seg([0, 0, 0], oB, { color: GRAY, width: 1.4, dash: [5, 3], alpha: 0.9 });
+    }
+
+    // ---- the coordinate box, in each frame's OWN basis ------------------
+    // Edges run along that frame's axes, so B's box is rotated with B. Every
+    // edge is one of the frame's three coordinates, which is the point.
+    ["A", "B"].forEach(function (F) {
+      if (!showBox[F]) return;
+      var O = origin[F];
+      var e = KEYS.map(function (a) { return scl(uvec[F][a], coord[F][a]); });
+      var V = [];
+      for (var i = 0; i < 8; i++) {
+        var q = O;
+        if (i & 1) q = add(q, e[0]);
+        if (i & 2) q = add(q, e[1]);
+        if (i & 4) q = add(q, e[2]);
+        V.push(q);
+      }
+      var bs = { color: COL[F].y, width: 1, dash: [4, 3], alpha: 0.5 };
+      for (var v = 0; v < 8; v++) {
+        for (var b = 0; b < 3; b++) {
+          var w2 = v | (1 << b);
+          if (w2 !== v) seg(V[v], V[w2], bs);
+        }
+      }
+    });
+
+    // the same point, seen from each frame
+    seg([0, 0, 0], p, { color: COL.A.vec, width: 1.9, arrow: 8.5 });
+    seg(oB, p,         { color: COL.B.vec, width: 1.9, arrow: 8.5 });
+
+    // ---- projections: foot F = O + (r . u) u, exact right angle at F ----
+    var feet = {};
+    ["A", "B"].forEach(function (F) {
+      KEYS.forEach(function (a) {
+        if (!showProj[F + a]) return;
+        var O = origin[F], u = uvec[F][a], c = coord[F][a];
+        var Ft = add(O, scl(u, c));
+        feet[F + a] = Ft;
+
+        // the coordinate as a thin length laid along the axis — deliberately
+        // thinner than the basis vector, so it reads as a measurement
+        seg(O, Ft, { color: COL[F][a], width: 1.4, alpha: 0.95 });
+        seg(p, Ft, { color: COL[F][a], width: 1, dash: [3, 3], alpha: 0.85 });
+
+        var w = sub(p, Ft);
+        var wn = Math.hypot(w[0], w[1], w[2]);
+        if (wn > 1e-6 && Math.abs(c) > 1e-6) {
+          var s = 0.3, sgn = c > 0 ? -1 : 1;
+          var uu = scl(u, s * sgn), ww = scl(w, s / wn);
+          var c1 = add(Ft, uu), c2 = add(c1, ww), c3 = add(Ft, ww);
+          var rs = { color: COL[F][a], width: 1.2, alpha: 0.95 };
+          seg(c1, c2, rs); seg(c2, c3, rs);
+        }
+      });
+    });
+
+    scene.sort(function (m, n) { return m.d - n.d; });
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < scene.length; i++) strokeSeg(scene[i]);
+
+    disc([0, 0, 0], COL.A.vec, 3.4);
+    disc(oB, COL.B.vec, 3.4);
+    disc(p, "#2D3748", 4.2);
+
+    // labels
+    ["A", "B"].forEach(function (F) {
+      var O = origin[F];
+      KEYS.forEach(function (a) {
+        placeLabel(F + a, add(O, scl(uvec[F][a], 1.36)), 0, 0);
+      });
+      placeLabel("O" + F, O, F === "A" ? -15 : 15, 14);
+    });
+    placeLabel("P", p, 13, -12);
+
+    var IPOFF = { x: [-14, 16], y: [16, 16], z: [-20, -9] };
+    ["A", "B"].forEach(function (F) {
+      KEYS.forEach(function (a) {
+        var Ft = feet[F + a];
+        if (!Ft) { placeLabel("ip" + F + a, [0, 0, 0], 0, 0, false); return; }
+        var O = origin[F];
+        labels["ip" + F + a].querySelector(".num").textContent = fmt(coord[F][a]);
+        placeLabel("ip" + F + a, add(O, scl(sub(Ft, O), 0.78)),
+                   IPOFF[a][0], IPOFF[a][1]);
+        disc(Ft, COL[F][a], 3.2);
+      });
+    });
+
+    document.getElementById("max").textContent = fmt(p[0]);
+    document.getElementById("may").textContent = fmt(p[1]);
+    document.getElementById("maz").textContent = fmt(p[2]);
+    document.getElementById("mbx").textContent = fmt(rB[0]);
+    document.getElementById("mby").textContent = fmt(rB[1]);
+    document.getElementById("mbz").textContent = fmt(rB[2]);
+  }
+
+  // ---- interaction ----------------------------------------------------
+  var drag = null;
+  stage.addEventListener("contextmenu", function (e) {
+    if (!e.target.closest("#panel")) e.preventDefault();   // right-drag pans
+  });
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#panel")) return;
+    // shift-drag, right-drag or middle-drag pans; plain drag orbits.
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el,
+             px: view.px, py: view.py, pan: pan };
+    stage.classList.add(pan ? "panning" : "dragging");
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) {
+      view.px = drag.px + (e.clientX - drag.x);
+      view.py = drag.py + (e.clientY - drag.y);
+    } else {
+      view.az = drag.az - (e.clientX - drag.x) * 0.008;
+      view.el = Math.max(-1.45, Math.min(1.45, drag.el + (e.clientY - drag.y) * 0.008));
+    }
+    draw();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null;
+    stage.classList.remove("dragging"); stage.classList.remove("panning");
+    if (e && e.pointerId !== undefined) {
+      try { stage.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+  }
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+  stage.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    view.scale = Math.max(16, Math.min(150,
+      view.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    draw();
+  }, { passive: false });
+
+  function bind(id, valId, obj, key, suffix) {
+    var s = document.getElementById(id);
+    s.addEventListener("input", function () {
+      obj[key] = parseFloat(s.value);
+      document.getElementById(valId).innerHTML = fmt(obj[key]) + (suffix || "");
+      draw();
+    });
+  }
+  bind("spx", "vpx", P,   "x");
+  bind("spy", "vpy", P,   "y");
+  bind("spz", "vpz", P,   "z");
+  bind("sox", "vox", OB,  "x");
+  bind("soy", "voy", OB,  "y");
+  bind("soz", "voz", OB,  "z");
+  bind("srr", "vrr", ROT, "roll",  "&deg;");
+  bind("srp", "vrp", ROT, "pitch", "&deg;");
+  bind("sry", "vry", ROT, "yaw",   "&deg;");
+
+  ["A", "B"].forEach(function (F) {
+    KEYS.forEach(function (a) {
+      document.getElementById("cp" + F.toLowerCase() + a)
+        .addEventListener("change", function () {
+          showProj[F + a] = this.checked; draw();
+        });
+    });
+  });
+  ["A", "B"].forEach(function (F) {
+    document.getElementById("cbx" + F.toLowerCase())
+      .addEventListener("change", function () { showBox[F] = this.checked; draw(); });
+  });
+  document.getElementById("cgrid").addEventListener("change", function () {
+    showGrid = this.checked; draw();
+  });
+  document.getElementById("clink").addEventListener("change", function () {
+    showLink = this.checked; draw();
+  });
+  ["A", "B"].forEach(function (F) {
+    document.getElementById("vp" + F).addEventListener("click", function () {
+      VP = F;
+      document.getElementById("vpA").classList.toggle("on", F === "A");
+      document.getElementById("vpB").classList.toggle("on", F === "B");
+      draw();
+    });
+  });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale;
+    view.px = 0; view.py = 0; draw();
+  });
+
+  // ---- presets from the URL -------------------------------------------
+  // ?p=3,4,3&o=2,1,1&rot=0,0,35&proj=Ax,Bz — lets a slide link to a state.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    function triple(name, obj, ids, keys, suffix) {
+      if (!q.has(name)) return;
+      var v = q.get(name).split(",").map(parseFloat);
+      keys.forEach(function (k, i) {
+        if (!isFinite(v[i])) return;
+        obj[k] = v[i];
+        document.getElementById(ids[i]).value = v[i];
+        document.getElementById(ids[i].replace("s", "v")).innerHTML =
+          fmt(v[i]) + (suffix || "");
+      });
+    }
+    triple("p",   P,   ["spx", "spy", "spz"], ["x", "y", "z"]);
+    triple("o",   OB,  ["sox", "soy", "soz"], ["x", "y", "z"]);
+    triple("rot", ROT, ["srr", "srp", "sry"], ["roll", "pitch", "yaw"], "&deg;");
+    if (q.has("proj")) {
+      var want = q.get("proj").split(",");
+      Object.keys(showProj).forEach(function (k) {
+        showProj[k] = want.indexOf(k) !== -1;
+        document.getElementById("cp" + k[0].toLowerCase() + k[1]).checked = showProj[k];
+      });
+    }
+    if (q.has("grid")) { showGrid = q.get("grid") !== "0";
+                         document.getElementById("cgrid").checked = showGrid; }
+    if (q.has("view")) {
+      var wv = q.get("view").toUpperCase() === "B" ? "B" : "A";
+      VP = wv;
+      document.getElementById("vpA").classList.toggle("on", wv === "A");
+      document.getElementById("vpB").classList.toggle("on", wv === "B");
+    }
+    if (q.has("box")) {
+      var wb = q.get("box").toUpperCase();
+      ["A", "B"].forEach(function (F) {
+        showBox[F] = wb.indexOf(F) !== -1;
+        document.getElementById("cbx" + F.toLowerCase()).checked = showBox[F];
+      });
+    }
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---- typeset the labels ONCE ----------------------------------------
+  // Label text never changes, only its position and the trailing number, so
+  // MathJax runs at load. Typesetting inside draw() would re-run on every
+  // orbit frame and crawl.
+  var typeset = false;
+  function useFallback() {
+    if (typeset) return;
+    typeset = true;
+    ["A", "B"].forEach(function (F) {
+      KEYS.forEach(function (a) {
+        labels[F + a].innerHTML = "<b>" + a + "</b><sub>" + F + "</sub>";
+        labels["ip" + F + a].querySelector(".sym").innerHTML =
+          "<b>" + a + "</b><sub>" + F + "</sub><sup>T</sup>&thinsp;" +
+          "<b>r</b><sub>P</sub><sup>" + F + "</sup>&nbsp;=";
+      });
+      labels["O" + F].innerHTML = "O<sub>" + F + "</sub>";
+    });
+    ["A", "B"].forEach(function (F) {
+      document.getElementById("sym" + F).innerHTML =
+        "<b>r</b><sub style='font-style:normal'>P</sub>" +
+        "<sup style='font-style:normal'>" + F + "</sup>&nbsp;=";
+    });
+    draw();
+  }
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    var nodes = Object.keys(labels).map(function (k) { return labels[k]; });
+    nodes.push(document.getElementById("symA"), document.getElementById("symB"));
+    window.MathJax.typesetPromise(nodes).then(draw).catch(function () {
+      typeset = false; useFallback();
+    });
+  }
+  function whenReady() {
+    if (window.MathJax && window.MathJax.startup) {
+      window.MathJax.startup.promise.then(typesetOnce).catch(useFallback);
+    }
+  }
+  document.getElementById("MathJax-script").addEventListener("load", whenReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  whenReady();
+  setTimeout(useFallback, 2500);
+})();
+</script>
+</body>
+</html>

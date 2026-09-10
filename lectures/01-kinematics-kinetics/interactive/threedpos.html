@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A point in a 3D reference frame</title>
+
+<!-- Same macros as the deck, so \v and \m mean here what they mean there. -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)']],
+      macros: {
+        v: ['{\\mathbf{#1}}', 1],
+        m: ['{\\begin{bmatrix}#1\\end{bmatrix}}', 1]
+      }
+    },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal:  #2D3748;
+    --forest:    #2B6CB0;
+    --crimson:   #A51C30;
+    --seagreen:  #2F855A;
+    --warmgray:  #718096;
+    --grid:      #CBD5E0;
+    --bg:        #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  #stage.panning  { cursor: move; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Labels are HTML, not canvas text, so the maths keeps the deck's typography. */
+  .lbl {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 15px; font-style: italic; white-space: nowrap;
+    pointer-events: none; user-select: none;
+  }
+  .lbl b { font-style: normal; font-weight: 700; }
+  .lbl sub { font-size: 0.68em; font-style: normal; }
+  .lbl.x, .lbl.y, .lbl.z { color: var(--forest); }
+  .lbl.o, .lbl.p { color: var(--charcoal); }
+  .lbl.tick { color: var(--crimson); font-size: 13px; font-style: normal; }
+
+  /* Deliberately compact: this sits on a slide, so the panel must give the
+     drawing as much room as possible without becoming unclickable. */
+  #panel {
+    position: absolute; top: 8px; left: 8px;
+    background: rgba(255,255,255,0.90);
+    border: 1px solid #E2E8F0; border-radius: 5px;
+    padding: 6px 8px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+
+  /* The native thumb is ~16px tall whatever height the input is given, so it
+     overflows a tight row and the sliders collide. Draw track and thumb
+     explicitly instead, and give the rows room to breathe. */
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 78px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px; margin-top: -3.5px;
+    border-radius: 50%; border: none; background: var(--forest);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none;
+    border-radius: 50%; background: var(--forest);
+  }
+  #panel .slider { margin-bottom: 5px; }
+  #panel .slider:first-child { margin-top: 1px; }
+  #panel input[type=checkbox] {
+    width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0;
+  }
+  #panel .val { display: inline-block; width: 1.9em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--crimson); }
+  #panel .k { display: inline-block; width: 1.1em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
+  #panel .row.sep { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .sw { display: inline-block; width: 12px; height: 2px;
+               vertical-align: middle; margin: 0 2px 2px 0; }
+  #panel .ax { font-family: "Linux Libertine O", Georgia, serif;
+               font-weight: 700; font-style: normal; }
+  #panel .ax.x { color: var(--crimson); }
+  #panel .ax.y { color: var(--seagreen); }
+  #panel .ax.z { color: var(--forest); }
+
+  /* An inner-product caption: symbol typeset once, number swapped live. */
+  .lbl.ip { font-size: 13px; }
+  .lbl.ip .num { font-variant-numeric: tabular-nums; font-style: normal;
+                 font-weight: 700; padding-left: 2px; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin-top: 3px;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+
+  #readout {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 6px; font-size: 15px;
+  }
+  #readout .bmat {
+    display: inline-flex; flex-direction: column; align-items: center;
+    padding: 1px 6px; line-height: 1.2;
+    border-left: 1.2px solid var(--charcoal); border-right: 1.2px solid var(--charcoal);
+    font-variant-numeric: tabular-nums; font-size: 13px;
+  }
+  #readout .bmat span:nth-child(1) { color: var(--crimson); }
+  #readout .bmat span:nth-child(2) { color: var(--crimson); }
+  #readout .bmat span:nth-child(3) { color: var(--crimson); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <label class="slider"><span class="k">x</span>
+      <input type="range" id="sx" min="-5" max="5" step="0.5" value="3">
+      <span class="val" id="vx">3</span></label>
+    <label class="slider"><span class="k">y</span>
+      <input type="range" id="sy" min="-5" max="5" step="0.5" value="4">
+      <span class="val" id="vy">4</span></label>
+    <label class="slider"><span class="k">z</span>
+      <input type="range" id="sz" min="-5" max="5" step="0.5" value="3">
+      <span class="val" id="vz">3</span></label>
+    <div class="row sep">project onto:</div>
+    <div class="row"><label><input type="checkbox" id="cpx">
+      <span class="sw" style="background:#A51C30"></span> <span class="ax x">x</span><sub>A</sub></label></div>
+    <div class="row"><label><input type="checkbox" id="cpy">
+      <span class="sw" style="background:#2F855A"></span> <span class="ax y">y</span><sub>A</sub></label></div>
+    <div class="row"><label><input type="checkbox" id="cpz">
+      <span class="sw" style="background:#2B6CB0"></span> <span class="ax z">z</span><sub>A</sub></label></div>
+    <div class="row sep"><label><input type="checkbox" id="cbox" checked> projection box</label></div>
+    <div class="row"><label><input type="checkbox" id="cgrid" checked> ground grid</label></div>
+    <button id="reset">reset view</button>
+    <div class="row">drag &middot; shift-drag pans</div>
+  </div>
+
+  <div id="readout">
+    <span id="rsym">\(\v{r}_{P}^{A} =\)</span>
+    <span class="bmat"><span id="mx">3</span><span id="my">4</span><span id="mz">3</span></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = {
+    charcoal: "#2D3748", forest: "#2B6CB0", crimson: "#A51C30",
+    seagreen: "#2F855A", warmgray: "#718096", grid: "#CBD5E0"
+  };
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  // ---- state ---------------------------------------------------------
+  var DEF = { az: 40 * Math.PI / 180, el: 22 * Math.PI / 180, scale: 74 };
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: 0, py: 0 };
+  var P = { x: 3, y: 4, z: 3 };
+  var showBox = true, showGrid = true;
+  var showProj = { x: false, y: false, z: false };
+
+  // One frame on screen, so colour encodes the AXIS (the x/y/z = r/g/b
+  // convention students will meet in every robotics tool). If a second
+  // frame is ever added here, colour must switch to encoding the frame.
+  var AXCOL = { x: "#A51C30", y: "#2F855A", z: "#2B6CB0" };
+  var UNIT  = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
+
+  var AXIS = 5.4;          // how far the drawn axes reach
+  var W = 0, H = 0, DPR = 1;
+
+  // ---- orthographic projection ---------------------------------------
+  // right / up / dir form an orthonormal camera basis; dir points at the eye.
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    return {
+      right: [-sa, ca, 0],
+      up:    [-ca * se, -sa * se, ce],
+      dir:   [ca * ce, sa * ce, se]
+    };
+  }
+  function dot(a, p) { return a[0] * p[0] + a[1] * p[1] + a[2] * p[2]; }
+
+  var B = basis();
+  function project(p) {
+    return {
+      x: W / 2 + view.px + dot(B.right, p) * view.scale,
+      y: H / 2 + view.py - dot(B.up, p) * view.scale,
+      d: dot(B.dir, p)                        // larger = nearer the eye
+    };
+  }
+
+  // ---- a tiny painter's-algorithm scene ------------------------------
+  var scene = [];
+  function seg(a, b, style) {
+    scene.push({ a: a, b: b, s: style, d: (dot(B.dir, a) + dot(B.dir, b)) / 2 });
+  }
+
+  function strokeSeg(it) {
+    var s = it.s, A = project(it.a), Bp = project(it.b);
+    ctx.save();
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.width || 1;
+    ctx.setLineDash(s.dash || []);
+    ctx.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(Bp.x, Bp.y);
+    ctx.stroke();
+    if (s.arrow) {
+      var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = s.arrow, w = 0.42;
+      ctx.setLineDash([]);
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.moveTo(Bp.x, Bp.y);
+      ctx.lineTo(Bp.x - L * Math.cos(ang - w), Bp.y - L * Math.sin(ang - w));
+      ctx.lineTo(Bp.x - L * Math.cos(ang + w), Bp.y - L * Math.sin(ang + w));
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function disc(p, color, r) {
+    var s = project(p);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  // ---- HTML labels ----------------------------------------------------
+  var labels = {};
+  function mkLabel(key, cls, html) {
+    var d = document.createElement("div");
+    d.className = "lbl " + cls;
+    d.innerHTML = html;
+    stage.appendChild(d);
+    labels[key] = d;
+  }
+  mkLabel("x", "x", "\\(\\v{x}_{A}\\)");
+  mkLabel("y", "y", "\\(\\v{y}_{A}\\)");
+  mkLabel("z", "z", "\\(\\v{z}_{A}\\)");
+  mkLabel("o", "o", "\\(O_{A}\\)");
+  mkLabel("p", "p", "\\(P\\)");
+  mkLabel("tx", "tick", "3");
+  mkLabel("ty", "tick", "4");
+  mkLabel("tz", "tick", "3");
+
+  // The inner-product captions. The symbolic half is typeset once; only the
+  // number after it is rewritten as the sliders move.
+  ["x", "y", "z"].forEach(function (a) {
+    mkLabel("ip" + a, "ip",
+      '<span class="sym">\\(\\v{' + a + '}_{A}^{\\top}\\,\\v{r}_{P}^{A} =\\)</span>' +
+      '<span class="num"></span>');
+    labels["ip" + a].style.color = AXCOL[a];
+  });
+
+  function placeLabel(key, p, dx, dy, show) {
+    var d = labels[key];
+    if (show === false) { d.style.display = "none"; return; }
+    d.style.display = "";
+    var s = project(p);
+    d.style.left = (s.x + (dx || 0)) + "px";
+    d.style.top  = (s.y + (dy || 0)) + "px";
+  }
+
+  // ---- the drawing ----------------------------------------------------
+  function draw() {
+    B = basis();
+    scene = [];
+
+    var p  = [P.x, P.y, P.z];
+    var pxy = [P.x, P.y, 0], px = [P.x, 0, 0], py = [0, P.y, 0], pz = [0, 0, P.z];
+    var pxz = [P.x, 0, P.z], pyz = [0, P.y, P.z];
+    var O = [0, 0, 0];
+
+    if (showGrid) {
+      for (var g = -5; g <= 5; g++) {
+        var lw = (g === 0) ? 1 : 0.6, al = (g === 0) ? 0.9 : 0.55;
+        seg([g, -5, 0], [g, 5, 0], { color: C.grid, width: lw, alpha: al });
+        seg([-5, g, 0], [5, g, 0], { color: C.grid, width: lw, alpha: al });
+      }
+    }
+
+    // the three axes, full length, faint
+    var ax = { color: C.warmgray, width: 1, dash: [1, 3], alpha: 0.8 };
+    seg([-AXIS, 0, 0], [AXIS, 0, 0], ax);
+    seg([0, -AXIS, 0], [0, AXIS, 0], ax);
+    seg([0, 0, -AXIS], [0, 0, AXIS], ax);
+
+    // the basis vectors, each in its own colour
+    seg(O, [1, 0, 0], { color: AXCOL.x, width: 2.4, arrow: 9 });
+    seg(O, [0, 1, 0], { color: AXCOL.y, width: 2.4, arrow: 9 });
+    seg(O, [0, 0, 1], { color: AXCOL.z, width: 2.4, arrow: 9 });
+
+    // the box that lets each coordinate be read off its own axis
+    if (showBox) {
+      var bx = { color: C.warmgray, width: 1, dash: [4, 3], alpha: 0.75 };
+      seg(px, pxy, bx); seg(py, pxy, bx); seg(pxy, p, bx);
+      seg(px, pxz, bx); seg(pz, pxz, bx);
+      seg(py, pyz, bx); seg(pz, pyz, bx);
+      seg(pxz, p, bx);  seg(pyz, p, bx);
+    }
+
+    // ---- how each coordinate is obtained: the orthogonal projection ----
+    // The foot F = (r . u) u. P - F is perpendicular to u by construction,
+    // so the right angle at F is exact, not decorative.
+    var feet = {};
+    ["x", "y", "z"].forEach(function (a) {
+      if (!showProj[a]) return;
+      var u = UNIT[a], c = P[a];
+      var F = [u[0] * c, u[1] * c, u[2] * c];
+      feet[a] = F;
+
+      // the coordinate itself: a thin coloured length laid along the axis,
+      // deliberately thinner than the basis vector so it reads as a
+      // measurement drawn on the axis, not as another vector.
+      seg(O, F, { color: AXCOL[a], width: 1.4, alpha: 0.95 });
+
+      // the perpendicular dropped from P onto the axis
+      seg(p, F, { color: AXCOL[a], width: 1, dash: [3, 3], alpha: 0.85 });
+
+      // the right angle at the foot, in the plane spanned by u and (P - F)
+      var w = [p[0] - F[0], p[1] - F[1], p[2] - F[2]];
+      var wn = Math.sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2]);
+      if (wn > 1e-6 && Math.abs(c) > 1e-6) {
+        var s = 0.34, sgn = c > 0 ? -1 : 1;    // step back along the axis
+        var uu = [u[0] * s * sgn, u[1] * s * sgn, u[2] * s * sgn];
+        var ww = [w[0] / wn * s, w[1] / wn * s, w[2] / wn * s];
+        var c1 = [F[0] + uu[0], F[1] + uu[1], F[2] + uu[2]];
+        var c2 = [c1[0] + ww[0], c1[1] + ww[1], c1[2] + ww[2]];
+        var c3 = [F[0] + ww[0], F[1] + ww[1], F[2] + ww[2]];
+        var rs = { color: AXCOL[a], width: 1.2, alpha: 0.95 };
+        seg(c1, c2, rs); seg(c2, c3, rs);
+      }
+    });
+
+    // the position vector
+    seg(O, p, { color: C.charcoal, width: 2.6, arrow: 11 });
+
+    // paint far to near
+    scene.sort(function (a, b) { return a.d - b.d; });
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < scene.length; i++) strokeSeg(scene[i]);
+
+    disc(O, C.charcoal, 3.2);
+    disc(p, C.charcoal, 4.2);
+    if (showBox) {
+      disc(px, C.crimson, 3);
+      disc(py, C.crimson, 3);
+      disc(pz, C.crimson, 3);
+    }
+
+    placeLabel("x", [1.30, 0, 0], -4, 6);
+    placeLabel("y", [0, 1.18, 0], 0, 0);
+    placeLabel("z", [0, 0, 1.18], 0, 0);
+    placeLabel("o", O, -18, 16);
+    placeLabel("p", p, 14, -12);
+    labels.tx.textContent = fmt(P.x);
+    labels.ty.textContent = fmt(P.y);
+    labels.tz.textContent = fmt(P.z);
+    placeLabel("tx", px, -12, 10, showBox && !showProj.x && P.x !== 0);
+    placeLabel("ty", py,  12, 10, showBox && !showProj.y && P.y !== 0);
+    placeLabel("tz", pz, -14, -6, showBox && !showProj.z && P.z !== 0);
+
+    // the inner-product captions, at the midpoint of the highlighted length
+    var IPOFF = { x: [-16, 20], y: [18, 20], z: [-26, -10] };
+    ["x", "y", "z"].forEach(function (a) {
+      var F = feet[a];
+      if (!F) { placeLabel("ip" + a, O, 0, 0, false); return; }
+      labels["ip" + a].querySelector(".num").textContent = fmt(P[a]);
+      placeLabel("ip" + a, [F[0] * 0.78, F[1] * 0.78, F[2] * 0.78],
+                 IPOFF[a][0], IPOFF[a][1]);
+      disc(F, AXCOL[a], 3.4);
+    });
+  }
+
+  function fmt(v) { return (v % 1 === 0) ? String(v) : v.toFixed(1); }
+
+  // ---- interaction ----------------------------------------------------
+  var drag = null;
+  stage.addEventListener("contextmenu", function (e) {
+    if (!e.target.closest("#panel")) e.preventDefault();   // right-drag pans
+  });
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#panel")) return;
+    // shift-drag, right-drag or middle-drag pans; plain drag orbits.
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el,
+             px: view.px, py: view.py, pan: pan };
+    stage.classList.add(pan ? "panning" : "dragging");
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) {
+      view.px = drag.px + (e.clientX - drag.x);
+      view.py = drag.py + (e.clientY - drag.y);
+    } else {
+      view.az = drag.az - (e.clientX - drag.x) * 0.008;
+      var el = drag.el + (e.clientY - drag.y) * 0.008;
+      view.el = Math.max(-1.45, Math.min(1.45, el));  // never quite top-down
+    }
+    draw();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null;
+    stage.classList.remove("dragging"); stage.classList.remove("panning");
+    if (e && e.pointerId !== undefined) {
+      try { stage.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+  }
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+
+  stage.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    view.scale = Math.max(18, Math.min(160, view.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    draw();
+  }, { passive: false });
+
+  function bindSlider(id, valId, matId, key) {
+    var s = document.getElementById(id);
+    s.addEventListener("input", function () {
+      P[key] = parseFloat(s.value);
+      document.getElementById(valId).textContent = fmt(P[key]);
+      document.getElementById(matId).textContent = fmt(P[key]);
+      draw();
+    });
+  }
+  bindSlider("sx", "vx", "mx", "x");
+  bindSlider("sy", "vy", "my", "y");
+  bindSlider("sz", "vz", "mz", "z");
+
+  ["x", "y", "z"].forEach(function (a) {
+    document.getElementById("cp" + a).addEventListener("change", function () {
+      showProj[a] = this.checked; draw();
+    });
+  });
+
+  document.getElementById("cbox").addEventListener("change", function () {
+    showBox = this.checked; draw();
+  });
+  document.getElementById("cgrid").addEventListener("change", function () {
+    showGrid = this.checked; draw();
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale;
+    view.px = 0; view.py = 0; draw();
+  });
+
+  // ---- presets from the URL -------------------------------------------
+  // ?proj=xz shows those projections, ?p=3,4,3 sets the point, ?box=0 hides
+  // the box. Lets a slide link to exactly the state you want on screen.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("proj")) {
+      var want = q.get("proj").toLowerCase();
+      ["x", "y", "z"].forEach(function (a) {
+        showProj[a] = want.indexOf(a) !== -1;
+        document.getElementById("cp" + a).checked = showProj[a];
+      });
+    }
+    if (q.has("box"))  { showBox  = q.get("box")  !== "0";
+                         document.getElementById("cbox").checked  = showBox; }
+    if (q.has("grid")) { showGrid = q.get("grid") !== "0";
+                         document.getElementById("cgrid").checked = showGrid; }
+    if (q.has("p")) {
+      var v = q.get("p").split(",").map(parseFloat);
+      ["x", "y", "z"].forEach(function (a, i) {
+        if (isFinite(v[i])) {
+          P[a] = v[i];
+          document.getElementById("s" + a).value = v[i];
+          document.getElementById("v" + a).textContent = fmt(v[i]);
+          document.getElementById("m" + a).textContent = fmt(v[i]);
+        }
+      });
+    }
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth;
+    H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---- typeset the labels ONCE ----------------------------------------
+  // The label text never changes, only its position, so MathJax runs at
+  // load and the draw loop only moves the nodes it produced. Typesetting
+  // inside draw() would re-run on every orbit frame and crawl.
+  var typeset = false;
+
+  // If MathJax never arrives, fall back to HTML rather than showing raw TeX.
+  var FALLBACK = {
+    x: "<b>x</b><sub>A</sub>", y: "<b>y</b><sub>A</sub>", z: "<b>z</b><sub>A</sub>",
+    o: "O<sub>A</sub>", p: "P"
+  };
+  function useFallback() {
+    if (typeset) return;
+    typeset = true;
+    Object.keys(FALLBACK).forEach(function (k) { labels[k].innerHTML = FALLBACK[k]; });
+    ["x", "y", "z"].forEach(function (a) {
+      labels["ip" + a].querySelector(".sym").innerHTML =
+        "<b>" + a + "</b><sub>A</sub><sup>T</sup>&thinsp;<b>r</b><sub>P</sub><sup>A</sup>&nbsp;=";
+    });
+    document.getElementById("rsym").innerHTML =
+      "<b>r</b><sub style='font-style:normal'>P</sub><sup style='font-style:normal'>A</sup>&nbsp;=";
+    draw();
+  }
+
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    var nodes = Object.keys(labels).map(function (k) { return labels[k]; });
+    nodes.push(document.getElementById("rsym"));
+    window.MathJax.typesetPromise(nodes).then(draw).catch(function () {
+      typeset = false; useFallback();
+    });
+  }
+
+  function whenMathJaxReady() {
+    if (window.MathJax && window.MathJax.startup) {
+      window.MathJax.startup.promise.then(typesetOnce).catch(useFallback);
+    }
+  }
+  document.getElementById("MathJax-script").addEventListener("load", whenMathJaxReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  whenMathJaxReady();
+  setTimeout(useFallback, 2500);
+})();
+</script>
+</body>
+</html>

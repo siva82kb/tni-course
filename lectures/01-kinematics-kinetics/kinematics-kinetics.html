@@ -357,7 +357,7 @@ Sivakumar Balasubramanian
 <div style="margin-top: -1.0em">
 <p>Given the pair <span class="math inline">\(\left( \v{R}_{B}^{A}, \v{o}_{B}^{A} \right)\)</span>, how do we go the other way around? <span class="math inline">\(\v{r}_{i}^{A} \mapsto \v{r}_{i}^{B}\)</span>.</p>
 <div style="margin-top: -1.0em">
-<p><span class="math display">\[ \v{r}_{i}^{B} = {\v{R}_{B}^{A}}^{-1} \left( \v{r}_{i}^{A} - \v{o}_{B}^{A} \right) = \v{R}_{B}^{A} \v{r}_{i}^{A} + \v{o}_{A}^{B} \]</span></p>
+<p><span class="math display">\[ \v{r}_{i}^{B} = {\v{R}_{B}^{A}}^{-1} \left( \v{r}_{i}^{A} - \v{o}_{B}^{A} \right) = \v{R}_{A}^{B} \v{r}_{i}^{A} + \v{o}_{A}^{B} \]</span></p>
 </div>
 <p>where, <span class="math inline">\({\v{R}_{B}^{A}}^{-1} = \v{R}_{A}^{B}\)</span>, and <span class="math inline">\(\v{o}_{A}^{B} = -{\v{R}_{B}^{A}}^{-1}\v{o}_{B}^{A}\)</span>.</p>
 </div>
@@ -400,7 +400,7 @@ Sivakumar Balasubramanian
 <li class="fragment">Find <span class="math inline">\(\v{r}_{3}^{B}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \m{-1.5}\)</span></span></li>
 <li class="fragment">Find <span class="math inline">\(\v{r}_{3}^{C}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \m{9.5}\)</span></span></li>
 <li class="fragment">Find the pair <span class="math inline">\(\left( \v{R}_{C}^{B}, \v{o}_{C}^{B} \right)\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \m{-1.0}, \m{8}\)</span></span></li>
-<li class="fragment">Find the pair <span class="math inline">\(\left( \v{R}_{B}^{C}, \v{o}_{B}^{C} \right)\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \m{-1.0}, \m{-8}\)</span></span></li>
+<li class="fragment">Find the pair <span class="math inline">\(\left( \v{R}_{B}^{C}, \v{o}_{B}^{C} \right)\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \m{-1.0}, \m{8}\)</span></span></li>
 </ol>
 </div>
 </section>
@@ -580,6 +580,119 @@ Sivakumar Balasubramanian
 </div>
 <div style="margin-top: -1.0em">
 <p>Matrix multiplication <span class="math inline">\(\v{A}\v{B}\)</span> is allowed if only if <span class="highlight">the number of columns of <span class="math inline">\(\v{A}\)</span> equals the number of columns of <span class="math inline">\(\v{B}\)</span></span>.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="different-reference-frames-in-2d-1" class="slide level2">
+<h2>Different reference frames in 2D</h2>
+<p><span class="framesub">Let’s do an example</span></p>
+<div class="columns" style="align-items:center; margin-toip:-1em;">
+<div class="column" style="width:50%;">
+<p><img data-src="figures/twodpos3.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
+</div><div class="column" style="width:50%;">
+<div style="font-size: 0.7em;">
+<p>Find the following.</p>
+<ol type="1">
+<li class="fragment"><span class="math inline">\(\v{r}_{P}^{A}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \m{\sqrt{2} \\ \sqrt{2}}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{R}_{B}^{A}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \frac{1}{2}\m{\sqrt{3} &amp; -1 \\ 1 &amp; \sqrt{3}}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{R}_{A}^{B}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \frac{1}{2}\m{\sqrt{3} &amp; 1 \\ -1 &amp; \sqrt{3}}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{R}_{C}^{A}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \frac{1}{\sqrt{2}}\m{-1 &amp; -1 \\ 1 &amp; -1}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{R}_{A}^{C}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \frac{1}{\sqrt{2}}\m{-1 &amp; 1 \\ -1 &amp; -1}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{r}_{P}^{B}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \frac{1}{2}\m{\sqrt{6}+\sqrt{2} \\ \sqrt{6}-\sqrt{2}}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{r}_{P}^{C}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \m{0 \\ -2}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{R}_{B}^{C}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \frac{1}{4}\m{\sqrt{2}-\sqrt{6} &amp; \sqrt{6}+\sqrt{2} \\ -\sqrt{6}-\sqrt{2} &amp; \sqrt{2}-\sqrt{6}}\)</span></span></li>
+<li class="fragment"><span class="math inline">\(\v{R}_{C}^{B}\)</span>. <span class="fragment"><span class="math inline">\(\longrightarrow \frac{1}{4}\m{\sqrt{2}-\sqrt{6} &amp; -\sqrt{6}-\sqrt{2} \\ \sqrt{6}+\sqrt{2} &amp; \sqrt{2}-\sqrt{6}}\)</span></span></li>
+</ol>
+</div>
+</div></div>
+</section>
+<section id="different-reference-frames-in-2d-2" class="slide level2">
+<h2>Different reference frames in 2D</h2>
+<p><span class="framesub">Let’s now shift the origin</span></p>
+<div class="columns" style="align-items:center; margin-toip:-1em;">
+<div class="column" style="width:50%;">
+<p><img data-src="figures/twodpos4.svg" class="" style="width:80%; display:block; margin:0 auto;"></p>
+</div><div class="column" style="width:50%;">
+<div style="font-size: 0.7em;">
+<p>What is <span class="math inline">\(\v{R}_{B}^{A}\)</span>? <span class="fragment"><span class="math inline">\(\longrightarrow \m{1 &amp; 0 \\ 0 &amp; 1} = \v{I}\)</span></span></p>
+<p><span class="fragment">What is <span class="math inline">\(\v{r}_{P}^{B}\)</span>?</span> <span class="fragment"><span class="math inline">\(\longrightarrow \m{1 \\ 4}\)</span></span></p>
+<p><span class="fragment">What is <span class="math inline">\(\v{R}_{C}^{B}\)</span>?</span> <span class="fragment"><span class="math inline">\(\longrightarrow \m{\frac{\sqrt{3}}{2} &amp; -\frac{1}{2} \\ \frac{1}{2} &amp; \frac{\sqrt{3}}{2}}\)</span></span></p>
+<p><span class="fragment">What is <span class="math inline">\(\v{r}_{P}^{C}\)</span>?</span> <span class="fragment"><span class="math inline">\(\longrightarrow \m{1 \\ 4}\)</span></span></p>
+<p><span class="fragment highlight">How do we change between references frames <span class="math inline">\(A\)</span> and <span class="math inline">\(C\)</span>?</span></p>
+<div class="fragment">
+<p>We need the rotation and the translation. <span class="math inline">\(\left( \v{R}_{B}^{A}, \v{o}_{B}^{A}\right)\)</span>.</p>
+<p><span class="math display">\[ \v{r}_{P}^{A} = \v{R}_{B}^{A} \v{r}_{P}^{B} + \v{o}_{B}^{A} \]</span> <span class="math display">\[ \v{r}_{P}^{B} = {\v{R}_{B}^{A}}^{-1} \left( \v{r}_{P}^{A} - \v{o}_{B}^{A} \right) \]</span><br>
+<span class="math display">\[\implies \v{R}_{A}^{B} = {\v{R}_{B}^{A}}^{-1} = {\v{R}_{B}^{A}}^{\top} \qquad \v{o}_{A}^{B} = -{\v{R}_{B}^{A}}^{\top}\v{o}_{B}^{A}\]</span></p>
+</div>
+</div>
+</div></div>
+</section>
+<section id="different-reference-frames-in-2d-3" class="slide level2">
+<h2>Different reference frames in 2D</h2>
+<p><span class="framesub">Homogenous Coordinates and Transformation</span></p>
+<div style="font-size: 0.8em; margin-top:-0.5em">
+<p><span class="math display">\[ \v{r}_{P}^{A} = \v{R}_{B}^{A} \v{r}_{P}^{B} + \v{o}_{B}^{A} \qquad \qquad \v{r}_{P}^{B} = {\v{R}_{B}^{A}}^{\top} \left( \v{r}_{P}^{A} - \v{o}_{B}^{A} \right) \]</span></p>
+<p>Note that rotation is represented by a matrix multiplication operation, while translation is represented by vector addition.</p>
+<p><span class="highlight">Homogenous coordinations and transformation</span></p>
+<div style="margin-top:-0.5em">
+<p>We can express this entire transformation through a multiplication operation if we choose the <span class="red"><em>homogenous coordinate</em></span> representation, and we can represent both translation and rotation in a single matrix – <span class="red"><em>homogenous transformation matrix</em></span>.</p>
+<div style="margin-top:-0.5em">
+<p>Let <span class="math inline">\(\tilde{\v{r}}_{P}^{C}\)</span> be the homogenous coordinates of the point <span class="math inline">\(P\)</span> in reference frame <span class="math inline">\(C\)</span>: <span class="math inline">\(\quad \tilde{\v{r}}_{P}^{C} = \m{\v{r}_{P}^{C} \\ 1}\)</span>.</p>
+<div style="margin-top:-0.5em">
+<p>The homogenous transformation matrix representing frame <span class="math inline">\(C\)</span> w.r.t to <span class="math inline">\(A\)</span> is given by,</p>
+<div style="margin-top:-0.5em">
+<p><span class="math display">\[ \v{H}_{C}^{A} = \m{\v{R}_{C}^{A} &amp; \v{o}_{C}^{A} \\ \v{0} &amp; 1}\]</span></p>
+<p>We can obtain the homogenous representation of <span class="math inline">\(P\)</span> in <span class="math inline">\(A\)</span> from <span class="math inline">\(\v{r}_{P}^{C}\)</span> as follows,</p>
+<div style="margin-top:-0.5em">
+<p><span class="math display">\[ \tilde{\v{r}}_{P}^{A} = \v{H}_{C}^{A} \tilde{\v{r}}_{P}^{C} \quad \implies \quad \tilde{\v{r}}_{P}^{C} = \v{H}_{A}^{C} \tilde{\v{r}}_{P}^{A} = {\v{H}_{C}^{A}}^{-1} \tilde{\v{r}}_{P}^{A}\]</span></p>
+<p><span class="fragment">What is <span class="math inline">\({\v{H}_{C}^{A}}^{-1}\)</span>?</span> <span class="fragment"><span class="math inline">\(\longrightarrow \m{{\v{R}_{C}^{A}}^\top &amp; -{\v{R}_{C}^{A}}^\top \v{o}_{C}^{A} \\ \v{0} &amp; 1}\)</span></span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="different-reference-frames-in-3d" class="slide level2">
+<h2>Different reference frames in 3D</h2>
+<p><span class="framesub">Ideas from 2D generalize to 3D</span></p>
+<div style="margin-top:-0.5em; font-size:0.85em;">
+<p>Each coordinate is an <span class="highlight">inner product</span>: drop a perpendicular onto that axis, and the length you cut off is <span class="math inline">\(\v{x}_{A}^\top \v{r}_{P}^{A}\)</span>.</p>
+</div>
+<iframe src="interactive/threedpos.html?p=3,4,3" style="width:100%; height:520px; border:0; display:block;" title="A point in a 3D reference frame">
+</iframe>
+</section>
+<section id="different-reference-frames-in-3d-1" class="slide level2">
+<h2>Different reference frames in 3D</h2>
+<p><span class="framesub">Ideas from 2D generalize to 3D</span></p>
+<div style="margin-top:-0.5em; font-size:0.85em;">
+<p>Two reference frames, <span class="highlight">rotated and translated</span> with respect to each other. The <span class="highlight">same point</span> <span class="math inline">\(P\)</span> — two sets of numbers. Switch which frame the world is drawn in: <span class="deemph">the picture changes, the numbers do not</span>.</p>
+</div>
+<iframe src="interactive/twoframes.html?p=3,4,3&amp;o=3,-2,1&amp;rot=0,0,35&amp;view=A" style="width:100%; height:520px; border:0; display:block;" title="One point, two reference frames">
+</iframe>
+</section>
+<section id="different-reference-frames-in-3d-2" class="slide level2">
+<h2>Different reference frames in 3D</h2>
+<p><span class="framesub">Ideas from 2D generalize to 3D</span></p>
+<div style="margin-top:-0.5em;">
+<p>The representation of a reference frame <span class="math inline">\(B\)</span> w.r.t. <span class="math inline">\(A\)</span> requires the rotation matrix <span class="math inline">\(\v{R}_{B}^{A}\)</span> and the translation of the origin <span class="math inline">\(\v{o}_{B}^{A} \in \mathbb{R}^3\)</span>.</p>
+<div style="margin-top:-0.5em;">
+<p><span class="math display">\[ \v{R}_{B}^{A} = \m{
+  \v{x}_{A}^\top \v{x}_B &amp; \v{x}_{A}^\top \v{y}_B &amp; \v{x}_{A}^\top \v{z}_B \\
+  \v{y}_{A}^\top \v{x}_B &amp; \v{y}_{A}^\top \v{y}_B &amp; \v{y}_{A}^\top \v{z}_B \\
+  \v{z}_{A}^\top \v{x}_B &amp; \v{z}_{A}^\top \v{y}_B &amp; \v{z}_{A}^\top \v{z}_B} \in \mathbb{R}^{3 \times 3}\]</span></p>
+<div style="margin-top:-0.5em;">
+<p>The transformation between <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> is given by the following,</p>
+<div style="margin-top:-0.5em;">
+<p><span class="math display">\[ \v{r}_{P}^{A} = \v{R}_{B}^{A} \v{r}_{P}^{B} + \v{o}_{B}^{A} \qquad \qquad \v{r}_{P}^{B} = {\v{R}_{B}^{A}}^{\top} \left( \v{r}_{P}^{A} - \v{o}_{B}^{A} \right) \]</span></p>
+<div style="margin-top:-0.5em;">
+<p>In the homogenous representation, we have <span class="math inline">\(\tilde{\v{r}}_{P}^{B} = \m{\v{r}_{P}^{B} \\ 1}\)</span>. And the homogenous transformation matrix <span class="math inline">\(\v{H}_{B}^{A} \in \mathbb{R}^{4 \times 4}\)</span>.</p>
+<div style="margin-top:-0.5em;">
+<p><span class="math display">\[\tilde{\v{r}}_{P}^{A} = \v{H}_{B}^{A} \tilde{\v{r}}_{P}^{B} \quad \implies \quad \tilde{\v{r}}_{P}^{B} = \v{H}_{A}^{B} \tilde{\v{r}}_{P}^{A} = {\v{H}_{B}^{A}}^{-1} \tilde{\v{r}}_{P}^{A}\]</span></p>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
