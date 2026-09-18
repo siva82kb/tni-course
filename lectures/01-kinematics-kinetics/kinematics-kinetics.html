@@ -216,6 +216,7 @@ Sivakumar Balasubramanian
 <li>What the numbers mean?</li>
 </ul>
 <p>These numbers must allow us to see beyond our visual observations — more accurate, more precise, and more sensitive information.</p>
+<!-- Section -->
 </section></section>
 <section>
 <section id="movement-kinematics" class="title-slide slide level1 center">
@@ -695,6 +696,186 @@ Sivakumar Balasubramanian
 </div>
 </div>
 </div>
+</div>
+</section>
+<section id="representing-kinematics-of-rigid-bodies" class="slide level2">
+<h2>Representing kinematics of rigid bodies</h2>
+<p><span class="framesub">How many numbers do we need?</span></p>
+<p>A <span class="highlight">rigid body</span> is a collection of points whose relative spatila location with respect to each other does not change no matter the forces acting on these points.</p>
+<p>Useful approximation for many applications, simplifying representing/analysing kinematics of real objects.</p>
+<p>We need a total of 6 numbers to represent its position and orientation w.r.t to a reference frame.</p>
+<p><span class="math display">\[ \text{Rigid body in 3D space} \longrightarrow \left( \alpha, \beta, \gamma, x, y, z\right)\]</span></p>
+<p><span class="math inline">\(\left(\alpha, \beta, \gamma\right)\)</span> represent the <span class="red">orientation</span> of the body in space, and <span class="math inline">\(\left(x, y, z\right)\)</span> represents, typically, the <span class="red">position</span> of some point in the rigid body. Once we know these 6 numbers, we know (i.e.&nbsp;can compute) the location of every point in the rigid body.</p>
+<p>One of many ways to describe rigid body kinematics in 3D space; <span class="highlight">all representations we will need 6 numbers</span>.</p>
+<p>These numbers are also referred as <span class="highlight">degrees-of-freedom (DOFs)</span>.</p>
+</section>
+<section id="representing-kinematics-of-rigid-bodies-1" class="slide level2">
+<h2>Representing kinematics of rigid bodies</h2>
+<p><span class="framesub">How many numbers do we need?</span></p>
+<iframe src="interactive/rigidbody.html?p=3,4,3&amp;o=3,-2,1&amp;rot=0,0,35&amp;view=A" style="width:100%; height:520px; border:0; display:block;" title="One point, two reference frames">
+</iframe>
+</section>
+<section id="representing-kinematics-of-connected-rigid-bodies" class="slide level2">
+<h2>Representing kinematics of connected rigid bodies</h2>
+<p><span class="framesub">How many numbers connected rigid bodies?</span></p>
+<p>If we have two independent rigid bodies in space, how many number do we need to describ their kinemaics in 3D space? <span class="highlight fragment">12</span></p>
+<div class="fragment">
+<p>When we say <span class="red">two rigid bodies are connected together</span>, we mean that the two bodies have <span class="red">constraints on how they can move with respect to each other</span>.</p>
+<p>Reduces the numbers we need to describe the kinematics of the connection rigid bodes to be lower than 12.</p>
+<p>Each constraint on the movements of the two connected bodies, reduces the number of DOFs by 1.</p>
+<p><span class="math display">\[\text{DOFs of two connected rigid bodies} = 12 - \text{No. of kinematic constraints}\]</span></p>
+<p>We will refer to this connection as <span class="highlight">joint</span>, and we can talk about the DOFs of a joint.</p>
+<p><span class="math display">\[\text{DOFs of a joint} = 6 - \text{No. of kinematic constraints}\]</span></p>
+</div>
+</section>
+<section id="the-body-as-connected-rigid-bodies" class="slide level2">
+<h2>The body as connected rigid bodies</h2>
+<div style="position:relative; width:fit-content; margin:0 auto; margin-top: -0.75em;">
+<div class="r-stack">
+<p><img data-src="figures/fullbody-base.svg" style="height:600px; width:auto; max-height:none; display:block;"></p>
+<p><img data-src="figures/fullbody-rb.svg" class="fragment" style="height:600px; width:auto; max-height:none; display:block;" data-fragment-index="1"></p>
+<p><img data-src="figures/fullbody-annot.svg" class="fragment" style="height:600px; width:auto; max-height:none; display:block;" data-fragment-index="2"></p>
+</div>
+</div>
+<div class="fragment">
+<div style="margin-top: -1em; font-size: 0.8em;">
+<p><strong>Full body kinematics</strong>: Track one body segment and the joint angles of the connected segments.</p>
+</div>
+<div style="margin-top: -0.5em; font-size: 0.8em;">
+<p><strong>Individual joint kinematics</strong>: Track only the segments connected at the joints.</p>
+</div>
+</div>
+<!-- Section -->
+</section></section>
+<section>
+<section id="measuring-kinematics" class="title-slide slide level1 center">
+<h1>Measuring Kinematics</h1>
+
+</section>
+<section id="how-do-we-measure-kinematics" class="slide level2">
+<h2>How do we measure kinematics?</h2>
+<p><span class="framesub"></span></p>
+<div class="columns" style="align-items:center; margin-top:-1.0em;">
+<div class="column" style="width:42%;">
+<!-- The same three layers as the previous slide, all shown at once. -->
+<div class="r-stack" style="width:fit-content; margin:0 auto;">
+<p><img data-src="figures/fullbody-base.svg" style="height:540px; width:auto; max-height:none; display:block;"></p>
+<p><img data-src="figures/fullbody-rb.svg" style="height:540px; width:auto; max-height:none; display:block;"></p>
+<p><img data-src="figures/fullbody-annot.svg" style="height:540px; width:auto; max-height:none; display:block;"></p>
+</div>
+</div><div class="column" style="font-size: 0.9em;">
+<div class="fragment">
+<p><span class="highlight">General approach</span>: track all 6DOFs of each limb segment <span class="math inline">\(\longrightarrow\)</span> derive the individual joints variables.</p>
+</div>
+<div class="fragment" style="font-size: 0.8em;">
+<ul>
+<li><span class="highlight">Pros</span>: Full characterisation; Suitable for for complex movement behaviors (e.g.&nbsp;gait analysis, upper-limb reaching, object manipulation, etc.).</li>
+</ul>
+</div>
+<div class="fragment" style="font-size: 0.8em;">
+<ul>
+<li><span class="highlight">Cons</span>: Too much information for simple movements (e.g.&nbsp;knee flexion/extension, elbow range of motion.); Complex, expensive tools required.</li>
+</ul>
+</div>
+<div class="fragment" style="margin-top: 0.5em;">
+<p><span class="highlight">Joint level approach</span>: track specific joint variables of interest.</p>
+</div>
+<div class="fragment" style="font-size: 0.8em;">
+<ul>
+<li><span class="highlight">Pros</span>: Simple, compact tools. Focused, relevant information for simple movements.</li>
+</ul>
+</div>
+<div class="fragment" style="font-size: 0.8em;">
+<ul>
+<li><span class="highlight">Cons</span>: Unsuitable for complex movements.</li>
+</ul>
+</div>
+<div class="fragment" style="margin-top: 1.0em; font-size: 0.85em;">
+<p>We will explore sensing tools for both approaches.</p>
+<ol type="1">
+<li>Camera-based motion tracking with markers (standard &amp;. fiducial).</li>
+<li>Inertial measurement units</li>
+<li>Optical and magnetic encoders</li>
+</ol>
+</div>
+</div></div>
+</section>
+<section id="camera-based-movement-tracking" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub"></span></p>
+<!-- Hot-linked, not vendored: needs the network in the lecture hall. -->
+<p><img data-src="https://cgicoffee.com/blog/content/images/20170314142942-andy-serkis-mocap-actor.jpg" class="" style="height:420px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+<div style="margin-top:-0.75em; text-align:center;">
+<p><span class="cite">Marker-based motion-capture suit. Image: <a href="https://cgicoffee.com/blog/content/images/20170314142942-andy-serkis-mocap-actor.jpg">cgicoffee.com</a></span></p>
+</div>
+<div style="margin-top:-0.5em;">
+<ul>
+<li>Each marker is treated as a dot or point in space.</li>
+<li><span class="math inline">\((x_i, y_i, z_i)\)</span> position of the <span class="math inline">\(i^{th}\)</span> marker estimated from the cameras in a lab-fixed reference frame.</li>
+</ul>
+</div>
+<div style="margin-top:-1.5em;">
+<p><span class="math display">\[ \left(x_i, y_i, z_i \right)_{i=1}^{M} \longrightarrow \left(x_j, y_j, z_j, \alpha_j, \beta_j, \gamma_j \right)_{j=1}^{L} \longleftarrow \left(\theta_k, \phi_k, \chi_k \right)_{k=1}^{J}\]</span></p>
+</div>
+</section>
+<section id="camera-based-movement-tracking-1" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub"></span></p>
+<div style="font-size:0.9em;">
+<div style="margin-top: -0.5em;">
+<p>A camera captures the spatial distribution of light arriving from the environment — it records the <span class="highlight">direction</span> from which light arrives, not the <span class="red">distance</span> it has travelled.</p>
+</div>
+<div class="columns" style="align-items:center; margin-top:-1.0em;">
+<div class="column" style="width:50%;">
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/camera.png" style="width:auto; max-height:none; display:block; margin:0 auto;"></p>
+</div>
+</div><div class="column" style="width:50%;">
+<div class="fragment" style="margin-top: -0.5em;">
+<p>Camera optics produces captured by a <span class="highlight">image</span> of the work — CCD sensor for digital cameras or a film in traditional film cameras.</p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p>An <span class="highlight">image</span> <span class="math inline">\(I\left(x, y\right)\)</span> is a 2D distribution of brightness of light. For a cameras, the 2D surface is a rectangular region <span class="math inline">\(\Omega\)</span>. <span class="math display">\[ I: \Omega \subset \mathbb{R}^2 \mapsto \mathbb{R}_{+}; \quad \Omega \ni \left(x, y\right) \mapsto I\left(x, y\right) \in \mathbb{R}_{+} \]</span></p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p>Image intensity <span class="math inline">\(I\left(x, y\right)\)</span> at any location <span class="math inline">\(\left(x, y\right)\)</span> is determined by the amount of light entering the camera through its optical system that directs the light to the image sensor.</p>
+</div>
+</div></div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p><span class="highlight">Geometry of the optics</span> determines the mapping of the spatial location of a source of light in the world <span class="math inline">\(\left(x_w, y_w, z_w\right)\)</span> to a spatial location of the image <span class="math inline">\(\left(x, y\right)\)</span>.</p>
+</div>
+<div class="fragment" style="margin-top: -0.25em;">
+<p>We will primarily focus on the geometry of the optics for the purpose of kinematics tracking using camera image.</p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-2" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Physics of a Pinhole Camera</span></p>
+<div style="margin-top: -0.5em;">
+<p>A useful and simplified model of the geometry of a camera’s optics is provided by a <span class="highlight">pinhole</span> camera.</p>
+<p>A box, with an infinitesimly small hole that a single ray from each point to enter the box.</p>
+</div>
+<div class="fragment">
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/pinhole-camera.svg" style="width:60%; max-height:none; display:block;"></p>
+</div>
+<div style="margin-top: -0.5em;">
+<p>Produces an inverted image of the world on the back wall.</p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-3" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Physics of a Pinhole Camera</span></p>
+<div style="margin-top: -0.75em;">
+<p><img data-src="figures/pinhole-frame.svg" style="width:125%; max-height:none; display:block;"></p>
+</div>
+<div style="margin-top: -0.75em;">
+<p><span class="math inline">\(P\)</span> in space has coordinates <span class="math inline">\(\v{x}_C = \m{x_C &amp; y_C &amp; z_C}^\top \in \mathbb{R}^2\)</span> w.r.t. to the camera reference frame.</p>
+</div>
+<div style="margin-top: -0.75em;">
+<p><span class="math inline">\(p\)</span> is the corresponding point in the image with coordinates <span class="math inline">\(\v{x}_I = \m{x_I &amp; y_I}^\top \in \mathbb{R}^2\)</span> w.r.t. to the image reference frame.</p>
 </div>
 
 </section></section>

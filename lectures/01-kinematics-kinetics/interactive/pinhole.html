@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The pinhole camera</title>
+
+<style>
+  :root {
+    --charcoal:  #2D3748;
+    --forest:    #2B6CB0;
+    --crimson:   #A51C30;
+    --seagreen:  #2F855A;
+    --warmgray:  #718096;
+    --grid:      #CBD5E0;
+    --bg:        #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+
+  /* Two panes: the world on the left, what the camera records on the right. */
+  #app { display: flex; width: 100%; height: 100%; }
+  #world { position: relative; flex: 0 0 58%; height: 100%; cursor: grab;
+           border-right: 1px solid #E2E8F0; }
+  #world.orbiting { cursor: grabbing; }
+  #world.moving   { cursor: move; }
+  #image { position: relative; flex: 1 1 auto; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+  @media (max-width: 700px) {
+    #app { flex-direction: column; }
+    #world { flex: 0 0 55%; border-right: 0; border-bottom: 1px solid #E2E8F0; }
+  }
+
+  .lbl {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 14px; font-style: italic; white-space: nowrap;
+    pointer-events: none; user-select: none;
+  }
+  .lbl sub { font-size: 0.68em; font-style: normal; }
+  .lbl.x { color: var(--crimson); }
+  .lbl.y { color: var(--seagreen); }
+  .lbl.z { color: var(--forest); }
+  .lbl.o { color: var(--charcoal); }
+  .lbl.plane { color: var(--forest); font-style: normal; font-size: 12px; }
+
+  .hdr {
+    position: absolute; top: 8px; left: 12px; font-size: 13px;
+    color: var(--warmgray); pointer-events: none; user-select: none;
+  }
+  .hdr b { color: var(--charcoal); font-weight: 700; }
+
+  /* Compact panel, as in the other interactives: this sits on a slide. */
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 214px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #E2E8F0; border-radius: 5px;
+    padding: 6px 8px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: inline-block; }
+  #panel .slider { display: block; margin-bottom: 4px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 108px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px; margin-top: -3.5px;
+    border-radius: 50%; border: none; background: var(--forest);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none;
+    border-radius: 50%; background: var(--forest);
+  }
+  #panel input[type=range]:disabled::-webkit-slider-thumb { background: #CBD5E0; }
+  #panel input[type=checkbox], #panel input[type=radio] {
+    width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0;
+  }
+  #panel .val { display: inline-block; width: 2.4em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--crimson); }
+  #panel .k { display: inline-block; width: 2.2em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .k sub { font-size: 0.7em; font-style: normal; }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
+  #panel .row.sep { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .row.title { color: var(--charcoal); font-weight: 600; }
+  #panel select {
+    font: inherit; font-size: 10px; width: 100%; margin: 2px 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal);
+  }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 5px; margin: 2px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel button.danger { color: var(--crimson); }
+  #panel .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+               vertical-align: -1px; margin-right: 3px; }
+
+  #hint {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: var(--warmgray); font-family: system-ui, sans-serif;
+    pointer-events: none; user-select: none; white-space: nowrap;
+  }
+
+  /* The projection written out in numbers, under the image. */
+  #readout {
+    position: absolute; bottom: 8px; left: 12px; right: 12px;
+    font-size: 13.5px; line-height: 1.5; pointer-events: none; user-select: none;
+    font-variant-numeric: tabular-nums;
+  }
+  #readout .who { font-size: 12px; color: var(--warmgray); font-style: italic; }
+  #readout .eq { white-space: nowrap; }
+  #readout .n { color: var(--crimson); }
+  #readout .f { color: var(--forest); }
+  #readout .warn { color: var(--crimson); font-style: italic; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="world">
+    <canvas id="cw"></canvas>
+
+    <div id="panel">
+      <label class="slider"><span class="k">f</span>
+        <input type="range" id="sf" min="0.3" max="3" step="0.05" value="1">
+        <span class="val" id="vf">1.00</span></label>
+      <div class="row">image plane:
+        <label><input type="radio" name="plane" value="real"> real (behind, inverted)</label><br>
+        <span style="display:inline-block;width:5.1em"></span>
+        <label><input type="radio" name="plane" value="virtual" checked> virtual (in front)</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="crays" checked> rays</label>
+        <label><input type="checkbox" id="cfloor" checked> X–Z plane</label>
+      </div>
+
+      <div class="row sep title">objects</div>
+      <select id="objsel"></select>
+      <div class="row">
+        <button data-add="point">+ point</button><button data-add="segment">+ segment</button><button data-add="cube">+ cube</button><br>
+        <button data-add="sphere">+ sphere</button><button data-add="plate">+ plate</button><button data-add="ground">+ ground</button>
+        <button id="scaled" title="a copy twice as far away and twice as big: same rays, same image">×2 copy</button>
+        <button id="remove" class="danger">remove</button>
+      </div>
+      <label class="slider"><span class="k">X</span>
+        <input type="range" id="sX" min="-4" max="4" step="0.05" value="0">
+        <span class="val" id="vX">0</span></label>
+      <label class="slider"><span class="k">Y</span>
+        <input type="range" id="sY" min="-3" max="3" step="0.05" value="0">
+        <span class="val" id="vY">0</span></label>
+      <label class="slider"><span class="k">Z</span>
+        <input type="range" id="sZ" min="-2" max="15" step="0.05" value="5">
+        <span class="val" id="vZ">5</span></label>
+      <label class="slider"><span class="k">size</span>
+        <input type="range" id="sS" min="0.2" max="4" step="0.05" value="1">
+        <span class="val" id="vS">1</span></label>
+
+      <div class="row sep title">presets</div>
+      <div class="row">
+        <button data-preset="default">one point</button><button data-preset="cube">one cube</button><button data-preset="vanish">vanishing point</button>
+      </div>
+      <div class="row"><button id="resetview">reset view</button></div>
+      <div class="row sep">camera frame: <span class="k" style="width:auto;color:#A51C30">X</span> right,
+        <span class="k" style="width:auto;color:#2F855A">Y</span> down,
+        <span class="k" style="width:auto;color:#2B6CB0">Z</span> optical axis</div>
+    </div>
+
+    <div id="hint">drag an object to move it &middot; drag empty space to orbit &middot; shift-drag pans &middot; wheel zooms</div>
+  </div>
+
+  <div id="image">
+    <div class="hdr"><b>Image plane</b> &mdash; what the camera records</div>
+    <canvas id="ci"></canvas>
+    <div id="readout"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = {
+    charcoal: "#2D3748", forest: "#2B6CB0", crimson: "#A51C30",
+    seagreen: "#2F855A", warmgray: "#718096", grid: "#CBD5E0"
+  };
+  // One colour per object; the palette cycles if the class gets enthusiastic.
+  var OBJCOL = ["#A51C30", "#2F855A", "#B7791F", "#6B46C1", "#2D3748", "#C05621"];
+
+  var world = document.getElementById("world");
+  var cw = document.getElementById("cw"), gw = cw.getContext("2d");
+  var ci = document.getElementById("ci"), gi = ci.getContext("2d");
+
+  // ---- state ---------------------------------------------------------
+  var cam = { f: 1.0, w: 2.4, h: 1.8, plane: "virtual" };   // sensor w x h, same units as the world
+  var show = { rays: true, floor: true };
+  // Eye behind and above the camera, to its right, so +Z runs away to the
+  // right of the screen and the scene stays clear of the control panel.
+  var DEF = { az: 0.62, el: 0.34, scale: 50, px: -20, py: 20 };
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: DEF.px, py: DEF.py };
+  var objects = [], selected = -1, nextId = 1;
+  var EPS = 0.05;              // a point this close to the pinhole plane is not imaged
+  var W = 0, H = 0, DPR = 1;
+  var IW = 0, IH = 0;
+
+  // ---- the objects ----------------------------------------------------
+  // Each object is a centre, a size and a type; geometry is regenerated
+  // from those every frame, so moving an object is just moving its centre.
+  function addObject(type, c, size) {
+    var o = { id: nextId++, type: type, c: c.slice(), size: size || 1,
+              color: OBJCOL[(nextId - 2) % OBJCOL.length] };
+    objects.push(o);
+    selected = objects.length - 1;
+    return o;
+  }
+
+  // Returns vertices V, edges E (index pairs) and R, the vertices that get
+  // a ray drawn to the pinhole (all of them would be a thicket).
+  function geometry(o) {
+    var c = o.c, s = o.size, h = s / 2, V = [], E = [], R = [];
+    var i, j, k, n;
+    switch (o.type) {
+      case "point":
+        V.push(c); R.push(0); break;
+      case "segment":
+        V.push([c[0] - h, c[1], c[2]], [c[0] + h, c[1], c[2]]);
+        E.push([0, 1]); R.push(0, 1); break;
+      case "cube":
+        for (i = 0; i < 8; i++)
+          V.push([c[0] + ((i & 1) ? h : -h), c[1] + ((i & 2) ? h : -h), c[2] + ((i & 4) ? h : -h)]);
+        for (i = 0; i < 8; i++) for (j = i + 1; j < 8; j++) {
+          var d = i ^ j;
+          if (d === 1 || d === 2 || d === 4) E.push([i, j]);
+        }
+        R = [0, 1, 2, 3, 4, 5, 6, 7]; break;
+      case "sphere":
+        n = 36;
+        // three great circles: XY, XZ, YZ
+        for (k = 0; k < 3; k++) for (i = 0; i < n; i++) {
+          var a = 2 * Math.PI * i / n, ca = Math.cos(a) * h, sa = Math.sin(a) * h;
+          V.push(k === 0 ? [c[0] + ca, c[1] + sa, c[2]] :
+                 k === 1 ? [c[0] + ca, c[1], c[2] + sa] :
+                           [c[0], c[1] + ca, c[2] + sa]);
+          E.push([k * n + i, k * n + (i + 1) % n]);
+        }
+        R = [0, 9, 18, 27]; break;            // left/right/top/bottom of the XY ring
+      case "plate":
+        n = 4;                                 // a 4x4 grid facing the camera
+        for (j = 0; j <= n; j++) for (i = 0; i <= n; i++)
+          V.push([c[0] - h + s * i / n, c[1] - h + s * j / n, c[2]]);
+        for (j = 0; j <= n; j++) for (i = 0; i <= n; i++) {
+          if (i < n) E.push([j * (n + 1) + i, j * (n + 1) + i + 1]);
+          if (j < n) E.push([j * (n + 1) + i, (j + 1) * (n + 1) + i]);
+        }
+        R = [0, n, n * (n + 1), (n + 1) * (n + 1) - 1]; break;
+      case "ground":
+        // a horizontal grid, three times longer in Z than it is wide, so the
+        // lines running away from the camera have room to converge
+        var nx = 6, nz = 12, L = 3 * s;
+        for (j = 0; j <= nz; j++) for (i = 0; i <= nx; i++)
+          V.push([c[0] - h + s * i / nx, c[1], c[2] - L / 2 + L * j / nz]);
+        for (j = 0; j <= nz; j++) for (i = 0; i <= nx; i++) {
+          if (i < nx) E.push([j * (nx + 1) + i, j * (nx + 1) + i + 1]);
+          if (j < nz) E.push([j * (nx + 1) + i, (j + 1) * (nx + 1) + i]);
+        }
+        R = [0, nx, nz * (nx + 1), (nz + 1) * (nx + 1) - 1]; break;
+    }
+    return { V: V, E: E, R: R };
+  }
+
+  // ---- the pinhole projection itself ---------------------------------
+  // Virtual plane at Z = +f:  (u, v) = f (X, Y) / Z.
+  // Real plane at Z = -f: the ray continues through the pinhole, so the
+  // image is the same thing with the sign flipped -- inverted.
+  function sgn() { return cam.plane === "real" ? -1 : 1; }
+  function toImage(p) {
+    if (p[2] <= EPS) return null;
+    return [sgn() * cam.f * p[0] / p[2], sgn() * cam.f * p[1] / p[2]];
+  }
+  function imagePoint3D(p) {              // where the ray meets the plane, in world coordinates
+    var uv = toImage(p);
+    return uv ? [uv[0], uv[1], sgn() * cam.f] : null;
+  }
+  // An edge with one end behind the pinhole is cut at Z = EPS; the rest is
+  // not imaged, and pretending otherwise draws lines that cross the sky.
+  function clipEdge(a, b) {
+    var za = a[2] - EPS, zb = b[2] - EPS;
+    if (za <= 0 && zb <= 0) return null;
+    if (za > 0 && zb > 0) return [a, b];
+    var t = za / (za - zb);
+    var m = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), EPS + 1e-6];
+    return za > 0 ? [a, m] : [m, b];
+  }
+
+  // ---- orbit view of the world (orthographic) ------------------------
+  // World "up" is -Y, since the camera frame has Y pointing down.
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    var d = [ce * sa, -se, -ce * ca];                    // toward the eye
+    var r = [ca, 0, sa];                                 // cross(up, d), normalised
+    var u = [d[1] * r[2] - d[2] * r[1], d[2] * r[0] - d[0] * r[2], d[0] * r[1] - d[1] * r[0]];
+    return { right: r, up: u, dir: d };
+  }
+  function dot(a, p) { return a[0] * p[0] + a[1] * p[1] + a[2] * p[2]; }
+  var B = basis();
+  function project(p) {
+    return {
+      x: W / 2 + view.px + dot(B.right, p) * view.scale,
+      y: H / 2 + view.py - dot(B.up, p) * view.scale,
+      d: dot(B.dir, p)
+    };
+  }
+
+  var scene = [];
+  function seg(a, b, style) {
+    scene.push({ a: a, b: b, s: style, d: (dot(B.dir, a) + dot(B.dir, b)) / 2 });
+  }
+  function strokeSeg(g, it) {
+    var s = it.s, A = project(it.a), Bp = project(it.b);
+    g.save();
+    g.strokeStyle = s.color;
+    g.lineWidth = s.width || 1;
+    g.setLineDash(s.dash || []);
+    g.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+    g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(Bp.x, Bp.y); g.stroke();
+    if (s.arrow) {
+      var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = s.arrow, w = 0.42;
+      g.setLineDash([]); g.fillStyle = s.color;
+      g.beginPath();
+      g.moveTo(Bp.x, Bp.y);
+      g.lineTo(Bp.x - L * Math.cos(ang - w), Bp.y - L * Math.sin(ang - w));
+      g.lineTo(Bp.x - L * Math.cos(ang + w), Bp.y - L * Math.sin(ang + w));
+      g.closePath(); g.fill();
+    }
+    g.restore();
+  }
+  function disc(g, s, color, r, alpha) {
+    g.save();
+    g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.fillStyle = color;
+    g.beginPath(); g.arc(s.x, s.y, r, 0, 2 * Math.PI); g.fill();
+    g.restore();
+  }
+
+  // ---- HTML labels on the world view ----------------------------------
+  var labels = {};
+  function mkLabel(key, cls, html) {
+    var d = document.createElement("div");
+    d.className = "lbl " + cls; d.innerHTML = html;
+    world.appendChild(d); labels[key] = d;
+  }
+  mkLabel("x", "x", "X<sub>c</sub>");
+  mkLabel("y", "y", "Y<sub>c</sub>");
+  mkLabel("z", "z", "Z<sub>c</sub>");
+  mkLabel("o", "o", "O");
+  mkLabel("plane", "plane", "image plane");
+  function placeLabel(key, p, dx, dy) {
+    var s = project(p), d = labels[key];
+    d.style.left = (s.x + (dx || 0)) + "px";
+    d.style.top  = (s.y + (dy || 0)) + "px";
+  }
+
+  // ---- draw the world -------------------------------------------------
+  function drawWorld() {
+    B = basis();
+    scene = [];
+    var O = [0, 0, 0], f = cam.f, zp = sgn() * f, hw = cam.w / 2, hh = cam.h / 2;
+
+    // the X-Z plane through the pinhole (Y = 0), very light, as a ground
+    // reference for where things are and which way is "up"
+    if (show.floor) {
+      var fl = { color: C.grid, width: 0.6, alpha: 0.4 };
+      for (var g = -6; g <= 6; g++) seg([g, 0, -3], [g, 0, 16], fl);
+      for (var z = -3; z <= 16; z++) seg([-6, 0, z], [6, 0, z], fl);
+    }
+
+    // optical axis, long and faint, then the camera frame at the pinhole
+    seg([0, 0, -2.2], [0, 0, 16], { color: C.forest, width: 1, dash: [2, 4], alpha: 0.6 });
+    seg(O, [1, 0, 0], { color: C.crimson,  width: 2.2, arrow: 8 });
+    seg(O, [0, 1, 0], { color: C.seagreen, width: 2.2, arrow: 8 });
+    seg(O, [0, 0, 1], { color: C.forest,   width: 2.2, arrow: 8 });
+
+    // the image plane: a rectangle the size of the sensor, at Z = +f or -f
+    var pc = [[-hw, -hh, zp], [hw, -hh, zp], [hw, hh, zp], [-hw, hh, zp]];
+    var ps = { color: C.forest, width: 1.4, alpha: 0.9 };
+    for (var i = 0; i < 4; i++) seg(pc[i], pc[(i + 1) % 4], ps);
+
+    // the objects, their rays and their image points
+    var imgPts = [];
+    objects.forEach(function (o, idx) {
+      var G = geometry(o), sel = idx === selected;
+      var st = { color: o.color, width: sel ? 2.4 : 1.4, alpha: sel ? 1 : 0.85 };
+      G.E.forEach(function (e) { seg(G.V[e[0]], G.V[e[1]], st); });
+      if (show.rays) G.R.forEach(function (k) {
+        var p = G.V[k], ip = imagePoint3D(p);
+        if (!ip) return;
+        var rs = { color: o.color, width: 0.9, alpha: sel ? 0.7 : 0.4 };
+        seg(p, O, rs);
+        if (cam.plane === "real") seg(O, ip, rs);
+        imgPts.push({ p: ip, color: o.color, sel: sel });
+      });
+    });
+
+    scene.sort(function (a, b) { return a.d - b.d; });
+
+    gw.setTransform(DPR, 0, 0, DPR, 0, 0);
+    gw.clearRect(0, 0, W, H);
+
+    // the plane's translucent fill goes underneath everything: a painter's
+    // sort of line segments has no good place to put a polygon
+    gw.save();
+    gw.fillStyle = C.forest; gw.globalAlpha = 0.07;
+    gw.beginPath();
+    pc.forEach(function (q, k) { var s = project(q); k ? gw.lineTo(s.x, s.y) : gw.moveTo(s.x, s.y); });
+    gw.closePath(); gw.fill();
+    gw.restore();
+
+    for (i = 0; i < scene.length; i++) strokeSeg(gw, scene[i]);
+
+    disc(gw, project([0, 0, zp]), C.forest, 2.4, 0.9);         // principal point
+    disc(gw, project(O), C.charcoal, 4.2);                       // the pinhole
+    objects.forEach(function (o, idx) {
+      if (o.type !== "point") return;
+      disc(gw, project(o.c), o.color, idx === selected ? 5.2 : 4.2);
+    });
+    imgPts.forEach(function (ip) { disc(gw, project(ip.p), ip.color, ip.sel ? 3.4 : 2.6, 0.95); });
+
+    placeLabel("x", [1.25, 0, 0], 0, 0);
+    placeLabel("y", [0, 1.25, 0], 0, 0);
+    placeLabel("z", [0, 0, 1.3], 0, 0);
+    placeLabel("o", O, -12, 12);
+    placeLabel("plane", [0, -hh, zp], 0, -10);
+  }
+
+  // ---- draw the image -------------------------------------------------
+  function drawImage() {
+    gi.setTransform(DPR, 0, 0, DPR, 0, 0);
+    gi.clearRect(0, 0, IW, IH);
+
+    // fit the sensor into ~60% of the pane; everything is in image-plane units
+    var k = Math.min(0.6 * IW / cam.w, 0.6 * (IH - 90) / cam.h);
+    var cx = IW / 2, cy = (IH - 70) / 2 + 10;
+    function toPx(uv) { return { x: cx + uv[0] * k, y: cy + uv[1] * k }; }
+
+    // ticks every 0.5 units along u (right) and v (down), as on a real sensor
+    gi.save();
+    gi.strokeStyle = C.grid; gi.lineWidth = 0.6; gi.globalAlpha = 0.7;
+    var ext = 6;
+    for (var t = -ext; t <= ext; t += 0.5) {
+      var a = toPx([t, -ext]), b = toPx([t, ext]);
+      gi.beginPath(); gi.moveTo(a.x, a.y); gi.lineTo(b.x, b.y); gi.stroke();
+      a = toPx([-ext, t]); b = toPx([ext, t]);
+      gi.beginPath(); gi.moveTo(a.x, a.y); gi.lineTo(b.x, b.y); gi.stroke();
+    }
+    gi.restore();
+
+    // axes through the principal point
+    gi.save();
+    gi.strokeStyle = C.warmgray; gi.lineWidth = 1; gi.setLineDash([1, 3]); gi.globalAlpha = 0.8;
+    gi.beginPath(); gi.moveTo(0, cy); gi.lineTo(IW, cy); gi.stroke();
+    gi.beginPath(); gi.moveTo(cx, 0); gi.lineTo(cx, IH - 70); gi.stroke();
+    gi.restore();
+
+    // the sensor outline
+    var s0 = toPx([-cam.w / 2, -cam.h / 2]), s1 = toPx([cam.w / 2, cam.h / 2]);
+    gi.save();
+    gi.strokeStyle = C.forest; gi.lineWidth = 1.6;
+    gi.strokeRect(s0.x, s0.y, s1.x - s0.x, s1.y - s0.y);
+    gi.fillStyle = C.forest; gi.globalAlpha = 0.05;
+    gi.fillRect(s0.x, s0.y, s1.x - s0.x, s1.y - s0.y);
+    gi.restore();
+
+    gi.save();
+    gi.font = "italic 14px 'Linux Libertine O', Georgia, serif";
+    gi.fillStyle = C.charcoal; gi.textBaseline = "middle";
+    gi.fillText("u", IW - 16, cy - 10);
+    gi.fillText("v", cx + 8, IH - 82);
+    gi.font = "12px system-ui, sans-serif"; gi.fillStyle = C.forest;
+    gi.fillText("sensor", s0.x + 4, s0.y - 9);
+    gi.fillStyle = C.warmgray;
+    gi.fillText(cam.plane === "real" ? "real image plane, Z = −f: inverted" : "virtual image plane, Z = +f",
+                s0.x, s1.y + 12);
+    gi.restore();
+
+    // principal point
+    disc(gi, { x: cx, y: cy }, C.forest, 2.4, 0.9);
+
+    // far to near, so a nearer object on the same rays paints over the
+    // farther one, as it would on a real sensor
+    var order = objects.map(function (o, i) { return i; })
+                       .sort(function (a, b) { return objects[b].c[2] - objects[a].c[2]; });
+    order.forEach(function (idx) {
+      var o = objects[idx], G = geometry(o), sel = idx === selected;
+      gi.save();
+      gi.strokeStyle = o.color; gi.lineWidth = sel ? 2.2 : 1.3;
+      gi.globalAlpha = sel ? 1 : 0.85;
+      G.E.forEach(function (e) {
+        var ce = clipEdge(G.V[e[0]], G.V[e[1]]);
+        if (!ce) return;
+        var A = toPx(toImage(ce[0])), Bp = toPx(toImage(ce[1]));
+        gi.beginPath(); gi.moveTo(A.x, A.y); gi.lineTo(Bp.x, Bp.y); gi.stroke();
+      });
+      gi.restore();
+      if (show.rays) G.R.forEach(function (kk) {
+        var uv = toImage(G.V[kk]);
+        if (uv) disc(gi, toPx(uv), o.color, sel ? 3.6 : 2.8, 0.95);
+      });
+      if (o.type === "point") {
+        var uv = toImage(o.c);
+        if (uv) disc(gi, toPx(uv), o.color, sel ? 5 : 4);
+      }
+    });
+
+    drawReadout();
+  }
+
+  // The projection written out with the actual numbers in it, for whichever
+  // object is selected. This is the line students should be able to write
+  // themselves by the end of the lecture.
+  function drawReadout() {
+    var el = document.getElementById("readout");
+    var o = objects[selected];
+    if (!o) { el.innerHTML = ""; return; }
+    var c = o.c, what = o.type === "point" ? "the point" : "the centre of the " + o.type;
+    var head = '<div class="who">' + what + ' at (X, Y, Z) = (' +
+               fmt(c[0]) + ', ' + fmt(c[1]) + ', ' + fmt(c[2]) + ')</div>';
+    if (c[2] <= EPS) {
+      el.innerHTML = head + '<div class="warn">Z ≤ 0: behind the pinhole, not imaged</div>';
+      return;
+    }
+    var s = sgn(), pre = s < 0 ? "−" : "";
+    var uv = toImage(c);
+    el.innerHTML = head +
+      '<div class="eq">u = ' + pre + '<span class="f">f</span> X / Z = ' + pre +
+      '<span class="f">' + fmt(cam.f) + '</span> × ' + fmt(c[0]) + ' / ' + fmt(c[2]) +
+      ' = <span class="n">' + fmt(uv[0]) + '</span></div>' +
+      '<div class="eq">v = ' + pre + '<span class="f">f</span> Y / Z = ' + pre +
+      '<span class="f">' + fmt(cam.f) + '</span> × ' + fmt(c[1]) + ' / ' + fmt(c[2]) +
+      ' = <span class="n">' + fmt(uv[1]) + '</span></div>';
+  }
+
+  function fmt(v) {
+    if (Math.abs(v) < 5e-4) v = 0;
+    return (v % 1 === 0) ? String(v) : v.toFixed(2).replace(/0$/, "");
+  }
+
+  function draw() { drawWorld(); drawImage(); }
+
+  // ---- the panel ------------------------------------------------------
+  var sel = document.getElementById("objsel");
+  function refreshList() {
+    sel.innerHTML = "";
+    objects.forEach(function (o, i) {
+      var opt = document.createElement("option");
+      opt.value = i; opt.textContent = o.type + " " + o.id;
+      sel.appendChild(opt);
+    });
+    sel.value = selected;
+    syncSliders();
+  }
+  function syncSliders() {
+    var o = objects[selected];
+    ["X", "Y", "Z", "S"].forEach(function (a, i) {
+      var s = document.getElementById("s" + a), v = document.getElementById("v" + a);
+      if (!o) { s.disabled = true; v.textContent = "–"; return; }
+      var val = i < 3 ? o.c[i] : o.size;
+      s.disabled = (a === "S" && o.type === "point");
+      s.value = val; v.textContent = fmt(val);
+    });
+    var sw = sel.parentNode.querySelector(".sw");
+    if (sw) sw.remove();
+  }
+  sel.addEventListener("change", function () { selected = parseInt(sel.value, 10); syncSliders(); draw(); });
+
+  ["X", "Y", "Z"].forEach(function (a, i) {
+    var s = document.getElementById("s" + a);
+    s.addEventListener("input", function () {
+      var o = objects[selected]; if (!o) return;
+      o.c[i] = parseFloat(s.value);
+      document.getElementById("v" + a).textContent = fmt(o.c[i]);
+      draw();
+    });
+  });
+  document.getElementById("sS").addEventListener("input", function () {
+    var o = objects[selected]; if (!o) return;
+    o.size = parseFloat(this.value);
+    document.getElementById("vS").textContent = fmt(o.size);
+    draw();
+  });
+  document.getElementById("sf").addEventListener("input", function () {
+    cam.f = parseFloat(this.value);
+    document.getElementById("vf").textContent = cam.f.toFixed(2);
+    draw();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("input[name=plane]"), function (r) {
+    r.addEventListener("change", function () { cam.plane = this.value; draw(); });
+  });
+  document.getElementById("crays").addEventListener("change", function () { show.rays = this.checked; draw(); });
+  document.getElementById("cfloor").addEventListener("change", function () { show.floor = this.checked; draw(); });
+
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-add]"), function (b) {
+    b.addEventListener("click", function () {
+      var t = this.getAttribute("data-add");
+      // new objects appear a little off-axis so their image is not a dot on the principal point
+      var c = t === "ground" ? [0, 1.2, 7] : [0.6 + 0.3 * (objects.length % 3), -0.4, 5 + objects.length];
+      addObject(t, c, t === "ground" ? 2.5 : t === "plate" ? 1.6 : 1);
+      refreshList(); draw();
+    });
+  });
+  // Scale ambiguity, on whatever is selected: every vertex is c + size x
+  // (unit offset), so doubling both slides the object out along its own
+  // rays and the image does not change. Press again for x4, x8, ...
+  document.getElementById("scaled").addEventListener("click", function () {
+    var o = objects[selected]; if (!o) return;
+    var k = 2, keep = selected;
+    addObject(o.type, [o.c[0] * k, o.c[1] * k, o.c[2] * k], o.size * k);
+    selected = keep;                 // the original stays selected; the copy is the shadow
+    refreshList(); draw();
+  });
+  document.getElementById("remove").addEventListener("click", function () {
+    if (selected < 0) return;
+    objects.splice(selected, 1);
+    selected = Math.min(selected, objects.length - 1);
+    refreshList(); draw();
+  });
+  document.getElementById("resetview").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale; view.px = DEF.px; view.py = DEF.py; draw();
+  });
+
+  // ---- presets ----------------------------------------------------------
+  var PRESETS = {
+    "default": function () {
+      addObject("point", [1.2, -0.8, 4], 1);
+    },
+    "cube": function () {
+      addObject("cube", [0.6, -0.3, 4], 1);
+      show.rays = true;
+    },
+    // A ground grid below the camera: the lines parallel to the optical
+    // axis all meet at the principal point.
+    "vanish": function () {
+      addObject("ground", [0, 1.0, 8], 4);
+      show.rays = false;
+    }
+  };
+  function applyPreset(name) {
+    objects = []; selected = -1; nextId = 1;
+    (PRESETS[name] || PRESETS["default"])();
+    document.getElementById("crays").checked = show.rays;
+    refreshList(); draw();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-preset]"), function (b) {
+    b.addEventListener("click", function () { applyPreset(this.getAttribute("data-preset")); });
+  });
+
+  // ---- interaction in the world view ---------------------------------
+  // Pointer on an object: drag moves it in the screen plane of the current
+  // view (the natural thing in an orbit view). Pointer on nothing: orbit.
+  function hitTest(x, y) {
+    var best = null, bestD = -Infinity, R = 13;
+    objects.forEach(function (o, idx) {
+      var G = geometry(o), pts = G.V.slice(); pts.push(o.c);
+      pts.forEach(function (p) {
+        var s = project(p), dx = s.x - x, dy = s.y - y;
+        if (dx * dx + dy * dy <= R * R && s.d > bestD) { best = idx; bestD = s.d; }
+      });
+    });
+    return best;
+  }
+  var drag = null;
+  world.addEventListener("contextmenu", function (e) {
+    if (!e.target.closest("#panel")) e.preventDefault();
+  });
+  world.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#panel")) return;
+    var rect = world.getBoundingClientRect();
+    var x = e.clientX - rect.left, y = e.clientY - rect.top;
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    var hit = pan ? null : hitTest(x, y);
+    if (hit !== null) {
+      selected = hit; sel.value = hit; syncSliders();
+      drag = { kind: "move", x: e.clientX, y: e.clientY, c0: objects[hit].c.slice() };
+      world.classList.add("moving");
+    } else {
+      drag = { kind: pan ? "pan" : "orbit", x: e.clientX, y: e.clientY,
+               az: view.az, el: view.el, px: view.px, py: view.py };
+      world.classList.add(pan ? "moving" : "orbiting");
+    }
+    world.setPointerCapture(e.pointerId);
+    draw();
+  });
+  world.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (drag.kind === "move") {
+      var o = objects[selected]; if (!o) return;
+      var k = 1 / view.scale;
+      for (var i = 0; i < 3; i++)
+        o.c[i] = drag.c0[i] + B.right[i] * dx * k - B.up[i] * dy * k;
+      syncSliders();
+    } else if (drag.kind === "pan") {
+      view.px = drag.px + dx; view.py = drag.py + dy;
+    } else {
+      view.az = drag.az + dx * 0.008;
+      view.el = Math.max(-1.45, Math.min(1.45, drag.el + dy * 0.008));
+    }
+    draw();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null;
+    world.classList.remove("orbiting"); world.classList.remove("moving");
+    if (e && e.pointerId !== undefined) {
+      try { world.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+  }
+  world.addEventListener("pointerup", endDrag);
+  world.addEventListener("pointercancel", endDrag);
+  world.addEventListener("wheel", function (e) {
+    if (e.target.closest("#panel")) return;
+    e.preventDefault();
+    view.scale = Math.max(16, Math.min(160, view.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    draw();
+  }, { passive: false });
+
+  // ---- presets from the URL -------------------------------------------
+  // ?preset=cube|vanish|default, ?f=1.5, ?plane=real, ?rays=0, ?plane_xz=0
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("f")) {
+      var f = parseFloat(q.get("f"));
+      if (isFinite(f)) { cam.f = Math.max(0.3, Math.min(3, f));
+        document.getElementById("sf").value = cam.f;
+        document.getElementById("vf").textContent = cam.f.toFixed(2); }
+    }
+    if (q.get("plane") === "real") {
+      cam.plane = "real";
+      document.querySelector("input[name=plane][value=real]").checked = true;
+    }
+    if (q.has("rays")) { show.rays = q.get("rays") !== "0"; }
+    if (q.has("plane_xz")) { show.floor = q.get("plane_xz") !== "0"; document.getElementById("cfloor").checked = show.floor; }
+    objects = []; selected = -1; nextId = 1;
+    (PRESETS[q.get("preset")] || PRESETS["default"])();
+    if (q.has("rays")) show.rays = q.get("rays") !== "0";
+    document.getElementById("crays").checked = show.rays;
+    refreshList();
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = world.clientWidth; H = world.clientHeight;
+    cw.width = Math.round(W * DPR); cw.height = Math.round(H * DPR);
+    var im = document.getElementById("image");
+    IW = im.clientWidth; IH = im.clientHeight;
+    ci.width = Math.round(IW * DPR); ci.height = Math.round(IH * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+})();
+</script>
+</body>
+</html>

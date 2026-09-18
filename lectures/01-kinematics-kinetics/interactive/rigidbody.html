@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A rigid body in 3D: six numbers</title>
+
+<style>
+  :root {
+    --charcoal:  #2D3748;
+    --forest:    #2B6CB0;
+    --crimson:   #A51C30;
+    --seagreen:  #2F855A;
+    --warmgray:  #718096;
+    --grid:      #CBD5E0;
+    --bg:        #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  #stage.panning  { cursor: move; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .lbl {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 14px; font-style: italic; white-space: nowrap;
+    pointer-events: none; user-select: none;
+  }
+  .lbl b { font-style: normal; font-weight: 700; }
+  .lbl sub { font-size: 0.68em; font-style: normal; }
+  .lbl sup { font-size: 0.68em; font-style: normal; }
+  .lbl.A { color: var(--forest); }
+  .lbl.B { color: var(--crimson); }
+  .lbl.o { color: var(--charcoal); }
+  .lbl.t { color: var(--warmgray); font-size: 13px; }
+
+  /* Compact panel, as in the other interactives: this sits on a slide. */
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 222px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid #E2E8F0; border-radius: 5px;
+    padding: 6px 8px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel .slider { display: block; margin-bottom: 4px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 112px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px; margin-top: -3.5px;
+    border-radius: 50%; border: none; background: var(--forest);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none; border-radius: 50%; background: var(--forest);
+  }
+  #panel .rot input[type=range]::-webkit-slider-thumb { background: var(--seagreen); }
+  #panel .rot input[type=range]::-moz-range-thumb { background: var(--seagreen); }
+  #panel input[type=radio], #panel input[type=checkbox] {
+    width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0;
+  }
+  #panel .val { display: inline-block; width: 2.6em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--crimson); }
+  #panel .k { display: inline-block; width: 1.3em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 12px; }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
+  #panel .row.sep { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .row.title { color: var(--charcoal); font-weight: 600; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 5px; margin: 2px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel .warn { color: var(--crimson); font-style: italic; }
+
+  /* The equation with live numbers in it, under the drawing. */
+  #readout {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 7px; font-size: 15px; white-space: nowrap;
+  }
+  #readout .bmat {
+    display: inline-flex; flex-direction: column; align-items: center;
+    padding: 1px 6px; line-height: 1.2; font-size: 13px;
+    border-left: 1.2px solid var(--charcoal); border-right: 1.2px solid var(--charcoal);
+    font-variant-numeric: tabular-nums;
+  }
+  #readout .bmat.R { flex-direction: row; gap: 8px; }
+  #readout .bmat.R > span { display: inline-flex; flex-direction: column; align-items: center; }
+  #readout .A { color: var(--forest); }
+  #readout .B { color: var(--crimson); }
+  #readout .t { color: var(--warmgray); }
+  #readout .g { color: var(--seagreen); }
+  #readout .sym { font-style: italic; }
+  #readout .sym b { font-style: normal; font-weight: 700; }
+  #readout .sym sub, #readout .sym sup { font-size: 0.68em; font-style: normal; }
+  #readout .fixed { font-size: 11px; color: var(--warmgray); font-style: italic; }
+  #hint {
+    position: absolute; bottom: 6px; right: 12px;
+    font-size: 11px; color: var(--warmgray); font-family: system-ui, sans-serif;
+    pointer-events: none; user-select: none;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="row title">position of <span class="k" style="width:auto">O<sub>B</sub></span> in A</div>
+    <label class="slider"><span class="k">x</span>
+      <input type="range" id="sx" min="-4" max="4" step="0.1" value="-2.5"><span class="val" id="vx">-2.5</span></label>
+    <label class="slider"><span class="k">y</span>
+      <input type="range" id="sy" min="-4" max="4" step="0.1" value="1.5"><span class="val" id="vy">1.5</span></label>
+    <label class="slider"><span class="k">z</span>
+      <input type="range" id="sz" min="-4" max="4" step="0.1" value="1"><span class="val" id="vz">1</span></label>
+
+    <div class="row sep title">orientation of B in A (degrees)</div>
+    <label class="slider rot"><span class="k">α</span>
+      <input type="range" id="sa" min="-180" max="180" step="5" value="0"><span class="val" id="va">0</span></label>
+    <label class="slider rot"><span class="k">β</span>
+      <input type="range" id="sb" min="-180" max="180" step="5" value="0"><span class="val" id="vb">0</span></label>
+    <label class="slider rot"><span class="k">γ</span>
+      <input type="range" id="sg" min="-180" max="180" step="5" value="0"><span class="val" id="vg">0</span></label>
+    <div class="row">α about x<sub>A</sub>, then β about y<sub>A</sub>, then γ about z<sub>A</sub></div>
+    <div class="row warn" id="gimbal" hidden>β = ±90°: α and γ now do the same thing</div>
+
+    <div class="row sep title">try</div>
+    <div class="row">
+      <button data-try="xz">α = 90°, γ = 90°</button><button data-try="gimbal">β = 90°</button><button data-try="reset">reset pose</button>
+    </div>
+    <div class="row sep">
+      <label><input type="checkbox" id="cvec" checked> position vectors of P</label>
+      <label><input type="checkbox" id="cgrid" checked> grid</label>
+    </div>
+    <div class="row"><button id="resetview">reset view</button></div>
+  </div>
+
+  <div id="readout">
+    <span class="sym A"><b>r</b><sub>P</sub><sup>A</sup></span> <span>=</span>
+    <span class="sym t"><b>o</b><sub>B</sub><sup>A</sup></span> <span>+</span>
+    <span class="sym g"><b>R</b><sub>B</sub><sup>A</sup></span>
+    <span class="sym B"><b>r</b><sub>P</sub><sup>B</sup></span>
+    <span>&nbsp;:&nbsp;</span>
+    <span class="bmat A" id="rA"><span></span><span></span><span></span></span> <span>=</span>
+    <span class="bmat t" id="oB"><span></span><span></span><span></span></span> <span>+</span>
+    <span class="bmat g R" id="RB"><span><span></span><span></span><span></span></span><span><span></span><span></span><span></span></span><span><span></span><span></span><span></span></span></span>
+    <span class="bmat B" id="rB"><span></span><span></span><span></span></span>
+    <span class="fixed">(fixed)</span>
+  </div>
+  <div id="hint">drag orbits &middot; shift-drag pans &middot; wheel zooms</div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = {
+    charcoal: "#2D3748", forest: "#2B6CB0", crimson: "#A51C30",
+    seagreen: "#2F855A", warmgray: "#718096", grid: "#CBD5E0"
+  };
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  // ---- state ---------------------------------------------------------
+  // Not along the default translation (-2.5, 1.5), or O_B lands on O_A.
+  var DEF = { az: 38 * Math.PI / 180, el: 26 * Math.PI / 180, scale: 62, px: 110, py: 20 };
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: DEF.px, py: DEF.py };
+  var pose = { x: -2.5, y: 1.5, z: 1, a: 0, b: 0, g: 0 };   // the six numbers
+  var showVec = true, showGrid = true;
+
+  // The body: a box with three different side lengths, its frame at an
+  // off-centre point inside it, and a marked point P. Nothing about it is
+  // symmetric, so every one of the six numbers changes what you see.
+  var BOX = { lo: [-0.5, -0.4, -0.25], hi: [1.5, 0.8, 0.35] };
+  var P_B = [1.1, 0.5, 0.2];                             // P in the body frame: never changes
+  var W = 0, H = 0, DPR = 1;
+
+  // ---- the rotation ---------------------------------------------------
+  function Rx(t) { var c = Math.cos(t), s = Math.sin(t); return [[1,0,0],[0,c,-s],[0,s,c]]; }
+  function Ry(t) { var c = Math.cos(t), s = Math.sin(t); return [[c,0,s],[0,1,0],[-s,0,c]]; }
+  function Rz(t) { var c = Math.cos(t), s = Math.sin(t); return [[c,-s,0],[s,c,0],[0,0,1]]; }
+  function mul(A, B) {
+    var M = [[0,0,0],[0,0,0],[0,0,0]];
+    for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++)
+      M[i][j] = A[i][0]*B[0][j] + A[i][1]*B[1][j] + A[i][2]*B[2][j];
+    return M;
+  }
+  function mv(M, v) {
+    return [M[0][0]*v[0] + M[0][1]*v[1] + M[0][2]*v[2],
+            M[1][0]*v[0] + M[1][1]*v[1] + M[1][2]*v[2],
+            M[2][0]*v[0] + M[2][1]*v[1] + M[2][2]*v[2]];
+  }
+  // One convention for the whole course: rotate about the fixed axes of A,
+  // alpha about x first, then beta about y, then gamma about z. A rotation
+  // applied later multiplies on the left, so R = Rz Ry Rx.
+  function rotation() {
+    var d = Math.PI / 180;
+    return mul(Rz(pose.g * d), mul(Ry(pose.b * d), Rx(pose.a * d)));
+  }
+  // body -> world
+  function toA(R, p) {
+    var q = mv(R, p);
+    return [q[0] + pose.x, q[1] + pose.y, q[2] + pose.z];
+  }
+
+  // ---- orthographic orbit view ---------------------------------------
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    return { right: [-sa, ca, 0], up: [-ca * se, -sa * se, ce], dir: [ca * ce, sa * ce, se] };
+  }
+  function dot(a, p) { return a[0]*p[0] + a[1]*p[1] + a[2]*p[2]; }
+  var Bv = basis();
+  function project(p) {
+    return { x: W / 2 + view.px + dot(Bv.right, p) * view.scale,
+             y: H / 2 + view.py - dot(Bv.up, p) * view.scale,
+             d: dot(Bv.dir, p) };
+  }
+
+  var scene = [];
+  function seg(a, b, s) { scene.push({ a: a, b: b, s: s, d: (dot(Bv.dir, a) + dot(Bv.dir, b)) / 2 }); }
+  function strokeSeg(it) {
+    var s = it.s, A = project(it.a), Bp = project(it.b);
+    ctx.save();
+    ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 1;
+    ctx.setLineDash(s.dash || []); ctx.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(Bp.x, Bp.y); ctx.stroke();
+    if (s.arrow) {
+      var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = s.arrow, w = 0.42;
+      ctx.setLineDash([]); ctx.fillStyle = s.color;
+      ctx.beginPath(); ctx.moveTo(Bp.x, Bp.y);
+      ctx.lineTo(Bp.x - L * Math.cos(ang - w), Bp.y - L * Math.sin(ang - w));
+      ctx.lineTo(Bp.x - L * Math.cos(ang + w), Bp.y - L * Math.sin(ang + w));
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function disc(p, color, r) {
+    var s = project(p);
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2 * Math.PI); ctx.fill();
+  }
+  function poly(pts, color, alpha) {
+    ctx.save(); ctx.fillStyle = color; ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    pts.forEach(function (p, i) { var s = project(p); i ? ctx.lineTo(s.x, s.y) : ctx.moveTo(s.x, s.y); });
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+
+  // ---- HTML labels ----------------------------------------------------
+  var labels = {};
+  function mkLabel(key, cls, html) {
+    var d = document.createElement("div");
+    d.className = "lbl " + cls; d.innerHTML = html;
+    stage.appendChild(d); labels[key] = d;
+  }
+  ["x", "y", "z"].forEach(function (a) {
+    mkLabel(a + "A", "A", "<b>" + a + "</b><sub>A</sub>");
+    mkLabel(a + "B", "B", "<b>" + a + "</b><sub>B</sub>");
+  });
+  mkLabel("oA", "o", "O<sub>A</sub>");
+  mkLabel("oB", "o", "O<sub>B</sub>");
+  mkLabel("P", "o", "P");
+  mkLabel("t", "t", "<b>o</b><sub>B</sub><sup>A</sup>");
+  function placeLabel(key, p, dx, dy, show) {
+    var d = labels[key];
+    if (show === false) { d.style.display = "none"; return; }
+    d.style.display = "";
+    var s = project(p);
+    d.style.left = (s.x + (dx || 0)) + "px"; d.style.top = (s.y + (dy || 0)) + "px";
+  }
+
+  // ---- the drawing ----------------------------------------------------
+  function draw() {
+    Bv = basis(); scene = [];
+    var R = rotation();
+    var O_A = [0, 0, 0], O_B = [pose.x, pose.y, pose.z];
+    var P_A = toA(R, P_B);
+
+    if (showGrid) {
+      for (var g = -4; g <= 4; g++) {
+        var lw = g === 0 ? 1 : 0.6, al = g === 0 ? 0.9 : 0.5;
+        seg([g, -4, 0], [g, 4, 0], { color: C.grid, width: lw, alpha: al });
+        seg([-4, g, 0], [4, g, 0], { color: C.grid, width: lw, alpha: al });
+      }
+    }
+
+    // frame A
+    var ax = { color: C.warmgray, width: 1, dash: [1, 3], alpha: 0.7 };
+    seg([-4.5, 0, 0], [4.5, 0, 0], ax); seg([0, -4.5, 0], [0, 4.5, 0], ax); seg([0, 0, -1], [0, 0, 4.5], ax);
+    seg(O_A, [1, 0, 0], { color: C.forest, width: 2.4, arrow: 9 });
+    seg(O_A, [0, 1, 0], { color: C.forest, width: 2.4, arrow: 9 });
+    seg(O_A, [0, 0, 1], { color: C.forest, width: 2.4, arrow: 9 });
+
+    // the box, in the body frame, carried into A by (R, o)
+    var lo = BOX.lo, hi = BOX.hi, V = [];
+    for (var i = 0; i < 8; i++)
+      V.push(toA(R, [(i & 1) ? hi[0] : lo[0], (i & 2) ? hi[1] : lo[1], (i & 4) ? hi[2] : lo[2]]));
+    var bx = { color: C.charcoal, width: 1.3, alpha: 0.85 };
+    for (i = 0; i < 8; i++) for (var j = i + 1; j < 8; j++) {
+      var d = i ^ j;
+      if (d === 1 || d === 2 || d === 4) seg(V[i], V[j], bx);
+    }
+
+    // frame B, attached to the body
+    var bax = { color: C.crimson, width: 2.4, arrow: 9 };
+    var xB = toA(R, [1, 0, 0]), yB = toA(R, [0, 1, 0]), zB = toA(R, [0, 0, 1]);
+    seg(O_B, xB, bax); seg(O_B, yB, bax); seg(O_B, zB, bax);
+
+    // where the body is: the translation, and P's two position vectors
+    seg(O_A, O_B, { color: C.warmgray, width: 1.6, dash: [5, 3], arrow: 9, alpha: 0.9 });
+    if (showVec) {
+      seg(O_A, P_A, { color: C.forest,  width: 1.3, arrow: 8, alpha: 0.7 });
+      seg(O_B, P_A, { color: C.crimson, width: 1.3, arrow: 8, alpha: 0.8 });
+    }
+
+    scene.sort(function (a, b) { return a.d - b.d; });
+
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    // one tinted face (the +x face of the body) so a half-turn is visible
+    poly([V[1], V[3], V[7], V[5]], C.crimson, 0.10);
+    for (i = 0; i < scene.length; i++) strokeSeg(scene[i]);
+
+    disc(O_A, C.charcoal, 3.2);
+    disc(O_B, C.charcoal, 3.6);
+    disc(P_A, C.charcoal, 4.2);
+
+    placeLabel("xA", [1.25, 0, 0], 0, 6); placeLabel("yA", [0, 1.2, 0], 0, 0); placeLabel("zA", [0, 0, 1.2], 0, 0);
+    placeLabel("xB", toA(R, [1.22, 0, 0]), 0, 0);
+    placeLabel("yB", toA(R, [0, 1.22, 0]), 0, 0);
+    placeLabel("zB", toA(R, [0, 0, 1.22]), 0, 0);
+    placeLabel("oA", O_A, -16, 14);
+    placeLabel("oB", O_B, -16, 12);
+    placeLabel("P", P_A, 12, -10);
+    placeLabel("t", [O_B[0] / 2, O_B[1] / 2, O_B[2] / 2], 14, 12);
+
+    // the readout: the same equation, with tonight's numbers in it
+    setVec("rA", P_A); setVec("oB", O_B); setVec("rB", P_B);
+    var RB = document.getElementById("RB").children;
+    for (j = 0; j < 3; j++) for (i = 0; i < 3; i++) RB[j].children[i].textContent = fmt(R[i][j]);
+
+    document.getElementById("gimbal").hidden = Math.abs(Math.abs(pose.b) - 90) > 1e-6;
+  }
+  function setVec(id, v) {
+    var el = document.getElementById(id).children;
+    for (var i = 0; i < 3; i++) el[i].textContent = fmt(v[i]);
+  }
+  function fmt(v) {
+    if (Math.abs(v) < 5e-3) v = 0;
+    return v.toFixed(2).replace(/\.?0+$/, "");
+  }
+  function fmtDeg(v) { return String(v) + "°"; }
+
+  // ---- interaction ----------------------------------------------------
+  var drag = null;
+  stage.addEventListener("contextmenu", function (e) { if (!e.target.closest("#panel")) e.preventDefault(); });
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#panel")) return;
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el, px: view.px, py: view.py, pan: pan };
+    stage.classList.add(pan ? "panning" : "dragging");
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) { view.px = drag.px + (e.clientX - drag.x); view.py = drag.py + (e.clientY - drag.y); }
+    else {
+      view.az = drag.az - (e.clientX - drag.x) * 0.008;
+      view.el = Math.max(-1.45, Math.min(1.45, drag.el + (e.clientY - drag.y) * 0.008));
+    }
+    draw();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null; stage.classList.remove("dragging"); stage.classList.remove("panning");
+    if (e && e.pointerId !== undefined) { try { stage.releasePointerCapture(e.pointerId); } catch (err) {} }
+  }
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+  stage.addEventListener("wheel", function (e) {
+    if (e.target.closest("#panel")) return;
+    e.preventDefault();
+    view.scale = Math.max(18, Math.min(160, view.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    draw();
+  }, { passive: false });
+
+  var SL = { x: "sx", y: "sy", z: "sz", a: "sa", b: "sb", g: "sg" };
+  var VL = { x: "vx", y: "vy", z: "vz", a: "va", b: "vb", g: "vg" };
+  function syncSliders() {
+    Object.keys(SL).forEach(function (k) {
+      document.getElementById(SL[k]).value = pose[k];
+      document.getElementById(VL[k]).textContent = (k === "a" || k === "b" || k === "g") ? fmtDeg(pose[k]) : fmt(pose[k]);
+    });
+  }
+  Object.keys(SL).forEach(function (k) {
+    document.getElementById(SL[k]).addEventListener("input", function () {
+      pose[k] = parseFloat(this.value); syncSliders(); draw();
+    });
+  });
+  document.getElementById("cvec").addEventListener("change", function () { showVec = this.checked; draw(); });
+  document.getElementById("cgrid").addEventListener("change", function () { showGrid = this.checked; draw(); });
+  document.getElementById("resetview").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale; view.px = DEF.px; view.py = DEF.py; draw();
+  });
+
+  var TRY = {
+    xz:     function () { pose.a = 90; pose.b = 0;  pose.g = 90; },
+    gimbal: function () { pose.a = 0;  pose.b = 90; pose.g = 0;  },
+    reset:  function () { pose.a = 0;  pose.b = 0;  pose.g = 0;
+                          pose.x = -2.5; pose.y = 1.5; pose.z = 1; }
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-try]"), function (b) {
+    b.addEventListener("click", function () { TRY[this.getAttribute("data-try")](); syncSliders(); draw(); });
+  });
+
+  // ---- presets from the URL -------------------------------------------
+  // ?o=2,1.5,1 sets the position, ?r=90,0,90 the angles, ?try=xz|gimbal
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("try") && TRY[q.get("try")]) TRY[q.get("try")]();
+    if (q.has("o")) {
+      var v = q.get("o").split(",").map(parseFloat);
+      ["x", "y", "z"].forEach(function (k, i) { if (isFinite(v[i])) pose[k] = v[i]; });
+    }
+    if (q.has("r")) {
+      var w = q.get("r").split(",").map(parseFloat);
+      ["a", "b", "g"].forEach(function (k, i) { if (isFinite(w[i])) pose[k] = w[i]; });
+    }
+    if (q.has("vec"))  showVec  = q.get("vec")  !== "0";
+    if (q.has("grid")) { showGrid = q.get("grid") !== "0"; document.getElementById("cgrid").checked = showGrid; }
+    document.getElementById("cvec").checked = showVec;
+    syncSliders();
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+})();
+</script>
+</body>
+</html>
