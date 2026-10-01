@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two pixels, one point</title>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']],
+           macros: { v: ['{\\mathbf{#1}}', 1],
+                     m: ['{\\begin{bmatrix}#1\\end{bmatrix}}', 1] } },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal: #2D3748; --forest: #2B6CB0; --crimson: #A51C30;
+    --seagreen: #2F855A; --warmgray: #718096; --grid: #CBD5E0;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #fff; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+  #panel {
+    flex: 0 0 auto; display: flex; align-items: flex-start;
+    background: #FAFBFC; border-bottom: 1px solid #E2E8F0;
+    padding: 5px 10px 6px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #panel .grp { padding: 0 10px; border-left: 1px solid #E2E8F0; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel .hd.a { color: var(--forest); }
+  #panel .hd.b { color: var(--seagreen); }
+  #panel label { display: block; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 84px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 10px; height: 10px;
+    margin-top: -3.5px; border-radius: 50%; border: none; background: var(--crimson); }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none; border-radius: 50%; background: var(--crimson); }
+  #panel .k { display: inline-block; width: 2.4em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .val { display: inline-block; width: 3.0em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--crimson); }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray);
+                font-variant-numeric: tabular-nums; }
+  #panel input[type=checkbox] { width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 1px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+
+  #panes { display: flex; flex: 1 1 auto; min-height: 0; }
+  .pane { position: relative; height: 100%; }
+  #left  { flex: 0 0 25%; display: flex; flex-direction: column; min-width: 0; }
+  .img   { flex: 1 1 50%; height: auto; min-height: 0; cursor: crosshair; }
+  .img + .img { border-top: 1px solid #E2E8F0; }
+  .img.locked { cursor: not-allowed; }
+  #world { flex: 1 1 75%; cursor: grab; border-left: 1px solid #E2E8F0; }
+  #world.dragging { cursor: grabbing; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .cap {
+    position: absolute; bottom: 6px; left: 0; right: 0; text-align: center;
+    font-size: 12px; color: var(--warmgray); pointer-events: none; user-select: none;
+  }
+  .cap.top { top: 4px; bottom: auto; font-size: 12px; }
+  .lbl { position: absolute; transform: translate(-50%, -50%);
+         font-size: 13px; white-space: nowrap; pointer-events: none; user-select: none; }
+
+  #readout {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 18px;
+    padding: 6px 14px 7px; border-top: 1px solid #E2E8F0; background: #FAFBFC;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #readout .n { color: var(--crimson); font-weight: 700; }
+  #readout .note { color: var(--warmgray); font-size: 11.5px; font-style: italic;
+                   font-family: system-ui, sans-serif; }
+  #readout .note b { color: var(--crimson); font-style: normal; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd a">camera A intrinsics</div>
+      <label><span class="k">f</span>
+        <input type="range" id="s_fa" min="200" max="1600" step="10" value="800">
+        <span class="val" id="v_fa"></span> px</label>
+      <label><span class="k">u<sub>0</sub></span>
+        <input type="range" id="s_ua" min="0" max="640" step="5" value="320">
+        <span class="val" id="v_ua"></span> px</label>
+      <label><span class="k">v<sub>0</sub></span>
+        <input type="range" id="s_va" min="0" max="480" step="5" value="240">
+        <span class="val" id="v_va"></span> px</label>
+    </div>
+
+    <div class="grp">
+      <div class="hd b">camera B intrinsics</div>
+      <label><span class="k">f</span>
+        <input type="range" id="s_fb" min="200" max="1600" step="10" value="800">
+        <span class="val" id="v_fb"></span> px</label>
+      <label><span class="k">u<sub>0</sub></span>
+        <input type="range" id="s_ub" min="0" max="640" step="5" value="320">
+        <span class="val" id="v_ub"></span> px</label>
+      <label><span class="k">v<sub>0</sub></span>
+        <input type="range" id="s_vb" min="0" max="480" step="5" value="240">
+        <span class="val" id="v_vb"></span> px</label>
+    </div>
+
+    <div class="grp">
+      <div class="hd b">camera B origin, in A</div>
+      <label><span class="k">x</span>
+        <input type="range" id="s_tx" min="-6" max="6" step="0.05" value="3">
+        <span class="val" id="v_tx"></span></label>
+      <label><span class="k">y</span>
+        <input type="range" id="s_ty" min="-3" max="3" step="0.05" value="-1">
+        <span class="val" id="v_ty"></span></label>
+      <label><span class="k">z</span>
+        <input type="range" id="s_tz" min="-3" max="6" step="0.05" value="0">
+        <span class="val" id="v_tz"></span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd b">camera B orientation, in A</div>
+      <label><span class="k">pan</span>
+        <input type="range" id="s_yaw" min="-60" max="60" step="0.5" value="-16">
+        <span class="val" id="v_yaw"></span>&deg; <span style="color:var(--warmgray)">about y</span></label>
+      <label><span class="k">tilt</span>
+        <input type="range" id="s_pitch" min="-40" max="40" step="0.5" value="-8">
+        <span class="val" id="v_pitch"></span>&deg; <span style="color:var(--warmgray)">about x</span></label>
+      <label><span class="k">roll</span>
+        <input type="range" id="s_roll" min="-45" max="45" step="0.5" value="0">
+        <span class="val" id="v_roll"></span>&deg; <span style="color:var(--warmgray)">about z</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">what B sees of A</div>
+      <div class="row" id="oab"></div>
+      <div class="row" id="rab0"></div>
+      <div class="row" id="rab1"></div>
+      <div class="row" id="rab2"></div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">controls</div>
+      <label><span class="k">snap</span>
+        <input type="range" id="s_tol" min="0" max="40" step="1" value="12">
+        <span class="val" id="v_tol"></span> px</label>
+      <div class="row">
+        <button id="clear">clear images</button>
+        <button id="resetcam">reset cameras</button>
+        <button id="reset">reset view</button>
+      </div>
+      <div class="row">
+        <label style="display:inline"><input type="checkbox" id="c_cube">cube</label> &nbsp;
+        <label style="display:inline"><input type="checkbox" id="c_mark">principal point &amp; epipole</label>
+      </div>
+      <div class="row">drag 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
+    </div>
+  </div>
+
+  <div id="panes">
+    <div id="left">
+      <div class="pane img" id="paneA">
+        <canvas id="cA"></canvas>
+        <div class="cap top"><span style="color:var(--forest)">camera A &mdash; the world frame</span>
+          &middot; click to choose \(\v{r}_p^{S_A}\)</div>
+      </div>
+      <div class="pane img" id="paneB">
+        <canvas id="cB"></canvas>
+        <div class="cap top"><span style="color:var(--seagreen)">camera B</span>
+          &middot; click to choose \(\v{r}_p^{S_B}\)</div>
+      </div>
+    </div>
+    <div class="pane" id="world">
+      <canvas id="cw"></canvas>
+      <div class="cap">the world &mdash; two rays, one point</div>
+    </div>
+  </div>
+
+  <div id="readout">
+    <span id="eq">\(\lambda_a \v{r}_p^{S_A} = \v{K}_f^{A}\m{\v{I}_3 & \v{0}}\v{r}_P^W \quad
+                   \lambda_b \v{r}_p^{S_B} = \v{K}_f^{B}\m{\v{R}_A^B & \v{o}_A^B}\v{r}_P^W\)</span>
+    <span id="numbers"></span>
+    <span class="note" id="note"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = { charcoal:"#2D3748", forest:"#2B6CB0", crimson:"#A51C30",
+            seagreen:"#2F855A", warmgray:"#718096", grid:"#CBD5E0" };
+
+  // ---- small linear algebra ----------------------------------------------
+  function dot(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function add(a, b) { return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+  function sub(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function mul(a, s) { return [a[0]*s, a[1]*s, a[2]*s]; }
+  function len(a) { return Math.sqrt(dot(a, a)); }
+  function cross(a, b) {
+    return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function mv(M, v) { return [dot(M[0], v), dot(M[1], v), dot(M[2], v)]; }
+  function tr(M) { return [[M[0][0],M[1][0],M[2][0]],
+                           [M[0][1],M[1][1],M[2][1]],
+                           [M[0][2],M[1][2],M[2][2]]]; }
+  function mm(A, B) { var T = tr(B);
+    return [[dot(A[0],T[0]),dot(A[0],T[1]),dot(A[0],T[2])],
+            [dot(A[1],T[0]),dot(A[1],T[1]),dot(A[1],T[2])],
+            [dot(A[2],T[0]),dot(A[2],T[1]),dot(A[2],T[2])]]; }
+  function rotX(a) { var c=Math.cos(a), s=Math.sin(a); return [[1,0,0],[0,c,-s],[0,s,c]]; }
+  function rotY(a) { var c=Math.cos(a), s=Math.sin(a); return [[c,0,s],[0,1,0],[-s,0,c]]; }
+  function rotZ(a) { var c=Math.cos(a), s=Math.sin(a); return [[c,-s,0],[s,c,0],[0,0,1]]; }
+  var I3 = [[1,0,0],[0,1,0],[0,0,1]];
+
+  // ---- the two cameras -----------------------------------------------------
+  // Each camera is its intrinsics plus its pose IN THE WORLD, (R, o): R's
+  // columns are the camera's axes and o its centre, both written in A's frame.
+  // A is the world, so its pose is the identity and stays that way.
+  var NU = 640, NV = 480;             // both sensors, pixels
+  var DEFB = { x: 3, y: -1, z: 0, yaw: -16, pitch: -8, roll: 0 };
+  var cam = {
+    A: { f: 800, u0: 320, v0: 240, R: I3, o: [0,0,0], col: C.forest,   name: "A" },
+    B: { f: 800, u0: 320, v0: 240, R: I3, o: [3,-1,0], col: C.seagreen, name: "B" }
+  };
+  var poseB = { x: DEFB.x, y: DEFB.y, z: DEFB.z,
+                yaw: DEFB.yaw, pitch: DEFB.pitch, roll: DEFB.roll };
+  function other(k) { return k === "A" ? "B" : "A"; }
+
+  function updateB() {
+    var d = Math.PI / 180;
+    cam.B.R = mm(mm(rotY(poseB.yaw*d), rotX(poseB.pitch*d)), rotZ(poseB.roll*d));
+    cam.B.o = [poseB.x, poseB.y, poseB.z];
+  }
+
+  // K^{-1} r_p^S: the direction of a pixel's ray in the camera's own frame,
+  // scaled so that its z is 1 -- the multiplier along it is then the depth.
+  function normd(c, u, v) { return [(u - c.u0)/c.f, (v - c.v0)/c.f, 1]; }
+  function rayDir(c, u, v) { return mv(c.R, normd(c, u, v)); }   // in the world
+  function toCam(c, X) { return mv(tr(c.R), sub(X, c.o)); }
+  function pix(c, X) {
+    var q = toCam(c, X);
+    if (q[2] < 0.05) return null;       // behind (or on) the camera: no image
+    return [c.f*q[0]/q[2] + c.u0, c.f*q[1]/q[2] + c.v0, q[2]];
+  }
+
+  // The epipolar line. The ray through pixel (u, v) of camera `from`, together
+  // with the centre of camera `to`, spans a plane; that plane cuts `to`'s image
+  // in a line, and the second pixel must lie on it. In `to`'s frame the plane
+  // has normal m = t x (R n); m . K^{-1} x = 0 is then rewritten in pixels.
+  // Returns [a, b, c] with a u + b v + c = 0, or null when the centres coincide.
+  function epiLine(from, to, u, v) {
+    var R12 = mm(tr(to.R), from.R);
+    var t12 = mv(tr(to.R), sub(from.o, to.o));
+    if (len(t12) < 1e-6) return null;
+    var m = cross(t12, mv(R12, normd(from, u, v)));
+    var a = m[0]/to.f, b = m[1]/to.f;
+    return [a, b, m[2] - a*to.u0 - b*to.v0];
+  }
+  function offLine(L, u, v) {
+    var s = (L[0]*u + L[1]*v + L[2]) / (L[0]*L[0] + L[1]*L[1]);
+    return { u: u - L[0]*s, v: v - L[1]*s,
+             dist: Math.abs(L[0]*u + L[1]*v + L[2]) / Math.hypot(L[0], L[1]) };
+  }
+
+  // Closest approach of the two rays. When they meet, the gap is zero and the
+  // midpoint IS the point; when they do not, the gap says by how much they miss.
+  // s and t come back as depths, because each direction has z = 1 in its camera.
+  function closest(c1, p1, c2, p2) {
+    var d1 = rayDir(c1, p1.u, p1.v), d2 = rayDir(c2, p2.u, p2.v);
+    var w = sub(c1.o, c2.o);
+    var a = dot(d1,d1), b = dot(d1,d2), c = dot(d2,d2), d = dot(d1,w), e = dot(d2,w);
+    var den = a*c - b*b;
+    var ang = Math.acos(Math.min(1, Math.abs(b)/Math.sqrt(a*c))) * 180/Math.PI;
+    if (den < 1e-12 * a * c) return { ok: false, ang: ang };
+    var s = (b*e - c*d)/den, t = (a*e - b*d)/den;
+    var P1 = add(c1.o, mul(d1, s)), P2 = add(c2.o, mul(d2, t));
+    return { ok: true, P1: P1, P2: P2, P: mul(add(P1, P2), 0.5),
+             gap: len(sub(P1, P2)), s: s, t: t, ang: ang };
+  }
+
+  // ---- the scene: a cube in front of both cameras ----------------------------
+  // y points down (camera convention), so the floor sits at y = +1.
+  var CUBE_C = [1.0, 0, 7], CUBE_H = 1, FLOOR = 1;
+  var CV = [];
+  for (var i = 0; i < 8; i++)
+    CV.push([CUBE_C[0] + (i&1 ? CUBE_H : -CUBE_H),
+             CUBE_C[1] + (i&2 ? CUBE_H : -CUBE_H),
+             CUBE_C[2] + (i&4 ? CUBE_H : -CUBE_H)]);
+  var CE = [];
+  for (var p = 0; p < 8; p++) for (var q = p+1; q < 8; q++) {
+    var x = p ^ q; if (x === 1 || x === 2 || x === 4) CE.push([p, q]); }
+
+  // ---- what has been clicked -------------------------------------------------
+  var first = null;                   // {cam, u, v}
+  var second = null;                  // {cam, u, v}  (already snapped, if it was)
+  var hover = null;                   // {cam, u, v, on} -- where a click would land
+  var tol = 12;                       // snap distance, sensor pixels
+  var show = { cube: false, mark: false };   // optional clutter, off by default
+
+  // Everything about the current pair, computed afresh each frame, so that
+  // moving a camera after clicking shows at once what that does to the rays.
+  function pairState() {
+    if (!first) return null;
+    var cf = cam[first.cam], co = cam[other(first.cam)];
+    var L = epiLine(cf, co, first.u, first.v);
+    var st = { L: L };
+    if (!second) return st;
+    st.off = L ? offLine(L, second.u, second.v).dist : NaN;
+    st.on = !!L && st.off <= tol;
+    // report in A-then-B order, whichever image was clicked first
+    var pa = first.cam === "A" ? first : second, pb = first.cam === "A" ? second : first;
+    st.pa = pa; st.pb = pb;
+    st.r = closest(cam.A, pa, cam.B, pb);
+    return st;
+  }
+
+  // One point per image. The first click fixes a pixel -- and so a ray -- and
+  // that image is then locked until "clear images". Every click on the other
+  // image replaces its point, so the search for the match happens along one
+  // fixed epipolar line: points along it are different depths on the same ray.
+  function onClick(k, u, v) {
+    if (!first) { first = { cam: k, u: u, v: v }; }
+    else if (first.cam === k) { return; }
+    else {
+      var L = epiLine(cam[first.cam], cam[k], first.u, first.v);
+      if (L) {
+        var s = offLine(L, u, v);
+        if (s.dist <= tol) { u = s.u; v = s.v; }   // sticky: land on the line
+      }
+      second = { cam: k, u: u, v: v };
+    }
+    hover = null;
+    draw();
+  }
+
+  // ---- orbit view of the world (orthographic) ----------------------------
+  var DEF = { az: 0.78, el: 0.42, scale: 54, px: -60, py: 0 };
+  // Orbit about a point between the cameras and the cube, so that the whole
+  // two-camera arrangement stays in view whichever way it is turned.
+  var CENTRE = [1.2, 0, 3.5];
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: DEF.px, py: DEF.py };
+  var W = 0, H = 0;
+
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    // world "up" is -y, since the camera frame has y pointing down
+    var d = [ce * sa, -se, -ce * ca];
+    var r = [ca, 0, sa];
+    return { right: r, up: cross(d, r), dir: d };
+  }
+  var Bs = basis();
+  function project(p) {
+    var q = sub(p, CENTRE);
+    return { x: W/2 + view.px + dot(Bs.right, q) * view.scale,
+             y: H/2 + view.py - dot(Bs.up, q) * view.scale };
+  }
+  function line3(g, a, b, colour, width, dash, alpha) {
+    var A = project(a), Bp = project(b);
+    g.save();
+    g.strokeStyle = colour; g.lineWidth = width || 1;
+    g.setLineDash(dash || []); g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(Bp.x, Bp.y); g.stroke();
+    g.restore();
+  }
+  function arrow3(g, a, b, colour, width, head) {
+    // head built in SCREEN space, so it keeps its shape whichever way it points
+    line3(g, a, b, colour, width);
+    var A = project(a), Bp = project(b);
+    var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = head || 8, w = 0.42;
+    g.save(); g.fillStyle = colour;
+    g.beginPath();
+    g.moveTo(Bp.x, Bp.y);
+    g.lineTo(Bp.x - L*Math.cos(ang - w), Bp.y - L*Math.sin(ang - w));
+    g.lineTo(Bp.x - L*Math.cos(ang + w), Bp.y - L*Math.sin(ang + w));
+    g.closePath(); g.fill(); g.restore();
+  }
+  function disc3(g, p, colour, r, alpha) {
+    var s = project(p);
+    g.save(); g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.fillStyle = colour; g.beginPath(); g.arc(s.x, s.y, r, 0, 2*Math.PI); g.fill();
+    g.restore();
+  }
+  function poly3(g, pts, colour, alpha) {
+    g.save(); g.fillStyle = colour; g.globalAlpha = alpha;
+    g.beginPath();
+    pts.forEach(function (q, i) { var s = project(q); i ? g.lineTo(s.x, s.y) : g.moveTo(s.x, s.y); });
+    g.closePath(); g.fill(); g.restore();
+  }
+
+  // ---- labels ------------------------------------------------------------
+  var labels = {};
+  function mkLabel(pane, key, html, colour) {
+    var d = document.createElement("div");
+    d.className = "lbl"; d.innerHTML = html; d.style.color = colour;
+    document.getElementById(pane).appendChild(d); labels[key] = d;
+  }
+  mkLabel("world", "OA", "\\(\\v{o}_A\\)", C.forest);
+  mkLabel("world", "OB", "\\(\\v{o}_B\\)", C.seagreen);
+  mkLabel("world", "XW", "\\(\\v{r}_P^W\\)", C.crimson);
+  function place(key, p, dx, dy, show) {
+    var d = labels[key];
+    if (show === false) { d.style.display = "none"; return; }
+    d.style.display = "";
+    var s = project(p);
+    d.style.left = (s.x + (dx||0)) + "px";
+    d.style.top  = (s.y + (dy||0)) + "px";
+  }
+
+  // ---- the two image panes ---------------------------------------------------
+  var panes = {
+    A: { el: document.getElementById("paneA"), cv: document.getElementById("cA"), geo: {} },
+    B: { el: document.getElementById("paneB"), cv: document.getElementById("cB"), geo: {} }
+  };
+
+  function drawImage(k, st) {
+    var P = panes[k], c = cam[k], g = P.cv.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var w = P.el.clientWidth, h = P.el.clientHeight;
+    P.cv.width = Math.round(w*dpr); P.cv.height = Math.round(h*dpr);
+    g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
+
+    var s = Math.min((w-16)/NU, (h-30)/NV);
+    var ox = (w - NU*s)/2, oy = 22 + (h - 26 - NV*s)/2;
+    P.geo = { k: s, ox: ox, oy: oy };
+    function X(u) { return ox + u*s; }
+    function Y(v) { return oy + v*s; }
+
+    g.save();
+    g.fillStyle = "#F7FAFC"; g.fillRect(ox, oy, NU*s, NV*s);
+    g.strokeStyle = C.grid; g.globalAlpha = .7; g.lineWidth = .5;
+    for (var i = 0; i <= NU; i += 40) {
+      g.beginPath(); g.moveTo(X(i), oy); g.lineTo(X(i), oy+NV*s); g.stroke(); }
+    for (var j = 0; j <= NV; j += 40) {
+      g.beginPath(); g.moveTo(ox, Y(j)); g.lineTo(ox+NU*s, Y(j)); g.stroke(); }
+    g.restore();
+
+    // everything below is clipped to the sensor: what falls off it is not seen
+    g.save();
+    g.beginPath(); g.rect(ox, oy, NU*s, NV*s); g.clip();
+
+    // the cube, as this camera sees it
+    if (show.cube) {
+      var pv = CV.map(function (q) { return pix(c, q); });
+      g.strokeStyle = C.charcoal; g.lineWidth = 1.1; g.globalAlpha = .75;
+      CE.forEach(function (e) {
+        var a = pv[e[0]], b = pv[e[1]]; if (!a || !b) return;
+        g.beginPath(); g.moveTo(X(a[0]), Y(a[1])); g.lineTo(X(b[0]), Y(b[1])); g.stroke();
+      });
+      g.globalAlpha = 1; g.fillStyle = C.charcoal;
+      pv.forEach(function (a) { if (!a) return;
+        g.beginPath(); g.arc(X(a[0]), Y(a[1]), 2.5, 0, 2*Math.PI); g.fill(); });
+    }
+
+    // principal point
+    if (show.mark) {
+      g.fillStyle = c.col;
+      g.beginPath(); g.arc(X(c.u0), Y(c.v0), 2.5, 0, 2*Math.PI); g.fill();
+    }
+
+    // the epipole: where this camera sees the OTHER camera's centre. Every
+    // epipolar line in this image passes through it.
+    var ep = show.mark && pix(c, cam[other(k)].o);
+    if (ep) {
+      var ex = X(ep[0]), ey = Y(ep[1]);
+      g.strokeStyle = C.warmgray; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(ex-4, ey-4); g.lineTo(ex+4, ey+4);
+      g.moveTo(ex-4, ey+4); g.lineTo(ex+4, ey-4); g.stroke();
+      g.font = "italic 11px Georgia, serif"; g.fillStyle = C.warmgray;
+      g.fillText("e", ex+6, ey-5);
+    }
+
+    // epipolar lines: the image, in this camera, of a ray from the other one
+    function epi(L, colour) {
+      if (!L) return;
+      var p1, p2;
+      if (Math.abs(L[1]) > Math.abs(L[0])) {
+        p1 = [0, -L[2]/L[1]]; p2 = [NU, -(L[0]*NU + L[2])/L[1]];
+      } else {
+        p1 = [-L[2]/L[0], 0]; p2 = [-(L[1]*NV + L[2])/L[0], NV];
+      }
+      g.save();
+      if (tol > 0) {                          // the sticky band around the line
+        g.strokeStyle = colour; g.globalAlpha = .10; g.lineWidth = 2*tol*s;
+        g.beginPath(); g.moveTo(X(p1[0]), Y(p1[1])); g.lineTo(X(p2[0]), Y(p2[1])); g.stroke();
+      }
+      g.strokeStyle = colour; g.globalAlpha = .95; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(X(p1[0]), Y(p1[1])); g.lineTo(X(p2[0]), Y(p2[1])); g.stroke();
+      g.restore();
+    }
+    if (first && first.cam !== k) epi(st.L, cam[first.cam].col);
+    if (second && second.cam !== k)
+      epi(epiLine(cam[second.cam], c, second.u, second.v), cam[second.cam].col);
+
+    // the clicked pixels
+    [first, second].forEach(function (pt) {
+      if (!pt || pt.cam !== k) return;
+      g.fillStyle = c.col;
+      g.beginPath(); g.arc(X(pt.u), Y(pt.v), 4, 0, 2*Math.PI); g.fill();
+      g.font = "11.5px system-ui, sans-serif";
+      var txt = "(" + pt.u.toFixed(1) + ", " + pt.v.toFixed(1) + ")";
+      var tw = g.measureText(txt).width;
+      // keep the label on the sensor: flip it to the left near the right edge
+      var tx = X(pt.u) + 8 + tw > ox + NU*s ? X(pt.u) - 8 - tw : X(pt.u) + 8;
+      var ty = Y(pt.v) - 8 < oy + 12 ? Y(pt.v) + 18 : Y(pt.v) - 8;
+      g.fillText(txt, tx, ty);
+    });
+
+    // where a click would land now
+    if (hover && hover.cam === k) {
+      g.strokeStyle = hover.on ? C.crimson : C.warmgray; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(X(hover.u), Y(hover.v), 6, 0, 2*Math.PI); g.stroke();
+    }
+    g.restore();
+
+    g.strokeStyle = "#A0AEC0"; g.lineWidth = 1;
+    g.strokeRect(ox, oy, NU*s, NV*s);
+  }
+
+  function toPixel(k, e) {
+    var P = panes[k], r = P.el.getBoundingClientRect(), G = P.geo;
+    var u = (e.clientX - r.left - G.ox) / G.k, v = (e.clientY - r.top - G.oy) / G.k;
+    return (u < 0 || u > NU || v < 0 || v > NV) ? null : [u, v];
+  }
+  ["A", "B"].forEach(function (k) {
+    var el = panes[k].el;
+    el.addEventListener("click", function (e) {
+      var p = toPixel(k, e); if (p) onClick(k, p[0], p[1]);
+    });
+    el.addEventListener("pointermove", function (e) {
+      var p = toPixel(k, e), h = null;
+      if (p && first && first.cam !== k) {
+        var L = epiLine(cam[first.cam], cam[k], first.u, first.v);
+        if (L) {
+          var s = offLine(L, p[0], p[1]), on = s.dist <= tol;
+          h = { cam: k, u: on ? s.u : p[0], v: on ? s.v : p[1], on: on };
+        }
+      }
+      if (h || hover) { hover = h; draw(); }
+    });
+    el.addEventListener("pointerleave", function () { if (hover) { hover = null; draw(); } });
+  });
+
+  // ---- the world pane ------------------------------------------------------
+  var world = document.getElementById("world");
+  var cw = document.getElementById("cw"), gw = cw.getContext("2d");
+  var FAR = 13;                       // depth to which rays are drawn
+
+  function drawCamera(c) {
+    // axes: the columns of R, from the centre
+    var ax = [0,1,2].map(function (i) { return [c.R[0][i], c.R[1][i], c.R[2][i]]; });
+    ax.forEach(function (a) { arrow3(gw, c.o, add(c.o, mul(a, 0.8)), c.col, 1.8); });
+    // the image plane, at a fixed depth -- its size follows f, u0, v0
+    var PZ = 1.3;
+    var corners = [[0,0],[NU,0],[NU,NV],[0,NV]].map(function (q) {
+      return add(c.o, mv(c.R, mul(normd(c, q[0], q[1]), PZ))); });
+    poly3(gw, corners, c.col, .08);
+    for (var i = 0; i < 4; i++) {
+      line3(gw, corners[i], corners[(i+1)%4], c.col, 1.1, [], .7);
+      line3(gw, c.o, corners[i], c.col, .6, [], .35);
+    }
+    disc3(gw, c.o, c.col, 4.5);
+  }
+  function drawRay(pt) {
+    var c = cam[pt.cam], d = rayDir(c, pt.u, pt.v);
+    line3(gw, c.o, add(c.o, mul(d, FAR)), c.col, 0.6, [], .9);
+    arrow3(gw, add(c.o, mul(d, FAR*0.9 - 0.6)), add(c.o, mul(d, FAR*0.9)), c.col, 0.6, 6);
+    disc3(gw, add(c.o, mul(d, 1.3)), c.col, 2.5);   // where it pierces the image plane
+  }
+
+  function drawWorld(st) {
+    Bs = basis();
+    var dpr = window.devicePixelRatio || 1;
+    W = world.clientWidth; H = world.clientHeight;
+    cw.width = Math.round(W*dpr); cw.height = Math.round(H*dpr);
+    gw.setTransform(dpr,0,0,dpr,0,0); gw.clearRect(0,0,W,H);
+
+    // the floor, so that depth can be judged in an orthographic view
+    var X0 = -4, X1 = 7, Z0 = -3, Z1 = 11;
+    poly3(gw, [[X0,FLOOR,Z0],[X1,FLOOR,Z0],[X1,FLOOR,Z1],[X0,FLOOR,Z1]], "#000", .03);
+    for (var gx = X0; gx <= X1; gx++) line3(gw, [gx,FLOOR,Z0], [gx,FLOOR,Z1], C.grid, .6, [], .55);
+    for (var gz = Z0; gz <= Z1; gz++) line3(gw, [X0,FLOOR,gz], [X1,FLOOR,gz], C.grid, .6, [], .55);
+
+    // the cube
+    if (show.cube) {
+      CE.forEach(function (e) { line3(gw, CV[e[0]], CV[e[1]], C.charcoal, 1, [], .45); });
+      CV.forEach(function (q) { disc3(gw, q, C.charcoal, 2, .6); });
+    }
+
+    // the baseline, joining the two centres
+    line3(gw, cam.A.o, cam.B.o, C.warmgray, 1, [4, 4], .9);
+
+    // the epipolar plane: the first ray together with the baseline
+    if (first && st.L) {
+      var cf = cam[first.cam], d = rayDir(cf, first.u, first.v);
+      poly3(gw, [cf.o, add(cf.o, mul(d, FAR)), cam[other(first.cam)].o], cf.col, .07);
+    }
+
+    drawCamera(cam.A); drawCamera(cam.B);
+    if (first) drawRay(first);
+    if (second) drawRay(second);
+
+    var showP = false;
+    if (st && st.r && st.r.ok) {
+      if (st.r.gap > 1e-3) line3(gw, st.r.P1, st.r.P2, C.crimson, 1.2, [2, 2]);
+      if (st.on) { disc3(gw, st.r.P, C.crimson, 6); showP = true; }
+    }
+
+    place("OA", cam.A.o, -14, 14);
+    place("OB", cam.B.o, -14, 14);
+    place("XW", showP ? st.r.P : [0,0,0], 16, -12, showP);
+  }
+
+  // ---- numbers -------------------------------------------------------------
+  function f2(x) { return (Math.abs(x) < 0.005 ? 0 : x).toFixed(2); }
+  function vec(a) { return "(" + a.map(f2).join(", ") + ")"; }
+  function pxs(p) { return "(" + p.u.toFixed(1) + ", " + p.v.toFixed(1) + ")"; }
+
+  function drawPanelMaths() {
+    // (R_A^B, o_A^B): the pair the forward model for camera B actually uses
+    var RAB = tr(cam.B.R), oAB = mul(mv(RAB, cam.B.o), -1);
+    document.getElementById("oab").innerHTML =
+      "<b>o</b><sub>A</sub><sup>B</sup> = " + vec(oAB);
+    for (var i = 0; i < 3; i++)
+      document.getElementById("rab" + i).innerHTML =
+        (i === 1 ? "<b>R</b><sub>A</sub><sup>B</sup> = " : "<span style='visibility:hidden'><b>R</b><sub>A</sub><sup>B</sup> = </span>") +
+        "[ " + RAB[i].map(function (x) { return (x >= 0 ? "&nbsp;" : "") + x.toFixed(3); }).join("&nbsp; ") + " ]";
+  }
+
+  function drawReadout(st) {
+    var el = document.getElementById("numbers"), note = document.getElementById("note");
+    if (!first) {
+      el.innerHTML = "";
+      note.innerHTML = "click either image to cast a ray";
+      return;
+    }
+    if (!st.L) {
+      el.innerHTML = "";
+      note.innerHTML = "the camera centres <b>coincide</b> &mdash; no baseline, no " +
+                       "epipolar line, and the second ray cannot pin down the depth";
+      return;
+    }
+    if (!second) {
+      el.innerHTML = "r<sub>p</sub><sup>S<sub>" + first.cam + "</sub></sup> = " + pxs(first);
+      note.innerHTML = "the ray from camera " + first.cam + " appears in image " +
+                       other(first.cam) + " as the <b>epipolar line</b> &mdash; " +
+                       "the matching point must lie on it (clear images to change image " +
+                       first.cam + ")";
+      return;
+    }
+    var r = st.r;
+    var s = "r<sub>p</sub><sup>S<sub>A</sub></sup> = " + pxs(st.pa) +
+            " &nbsp; r<sub>p</sub><sup>S<sub>B</sub></sup> = " + pxs(st.pb);
+    if (!r.ok) {
+      el.innerHTML = s;
+      note.innerHTML = "the two rays are <b>parallel</b> &mdash; they never meet";
+      return;
+    }
+    if (!st.on) {
+      el.innerHTML = s + " &nbsp; off the epipolar line by <span class='n'>" +
+                     st.off.toFixed(1) + " px</span> &nbsp; rays miss by " + r.gap.toFixed(2);
+      note.innerHTML = "<b>no 3D point</b> &mdash; the rays never meet";
+      return;
+    }
+    el.innerHTML = s + " &nbsp;&rarr;&nbsp; r<sub>P</sub><sup>W</sup> = <span class='n'>" + vec(r.P) +
+                   "</span> &nbsp; &lambda;<sub>a</sub> = " + f2(r.s) +
+                   " &nbsp; &lambda;<sub>b</sub> = " + f2(r.t) +
+                   " &nbsp; ray angle " + r.ang.toFixed(1) + "&deg;";
+    if (r.s <= 0 || r.t <= 0) {
+      note.innerHTML = "the rays meet <b>behind a camera</b> &mdash; not a point either camera could see";
+      return;
+    }
+    var best = null, bd = Infinity;
+    CV.forEach(function (q) { var dd = len(sub(q, r.P)); if (dd < bd) { bd = dd; best = q; } });
+    var msg = show.cube && bd < 0.3
+      ? "cube corner " + vec(best) + ", error " + bd.toFixed(3)
+      : "the rays meet &mdash; this is the point both pixels saw";
+    if (r.ang < 5) msg += " &middot; <b>rays nearly parallel</b>: depth is fragile";
+    note.innerHTML = msg;
+  }
+
+  function draw() {
+    var st = pairState();
+    ["A", "B"].forEach(function (k) {
+      panes[k].el.classList.toggle("locked", !!first && first.cam === k); });
+    drawImage("A", st); drawImage("B", st);
+    drawWorld(st); drawPanelMaths(); drawReadout(st);
+  }
+
+  // ---- orbiting the world --------------------------------------------------
+  var drag = null;
+  world.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  world.addEventListener("pointerdown", function (e) {
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el,
+             px: view.px, py: view.py, pan: pan };
+    world.classList.add("dragging");
+    world.setPointerCapture(e.pointerId);
+  });
+  world.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) {
+      view.px = drag.px + (e.clientX - drag.x);
+      view.py = drag.py + (e.clientY - drag.y);
+    } else {
+      view.az = drag.az - (e.clientX - drag.x) * 0.008;
+      view.el = Math.max(-1.45, Math.min(1.45, drag.el + (e.clientY - drag.y) * 0.008));
+    }
+    draw();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null; world.classList.remove("dragging");
+    if (e && e.pointerId !== undefined) {
+      try { world.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+  }
+  world.addEventListener("pointerup", endDrag);
+  world.addEventListener("pointercancel", endDrag);
+  world.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    view.scale = Math.max(10, Math.min(140, view.scale * (e.deltaY < 0 ? 1.08 : 1/1.08)));
+    draw();
+  }, { passive: false });
+
+  // ---- sliders ---------------------------------------------------------------
+  // Clicked pixels stay where they were clicked when a slider moves; their rays
+  // are recomputed from the new camera. So moving B after a match shows the
+  // rays drifting apart -- the pixels no longer agree with the geometry.
+  var SL = {
+    fa:    { get: function () { return cam.A.f; },  set: function (x) { cam.A.f = x; },  dp: 0 },
+    ua:    { get: function () { return cam.A.u0; }, set: function (x) { cam.A.u0 = x; }, dp: 0 },
+    va:    { get: function () { return cam.A.v0; }, set: function (x) { cam.A.v0 = x; }, dp: 0 },
+    fb:    { get: function () { return cam.B.f; },  set: function (x) { cam.B.f = x; },  dp: 0 },
+    ub:    { get: function () { return cam.B.u0; }, set: function (x) { cam.B.u0 = x; }, dp: 0 },
+    vb:    { get: function () { return cam.B.v0; }, set: function (x) { cam.B.v0 = x; }, dp: 0 },
+    tx:    { get: function () { return poseB.x; },     set: function (x) { poseB.x = x; },     dp: 2 },
+    ty:    { get: function () { return poseB.y; },     set: function (x) { poseB.y = x; },     dp: 2 },
+    tz:    { get: function () { return poseB.z; },     set: function (x) { poseB.z = x; },     dp: 2 },
+    yaw:   { get: function () { return poseB.yaw; },   set: function (x) { poseB.yaw = x; },   dp: 1 },
+    pitch: { get: function () { return poseB.pitch; }, set: function (x) { poseB.pitch = x; }, dp: 1 },
+    roll:  { get: function () { return poseB.roll; },  set: function (x) { poseB.roll = x; },  dp: 1 },
+    tol:   { get: function () { return tol; },         set: function (x) { tol = x; },         dp: 0 }
+  };
+  function syncSlider(id) {
+    var d = SL[id], x = d.get();
+    document.getElementById("s_" + id).value = x;
+    document.getElementById("v_" + id).textContent = x.toFixed(d.dp);
+  }
+  Object.keys(SL).forEach(function (id) {
+    document.getElementById("s_" + id).addEventListener("input", function () {
+      SL[id].set(parseFloat(this.value)); syncSlider(id); updateB(); draw();
+    });
+  });
+
+  ["cube", "mark"].forEach(function (k) {
+    var el = document.getElementById("c_" + k);
+    el.addEventListener("change", function () { show[k] = this.checked; draw(); });
+  });
+
+  document.getElementById("clear").addEventListener("click", function () {
+    first = second = hover = null; draw();
+  });
+  document.getElementById("resetcam").addEventListener("click", function () {
+    Object.keys(DEFB).forEach(function (k) { poseB[k] = DEFB[k]; });
+    ["A", "B"].forEach(function (k) { cam[k].f = 800; cam[k].u0 = 320; cam[k].v0 = 240; });
+    Object.keys(SL).forEach(syncSlider); updateB(); draw();
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale;
+    view.px = DEF.px; view.py = DEF.py; draw();
+  });
+
+  // ---- presets from the URL ------------------------------------------------
+  // e.g. ?tx=0.5&yaw=-3   (a short baseline)   or   ?tx=0&ty=0&tz=0 (none)
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SL).forEach(function (id) {
+      if (q.has(id) && isFinite(parseFloat(q.get(id)))) SL[id].set(parseFloat(q.get(id)));
+    });
+    ["cube", "mark"].forEach(function (k) {
+      if (q.has(k)) show[k] = q.get(k) !== "0";
+      document.getElementById("c_" + k).checked = show[k];
+    });
+  })();
+  Object.keys(SL).forEach(syncSlider);
+  updateB();
+
+  window.addEventListener("resize", draw);
+  draw();
+
+  // ---- MathJax, once --------------------------------------------------------
+  var typeset = false;
+  function useFallback() {
+    if (typeset) return; typeset = true;
+    labels.OA.innerHTML = "<b>o</b><sub>A</sub>";
+    labels.OB.innerHTML = "<b>o</b><sub>B</sub>";
+    labels.XW.innerHTML = "<b>r</b><sub>P</sub><sup>W</sup>";
+    document.getElementById("eq").innerHTML =
+      "&lambda;<sub>a</sub><b>r</b><sub>p</sub><sup>S<sub>A</sub></sup> = <b>K</b><sub>f</sub><sup>A</sup>[<b>I</b> <b>0</b>]<b>r</b><sub>P</sub><sup>W</sup> &nbsp; " +
+      "&lambda;<sub>b</sub><b>r</b><sub>p</sub><sup>S<sub>B</sub></sup> = <b>K</b><sub>f</sub><sup>B</sup>[<b>R</b><sub>A</sub><sup>B</sup> <b>o</b><sub>A</sub><sup>B</sup>]<b>r</b><sub>P</sub><sup>W</sup>";
+    Array.prototype.forEach.call(document.querySelectorAll(".cap"), function (e) {
+      e.innerHTML = e.innerHTML.replace(/\\\(\\v\{r\}_p\^\{S_(\w)\}\\\)/g, "<b>r</b><sub>p</sub><sup>S<sub>$1</sub></sup>"); });
+    draw();
+  }
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    var nodes = Object.keys(labels).map(function (k) { return labels[k]; });
+    nodes.push(document.getElementById("eq"));
+    Array.prototype.push.apply(nodes, document.querySelectorAll(".cap"));
+    window.MathJax.typesetPromise(nodes).then(draw)
+      .catch(function () { typeset = false; useFallback(); });
+  }
+  function whenReady() {
+    if (window.MathJax && window.MathJax.startup)
+      window.MathJax.startup.promise.then(typesetOnce).catch(useFallback);
+  }
+  document.getElementById("MathJax-script").addEventListener("load", whenReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  whenReady();
+  setTimeout(useFallback, 2500);
+})();
+</script>
+</body>
+</html>

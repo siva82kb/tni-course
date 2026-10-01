@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camera intrinsics</title>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']],
+           macros: { v: ['{\\mathbf{#1}}', 1] } },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal: #2D3748; --forest: #2B6CB0; --crimson: #A51C30;
+    --seagreen: #2F855A; --warmgray: #718096; --grid: #CBD5E0;
+    --lightgray: #F7FAFC;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #fff; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+  /* ---- toolbar: two rows, groups left to right ------------------------ */
+  #panel {
+    flex: 0 0 auto; display: flex; align-items: flex-start;
+    background: #FAFBFC; border-bottom: 1px solid #E2E8F0;
+    padding: 5px 10px 6px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #panel .grp { padding: 0 12px; border-left: 1px solid #E2E8F0; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel .hd.g { color: var(--seagreen); }
+  #panel label { display: inline-block; }
+  #panel .three { display: grid; grid-template-columns: auto auto auto; column-gap: 12px; }
+  #panel .sl { display: block; margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 74px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 10px; height: 10px;
+    margin-top: -3.5px; border-radius: 50%; border: none; background: var(--forest); }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none; border-radius: 50%; background: var(--forest); }
+  #panel .sl.g input[type=range]::-webkit-slider-thumb { background: var(--seagreen); }
+  #panel .sl.g input[type=range]::-moz-range-thumb     { background: var(--seagreen); }
+  #panel .k { display: inline-block; width: 1.7em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .k sub { font-size: 0.7em; font-style: normal; }
+  #panel .val { display: inline-block; width: 3.4em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel .val.g { color: var(--seagreen); font-weight: 600; }
+  #panel .unit { color: var(--warmgray); font-size: 9.5px; margin-left: 2px; }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 1px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel button.primary { border-color: var(--forest); color: var(--forest); font-weight: 600; }
+  #panel .pt { font-family: "Linux Libertine O", Georgia, serif; font-size: 11px;
+               font-variant-numeric: tabular-nums; }
+
+  /* ---- the two panes -------------------------------------------------- */
+  #panes { display: flex; flex: 1 1 auto; min-height: 0; }
+  .pane { position: relative; flex: 1 1 50%; height: 100%; }
+  .pane + .pane { border-left: 1px solid #E2E8F0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .cap {
+    position: absolute; bottom: 6px; left: 0; right: 0; text-align: center;
+    font-size: 12px; color: var(--warmgray); pointer-events: none; user-select: none;
+  }
+  .lbl {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 13px; white-space: nowrap; pointer-events: none; user-select: none;
+  }
+
+  /* ---- the algebra, written out live ---------------------------------- */
+  #readout {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 22px;
+    padding: 6px 14px 7px; border-top: 1px solid #E2E8F0; background: #FAFBFC;
+    font-size: 13px; font-variant-numeric: tabular-nums; overflow-x: auto; white-space: nowrap;
+  }
+  #readout .item { display: inline-flex; align-items: center; gap: 6px; }
+  #readout .mat { display: inline-grid; grid-template-columns: auto auto auto;
+                  column-gap: 8px; row-gap: 1px; padding: 2px 7px; line-height: 1.2;
+                  border-left: 1.3px solid var(--charcoal); border-right: 1.3px solid var(--charcoal); }
+  #readout .mat span { text-align: right; }
+  #readout .mat .k5 { color: var(--forest); font-weight: 600; }
+  #readout .mat .fix { color: var(--warmgray); }
+  #readout .chain { display: inline-flex; align-items: center; gap: 10px; }
+  #readout .arr { color: var(--warmgray); }
+  #readout .mm  { color: var(--forest); font-weight: 600; }
+  #readout .px  { color: var(--crimson); font-weight: 700; font-size: 14px; }
+  #readout .pix { color: var(--crimson); font-weight: 700; font-size: 14px; }
+  #readout .note { color: var(--warmgray); font-size: 11.5px; font-style: italic;
+                   font-family: system-ui, sans-serif; }
+  #readout .note b { color: var(--seagreen); font-style: normal; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">point, in camera frame</div>
+      <button id="rand" class="primary">random point</button>
+      <div class="row pt">(x<sub>P</sub><sup>C</sup>, y<sub>P</sub><sup>C</sup>, z<sub>P</sub><sup>C</sup>) = (<span id="pxc">0</span>, <span id="pyc">0</span>, <span id="pzc">0</span>)</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">six physical parameters</div>
+      <div class="three">
+        <label class="sl"><span class="k">f</span>
+          <input type="range" id="s_f" min="1" max="12" step="0.05" value="4">
+          <span class="val" id="v_f">4.00</span><span class="unit">mm</span></label>
+        <label class="sl"><span class="k">s<sub>x</sub></span>
+          <input type="range" id="s_sx" min="2" max="30" step="0.05" value="8">
+          <span class="val" id="v_sx">8.00</span><span class="unit">px/mm</span></label>
+        <label class="sl"><span class="k">u</span>
+          <input type="range" id="s_w" min="0" max="8" step="0.02" value="2.5">
+          <span class="val" id="v_w">2.50</span><span class="unit">mm</span></label>
+        <label class="sl"><span class="k">s<sub>θ</sub></span>
+          <input type="range" id="s_st" min="-8" max="8" step="0.05" value="0">
+          <span class="val" id="v_st">0.00</span><span class="unit">px/mm</span></label>
+        <label class="sl"><span class="k">s<sub>y</sub></span>
+          <input type="range" id="s_sy" min="2" max="30" step="0.05" value="5">
+          <span class="val" id="v_sy">5.00</span><span class="unit">px/mm</span></label>
+        <label class="sl"><span class="k">v</span>
+          <input type="range" id="s_h" min="0" max="8" step="0.02" value="2">
+          <span class="val" id="v_h">2.00</span><span class="unit">mm</span></label>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="hd g">the unit of the image plane</div>
+      <label class="sl g"><span class="k">λ</span>
+        <input type="range" id="s_lam" min="0.25" max="4" step="0.01" value="1">
+        <span class="val g" id="v_lam">1.00</span></label>
+      <div class="row">rescales all six at once: f, u, v ×λ; s<sub>x</sub>, s<sub>y</sub>, s<sub>θ</sub> ÷λ</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">sensor</div>
+      <div class="row pt">N<sub>x</sub> × N<sub>y</sub> = 40 × 20 px</div>
+      <div class="row"><button id="reset">reset all</button></div>
+    </div>
+  </div>
+
+  <div id="panes">
+    <div class="pane" id="paneS">
+      <canvas id="cS"></canvas>
+      <div class="cap">the sensor, \(N_x \times N_y\) pixels — the blue outline is the physical image plane, \(W \times H\) mm, seen in pixel coordinates</div>
+    </div>
+  </div>
+
+  <div id="readout">
+    <span class="item"><span id="Ksym">\(\v{K} =\)</span>
+      <span class="mat">
+        <span class="k5" id="k11">0</span><span class="k5" id="k12">0</span><span class="k5" id="k13">0</span>
+        <span class="fix">0</span><span class="k5" id="k22">0</span><span class="k5" id="k23">0</span>
+        <span class="fix">0</span><span class="fix">0</span><span class="fix">1</span>
+      </span></span>
+    <span class="chain">
+      <span class="item"><span id="xIsym">\(\v{r}_p^I =\)</span>
+        (<span class="mm" id="rxI">0</span>, <span class="mm" id="ryI">0</span>) mm</span>
+      <span class="arr">→</span>
+      <span class="item"><span id="uvsym">\((x_p^S, y_p^S) =\)</span>
+        (<span class="px" id="ru">0</span>, <span class="px" id="rv">0</span>)</span>
+      <span class="arr">→</span>
+      <span class="item">pixel
+        [<span class="pix" id="rcu">0</span>, <span class="pix" id="rcv">0</span>]</span>
+    </span>
+    <span class="note" id="gaugenote"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = { charcoal: "#2D3748", forest: "#2B6CB0", crimson: "#A51C30",
+            seagreen: "#2F855A", warmgray: "#718096", grid: "#CBD5E0", light: "#F7FAFC" };
+
+  // ---- state ---------------------------------------------------------
+  var DEF = { f: 4, sx: 8, sy: 5, st: 0, w: 2.5, h: 2 };
+  var P = { f: 4, sx: 8, sy: 5, st: 0, w: 2.5, h: 2 };
+  var lam = 1;                                   // the gauge, purely for display
+  var NU = 40, NV = 20;                          // pixel count is what a sensor IS
+  var pt = { x: 0.9, y: 0.6, z: 5 };             // the point, in camera coordinates
+
+  var KEYS = ["f", "sx", "sy", "st", "w", "h"];
+
+  // ---- the model ------------------------------------------------------
+  // Physical size of the sensor follows from pixel count and density.
+  function sensor() { return { W: NU / P.sx, H: NV / P.sy }; }
+
+  // The intrinsic matrix, as the product of the three factors on the slide.
+  function K() {
+    return [[P.sx * P.f, -P.st * P.f, P.sx * P.w + P.st * P.h],
+            [0,          -P.sy * P.f,  P.sy * P.h],
+            [0,           0,           1]];
+  }
+  function toPlane(p) { return { x: P.f * p.x / p.z, y: P.f * p.y / p.z }; }   // mm, origin = principal point, y up
+  function toPixel(xI, yI) {                                                    // via the same three steps
+    var xp = xI + P.w, yp = P.h - yI;
+    return { u: P.sx * xp + P.st * yp, v: P.sy * yp };
+  }
+
+  // ---- drawing helpers ------------------------------------------------
+  function setup(canvas) {
+    var dpr = window.devicePixelRatio || 1;
+    var W = canvas.clientWidth, H = canvas.clientHeight;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    var g = canvas.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    return { g: g, W: W, H: H };
+  }
+  function line(g, a, b, color, width, dash, alpha) {
+    g.save(); g.strokeStyle = color; g.lineWidth = width || 1;
+    g.setLineDash(dash || []); g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); g.restore();
+  }
+  function arrow(g, a, b, color, width) {
+    line(g, a, b, color, width);
+    var ang = Math.atan2(b.y - a.y, b.x - a.x), L = 7, w = 0.42;
+    g.save(); g.fillStyle = color; g.beginPath();
+    g.moveTo(b.x, b.y);
+    g.lineTo(b.x - L * Math.cos(ang - w), b.y - L * Math.sin(ang - w));
+    g.lineTo(b.x - L * Math.cos(ang + w), b.y - L * Math.sin(ang + w));
+    g.closePath(); g.fill(); g.restore();
+  }
+  function disc(g, s, color, r) {
+    g.save(); g.fillStyle = color; g.beginPath(); g.arc(s.x, s.y, r, 0, 2 * Math.PI); g.fill(); g.restore();
+  }
+  function dim(g, a, b, color, text, side) {           // a |—| b dimension line with a label
+    line(g, a, b, color, 1);
+    var dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy), nx = -dy / L * 4, ny = dx / L * 4;
+    line(g, { x: a.x + nx, y: a.y + ny }, { x: a.x - nx, y: a.y - ny }, color, 1);
+    line(g, { x: b.x + nx, y: b.y + ny }, { x: b.x - nx, y: b.y - ny }, color, 1);
+    g.save(); g.fillStyle = color; g.font = "italic 12px 'Linux Libertine O', Georgia, serif";
+    g.textAlign = "center"; g.textBaseline = side === "above" ? "bottom" : side === "below" ? "top" : "middle";
+    var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    if (side === "above") fillSub(g, text, mx, my - 4, "center");
+    else if (side === "below") fillSub(g, text, mx, my + 4, "center");
+    else if (side === "left") fillSub(g, text, mx - 5, my, "right");
+    else fillSub(g, text, mx + 5, my, "left");
+    g.restore();
+  }
+  // Canvas text has no subscripts: draw "N_x" as N with a small, lowered x.
+  function fillSub(g, text, x, y, align) {
+    var parts = text.split(/_(\w)/), big = g.font, small = big.replace(/\d+px/, "9px");
+    var w = 0, i;
+    for (i = 0; i < parts.length; i++) { g.font = i % 2 ? small : big; w += g.measureText(parts[i]).width; }
+    var x0 = align === "center" ? x - w / 2 : align === "right" ? x - w : x;
+    g.textAlign = "left";
+    for (i = 0; i < parts.length; i++) {
+      g.font = i % 2 ? small : big;
+      g.fillText(parts[i], x0, i % 2 ? y + 3 : y);
+      x0 += g.measureText(parts[i]).width;
+    }
+    g.font = big;
+  }
+  var labels = {};
+  function mkLabel(pane, key, html, color) {
+    var d = document.createElement("div");
+    d.className = "lbl"; d.innerHTML = html; d.style.color = color;
+    document.getElementById(pane).appendChild(d); labels[key] = d;
+  }
+  mkLabel("paneS", "u",  "\\(\\v{x}_S\\)", C.forest);
+  mkLabel("paneS", "v",  "\\(\\v{y}_S\\)", C.forest);
+  mkLabel("paneS", "pS", "\\(\\v{r}_p^S\\)", C.crimson);
+  function place(key, x, y, show) {
+    var d = labels[key];
+    if (show === false) { d.style.display = "none"; return; }
+    d.style.display = ""; d.style.left = x + "px"; d.style.top = y + "px";
+  }
+
+  function fmt(v, n) { if (Math.abs(v) < 5e-4) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+  // ---- right pane: the pixel grid ------------------------------------
+  function drawSensor() {
+    var c = setup(document.getElementById("cS")), g = c.g;
+    var S = sensor(), xI = toPlane(pt), uv = toPixel(xI.x, xI.y);
+    var margin = 56;
+    var k = Math.min((c.W - 2 * margin) / NU, (c.H - 2 * margin - 18) / NV);
+    var ox = c.W / 2 - NU / 2 * k, oy = (c.H - 18) / 2 - NV / 2 * k;   // top-left of pixel (0,0)
+    function sc(u, v) { return { x: ox + u * k, y: oy + v * k }; }
+
+    // pixel array
+    g.save(); g.fillStyle = C.light; g.fillRect(ox, oy, NU * k, NV * k); g.restore();
+
+    // the sensor rectangle, as seen in pixel coordinates: a parallelogram if s_theta != 0
+    var corn = [[-P.w, P.h], [S.W - P.w, P.h], [S.W - P.w, P.h - S.H], [-P.w, P.h - S.H]]
+                 .map(function (q) { var r = toPixel(q[0], q[1]); return sc(r.u, r.v); });
+    g.save(); g.fillStyle = C.forest; g.globalAlpha = 0.07; g.beginPath();
+    corn.forEach(function (q, i) { i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y); });
+    g.closePath(); g.fill(); g.globalAlpha = 0.6; g.strokeStyle = C.forest; g.lineWidth = 1; g.stroke(); g.restore();
+
+    // the filled pixel
+    var cu = Math.floor(uv.u), cv = Math.floor(uv.v);
+    var inside = cu >= 0 && cu < NU && cv >= 0 && cv < NV;
+    if (inside) { g.save(); g.fillStyle = C.crimson; g.globalAlpha = 0.85;
+                  g.fillRect(ox + cu * k, oy + cv * k, k, k); g.restore(); }
+
+    // grid lines on top
+    for (var i = 0; i <= NU; i++) line(g, sc(i, 0), sc(i, NV), "#CBD5E0", 0.6, [], 0.8);
+    for (var j = 0; j <= NV; j++) line(g, sc(0, j), sc(NU, j), "#CBD5E0", 0.6, [], 0.8);
+    g.save(); g.strokeStyle = "#A0AEC0"; g.lineWidth = 1; g.strokeRect(ox, oy, NU * k, NV * k); g.restore();
+
+    // pixel axes from the corner
+    arrow(g, sc(0, 0), sc(7, 0), C.forest, 1.4);
+    arrow(g, sc(0, 0), sc(0, 5), C.forest, 1.4);
+    disc(g, sc(0, 0), C.forest, 3);
+    place("u", sc(7, 0).x + 9, sc(7, 0).y - 8, true);
+    place("v", sc(0, 5).x - 9, sc(0, 5).y + 8, true);
+
+    // the principal point, where it lands in pixels
+    var pp = toPixel(0, 0), ps = sc(pp.u, pp.v);
+    disc(g, ps, C.forest, 2.6);
+
+    // the exact continuous point, as a white dot inside its pixel
+    var s = sc(uv.u, uv.v);
+    disc(g, s, "#fff", 2.2);
+    if (!inside) disc(g, s, C.crimson, 3);
+    place("pS", s.x + 16, s.y - 10, true);
+    if (!inside) {
+      g.save(); g.fillStyle = C.warmgray; g.font = "12px 'Linux Libertine O', Georgia, serif";
+      g.fillText("off the sensor", s.x + 10, s.y + 16); g.restore();
+    }
+
+    // counts
+    dim(g, sc(0, NV), sc(NU, NV), C.warmgray, "N_x = " + NU + " pixels", "below");
+    dim(g, sc(NU, 0), sc(NU, NV), C.warmgray, "N_y = " + NV, "right");
+  }
+
+  // ---- the algebra, live ---------------------------------------------
+  var K0 = null;                  // K at the moment the gauge slider was last untouched
+  function drawReadout() {
+    var Km = K(), xI = toPlane(pt), uv = toPixel(xI.x, xI.y);
+    document.getElementById("k11").textContent = fmt(Km[0][0]);
+    document.getElementById("k12").textContent = fmt(Km[0][1]);
+    document.getElementById("k13").textContent = fmt(Km[0][2]);
+    document.getElementById("k22").textContent = fmt(Km[1][1]);
+    document.getElementById("k23").textContent = fmt(Km[1][2]);
+    document.getElementById("rxI").textContent = fmt(xI.x, 3);
+    document.getElementById("ryI").textContent = fmt(xI.y, 3);
+    document.getElementById("ru").textContent  = fmt(uv.u, 3);
+    document.getElementById("rv").textContent  = fmt(uv.v, 3);
+    document.getElementById("rcu").textContent = Math.floor(uv.u);
+    document.getElementById("rcv").textContent = Math.floor(uv.v);
+    var n = document.getElementById("gaugenote");
+    if (Math.abs(lam - 1) > 1e-6) {
+      n.innerHTML = "λ = " + fmt(lam) + ": all six physical numbers changed — " +
+                    "<b>the five entries of K and (x<sub>p</sub><sup>S</sup>, y<sub>p</sub><sup>S</sup>) did not</b>. " +
+                    "The image plane's unit is not something the camera can see.";
+    } else {
+      n.innerHTML = "six parameters, <b>five</b> independent entries in K — drag λ to see which combination is invisible";
+    }
+  }
+
+  function draw() { drawSensor(); drawReadout(); }
+
+  // ---- controls -------------------------------------------------------
+  function syncSliders() {
+    KEYS.forEach(function (k) {
+      document.getElementById("s_" + k).value = P[k];
+      document.getElementById("v_" + k).textContent = fmt(P[k]);
+    });
+    document.getElementById("s_lam").value = lam;
+    document.getElementById("v_lam").textContent = fmt(lam);
+    document.getElementById("pxc").textContent = fmt(pt.x);
+    document.getElementById("pyc").textContent = fmt(pt.y);
+    document.getElementById("pzc").textContent = fmt(pt.z);
+  }
+  KEYS.forEach(function (k) {
+    document.getElementById("s_" + k).addEventListener("input", function () {
+      P[k] = parseFloat(this.value);
+      document.getElementById("v_" + k).textContent = fmt(P[k]);
+      draw();
+    });
+  });
+
+  // The gauge: scale the six together. Ratios to the previous lambda, so the
+  // slider composes with whatever the user has set by hand.
+  document.getElementById("s_lam").addEventListener("input", function () {
+    var nl = parseFloat(this.value), r = nl / lam;
+    P.f *= r; P.w *= r; P.h *= r; P.sx /= r; P.sy /= r; P.st /= r;
+    lam = nl;
+    syncSliders(); draw();
+  });
+
+  // A random point that lands on the sensor for the CURRENT intrinsics.
+  function randomPoint() {
+    var S = sensor();
+    var xI = -P.w + S.W * (0.08 + 0.84 * Math.random());
+    var yI = P.h - S.H * (0.08 + 0.84 * Math.random());
+    var z = 3 + 6 * Math.random();
+    pt = { x: xI * z / P.f, y: yI * z / P.f, z: z };
+    syncSliders(); draw();
+  }
+  document.getElementById("rand").addEventListener("click", randomPoint);
+  document.getElementById("reset").addEventListener("click", function () {
+    KEYS.forEach(function (k) { P[k] = DEF[k]; }); lam = 1; syncSliders(); draw();
+  });
+
+  // presets from the URL: ?f=..&sx=..&sy=..&st=..&w=..&h=..&p=x,y,z
+  (function () {
+    var q = new URLSearchParams(location.search);
+    KEYS.forEach(function (k) { if (q.has(k)) { var v = parseFloat(q.get(k)); if (isFinite(v)) P[k] = v; } });
+    if (q.has("p")) { var a = q.get("p").split(",").map(parseFloat);
+      if (a.length === 3 && a.every(isFinite)) pt = { x: a[0], y: a[1], z: a[2] }; }
+  })();
+
+  window.addEventListener("resize", draw);
+  syncSliders(); draw();
+
+  // ---- MathJax, once ---------------------------------------------------
+  var typeset = false;
+  function useFallback() {
+    if (typeset) return; typeset = true;
+    labels.u.innerHTML = "<b>x</b><sub>S</sub>"; labels.v.innerHTML = "<b>y</b><sub>S</sub>"; labels.pS.innerHTML = "<b>r</b><sub>p</sub><sup>S</sup>";
+    document.getElementById("Ksym").innerHTML = "<b>K</b> =";
+    document.getElementById("uvsym").innerHTML = "(<i>x</i><sub>p</sub><sup>S</sup>, <i>y</i><sub>p</sub><sup>S</sup>) =";
+    document.getElementById("xIsym").innerHTML = "<b>r</b><sub>p</sub><sup>I</sup> =";
+    Array.prototype.forEach.call(document.querySelectorAll(".cap"), function (e) {
+      e.innerHTML = e.innerHTML.replace(/\\\((.*?)\\\)/g, "$1"); });
+    draw();
+  }
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    var nodes = Object.keys(labels).map(function (k) { return labels[k]; });
+    nodes.push(document.getElementById("Ksym"), document.getElementById("uvsym"), document.getElementById("xIsym"));
+    Array.prototype.push.apply(nodes, document.querySelectorAll(".cap"));
+    window.MathJax.typesetPromise(nodes).then(draw).catch(function () { typeset = false; useFallback(); });
+  }
+  function whenReady() {
+    if (window.MathJax && window.MathJax.startup) window.MathJax.startup.promise.then(typesetOnce).catch(useFallback);
+  }
+  document.getElementById("MathJax-script").addEventListener("load", whenReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  whenReady();
+  setTimeout(useFallback, 2500);
+})();
+</script>
+</body>
+</html>

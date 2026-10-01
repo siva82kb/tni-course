@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One pixel, a whole ray</title>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']],
+           macros: { v: ['{\\mathbf{#1}}', 1],
+                     m: ['{\\begin{bmatrix}#1\\end{bmatrix}}', 1] } },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal: #2D3748; --forest: #2B6CB0; --crimson: #A51C30;
+    --seagreen: #2F855A; --warmgray: #718096; --grid: #CBD5E0;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #fff; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+  #panel {
+    flex: 0 0 auto; display: flex; align-items: flex-start;
+    background: #FAFBFC; border-bottom: 1px solid #E2E8F0;
+    padding: 5px 10px 6px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #panel .grp { padding: 0 12px; border-left: 1px solid #E2E8F0; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel label { display: block; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 110px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 10px; height: 10px;
+    margin-top: -3.5px; border-radius: 50%; border: none; background: var(--crimson); }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none; border-radius: 50%; background: var(--crimson); }
+  #panel .k { display: inline-block; width: 2.6em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .val { display: inline-block; width: 3.4em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--crimson); }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 1px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel input[type=checkbox] { width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0; }
+
+  #panes { display: flex; flex: 1 1 auto; min-height: 0; }
+  .pane { position: relative; height: 100%; }
+  #imgpane { flex: 0 0 34%; }
+  #world   { flex: 1 1 66%; }
+  .pane + .pane { border-left: 1px solid #E2E8F0; }
+  #imgpane { cursor: crosshair; }
+  #world { cursor: grab; }
+  #world.dragging { cursor: grabbing; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .cap {
+    position: absolute; bottom: 6px; left: 0; right: 0; text-align: center;
+    font-size: 12px; color: var(--warmgray); pointer-events: none; user-select: none;
+  }
+  .lbl { position: absolute; transform: translate(-50%, -50%);
+         font-size: 13px; white-space: nowrap; pointer-events: none; user-select: none; }
+
+  #readout {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 20px;
+    padding: 6px 14px 7px; border-top: 1px solid #E2E8F0; background: #FAFBFC;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #readout .n { color: var(--crimson); font-weight: 700; }
+  #readout .note { color: var(--warmgray); font-size: 11.5px; font-style: italic;
+                   font-family: system-ui, sans-serif; }
+  #readout .note b { color: var(--crimson); font-style: normal; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">camera</div>
+      <label><span class="k">f</span>
+        <input type="range" id="s_f" min="200" max="1600" step="10" value="800">
+        <span class="val" id="v_f">800</span> px</label>
+      <div class="row">sensor 640 x 480 px</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the unknown</div>
+      <label><span class="k">&lambda;</span>
+        <input type="range" id="s_lam" min="0.3" max="17" step="0.05" value="8">
+        <span class="val" id="v_lam">8.00</span></label>
+      <div class="row">slides the point along the ray</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">show</div>
+      <div class="row">
+        <button id="clear">clear rays</button>
+        <button id="reset">reset view</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">how</div>
+      <div class="row">click anywhere on the image (left) to cast a ray</div>
+      <div class="row">drag the 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
+    </div>
+  </div>
+
+  <div id="panes">
+    <div class="pane" id="imgpane">
+      <canvas id="ci"></canvas>
+      <div class="cap">the image &mdash; click to choose \(\v{r}_p^S\)</div>
+    </div>
+    <div class="pane" id="world">
+      <canvas id="cw"></canvas>
+      <div class="cap">the world &mdash; every point on the ray produces that same pixel</div>
+    </div>
+  </div>
+
+  <div id="readout">
+    <span id="eq">\(\v{r}_P^W = \lambda\,\v{K}_f^{-1}\,\v{r}_p^S\)</span>
+    <span id="numbers"></span>
+    <span class="note" id="note">click the image to cast a ray</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = { charcoal:"#2D3748", forest:"#2B6CB0", crimson:"#A51C30",
+            seagreen:"#2F855A", warmgray:"#718096", grid:"#CBD5E0" };
+
+  var imgpane = document.getElementById("imgpane");
+  var world   = document.getElementById("world");
+  var ci = document.getElementById("ci"), gi = ci.getContext("2d");
+  var cw = document.getElementById("cw"), gw = cw.getContext("2d");
+
+  // ---- the camera ------------------------------------------------------
+  var NU = 640, NV = 480;             // sensor, pixels
+  var f = 800;                        // focal length, pixels
+  var lam = 8;                        // the unknown depth
+
+  function K() { return { fu: f, fv: f, u0: NU / 2, v0: NV / 2 }; }
+
+  // K inverse applied to a pixel: the normalised direction (x/z, y/z, 1).
+  // This is the whole content of the slide -- one pixel gives a DIRECTION.
+  function pixelToNormalised(u, v) {
+    var k = K();
+    return [(u - k.u0) / k.fu, (v - k.v0) / k.fv, 1];
+  }
+
+  var rays = [];                      // each: {u, v, n:[x,y,1], colour}
+  var PALETTE = ["#A51C30", "#2B6CB0", "#2F855A", "#B7791F", "#6B46C1"];
+
+  // ---- orbit view of the world (orthographic) --------------------------
+  var DEF = { az: 0.62, el: 0.30, scale: 48, px: -223, py: 92 };
+  // Rotation is about the CAMERA ORIGIN -- the point the rays emanate from,
+  // and the only point in the scene with any physical meaning. Panning moves
+  // the whole picture instead, so the origin can still be placed where it is
+  // convenient without changing what the orbit turns around.
+  var CENTRE = [0, 0, 0];
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: DEF.px, py: DEF.py };
+  var W = 0, H = 0, DPR = 1;
+
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    // world "up" is -y, since the camera frame has y pointing down
+    var d = [ce * sa, -se, -ce * ca];
+    var r = [ca, 0, sa];
+    var u = [d[1]*r[2]-d[2]*r[1], d[2]*r[0]-d[0]*r[2], d[0]*r[1]-d[1]*r[0]];
+    return { right: r, up: u, dir: d };
+  }
+  function dot(a, p) { return a[0]*p[0] + a[1]*p[1] + a[2]*p[2]; }
+  var B = basis();
+  function project(p) {
+    var q = [p[0]-CENTRE[0], p[1]-CENTRE[1], p[2]-CENTRE[2]];
+    return { x: W/2 + view.px + dot(B.right, q) * view.scale,
+             y: H/2 + view.py - dot(B.up, q) * view.scale,
+             d: dot(B.dir, q) };
+  }
+  function line3(g, a, b, colour, width, dash, alpha) {
+    var A = project(a), Bp = project(b);
+    g.save();
+    g.strokeStyle = colour; g.lineWidth = width || 1;
+    g.setLineDash(dash || []); g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(Bp.x, Bp.y); g.stroke();
+    g.restore();
+  }
+  function arrow3(g, a, b, colour, width) {
+    // An axis drawn with a head. The head is built in SCREEN space, after
+    // projection, so it keeps its size and shape whichever way the axis points.
+    line3(g, a, b, colour, width);
+    var A = project(a), Bp = project(b);
+    var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = 9, w = 0.42;
+    g.save(); g.fillStyle = colour;
+    g.beginPath();
+    g.moveTo(Bp.x, Bp.y);
+    g.lineTo(Bp.x - L*Math.cos(ang - w), Bp.y - L*Math.sin(ang - w));
+    g.lineTo(Bp.x - L*Math.cos(ang + w), Bp.y - L*Math.sin(ang + w));
+    g.closePath(); g.fill(); g.restore();
+  }
+
+  function disc3(g, p, colour, r, alpha) {
+    var s = project(p);
+    g.save(); g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.fillStyle = colour; g.beginPath(); g.arc(s.x, s.y, r, 0, 2*Math.PI); g.fill();
+    g.restore();
+  }
+
+  // ---- labels ----------------------------------------------------------
+  var labels = {};
+  function mkLabel(pane, key, html, colour) {
+    var d = document.createElement("div");
+    d.className = "lbl"; d.innerHTML = html; d.style.color = colour;
+    document.getElementById(pane).appendChild(d); labels[key] = d;
+  }
+  mkLabel("world", "O",  "\\(\\v{o}_C\\)", C.charcoal);
+  mkLabel("world", "Z",  "\\(z\\)", C.forest);
+  mkLabel("world", "X",  "\\(x\\)", C.forest);
+  mkLabel("world", "Y",  "\\(y\\)", C.forest);
+  mkLabel("world", "IP", "image plane", C.warmgray);
+  function place(key, p, dx, dy, show) {
+    var d = labels[key];
+    if (show === false) { d.style.display = "none"; return; }
+    d.style.display = "";
+    var s = project(p);
+    d.style.left = (s.x + (dx||0)) + "px";
+    d.style.top  = (s.y + (dy||0)) + "px";
+  }
+
+  // ---- the image pane --------------------------------------------------
+  var imgGeom = {};                   // set by drawImage, used by the click handler
+  function drawImage() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = imgpane.clientWidth, h = imgpane.clientHeight;
+    ci.width = Math.round(w*dpr); ci.height = Math.round(h*dpr);
+    gi.setTransform(dpr,0,0,dpr,0,0); gi.clearRect(0,0,w,h);
+
+    var k = Math.min((w-60)/NU, (h-70)/NV);
+    var ox = (w - NU*k)/2, oy = (h - NV*k)/2 - 8;
+    imgGeom = { k: k, ox: ox, oy: oy };
+
+    gi.save();
+    gi.fillStyle = "#F7FAFC"; gi.fillRect(ox, oy, NU*k, NV*k);
+    gi.strokeStyle = "#A0AEC0"; gi.lineWidth = 1;
+    gi.strokeRect(ox, oy, NU*k, NV*k);
+    // a coarse pixel grid, so it reads as a sensor and not a blank rectangle
+    gi.strokeStyle = C.grid; gi.globalAlpha = .7; gi.lineWidth = .5;
+    for (var i = 0; i <= NU; i += 40) {
+      gi.beginPath(); gi.moveTo(ox+i*k, oy); gi.lineTo(ox+i*k, oy+NV*k); gi.stroke(); }
+    for (var j = 0; j <= NV; j += 40) {
+      gi.beginPath(); gi.moveTo(ox, oy+j*k); gi.lineTo(ox+NU*k, oy+j*k); gi.stroke(); }
+    gi.restore();
+
+    // Where the camera's x-z plane (y = 0) meets the image plane. Any world
+    // point with y = 0 has y/z = 0, so it lands at v = v0 whatever its x or
+    // z: the whole plane images as the single horizontal line through the
+    // principal point. This is the horizon.
+    var kk = K();
+    gi.save();
+    gi.strokeStyle = C.warmgray; gi.lineWidth = 1;
+    gi.setLineDash([3, 4]); gi.globalAlpha = .65;
+    gi.beginPath();
+    gi.moveTo(ox, oy + kk.v0*k); gi.lineTo(ox + NU*k, oy + kk.v0*k);
+    gi.stroke();
+    gi.font = "11px system-ui, sans-serif"; gi.fillStyle = C.warmgray;
+    gi.setLineDash([]); gi.globalAlpha = .9;
+    gi.fillText("x-z plane (y = 0)", ox + 6, oy + kk.v0*k - 6);
+    gi.restore();
+
+    // principal point
+    gi.save(); gi.fillStyle = C.forest;
+    gi.beginPath(); gi.arc(ox+kk.u0*k, oy+kk.v0*k, 3, 0, 2*Math.PI); gi.fill();
+    gi.restore();
+
+    rays.forEach(function (ray, idx) {
+      var x = ox + ray.u*k, y = oy + ray.v*k;
+      gi.save();
+      gi.fillStyle = ray.colour;
+      gi.beginPath(); gi.arc(x, y, 4, 0, 2*Math.PI); gi.fill();
+      if (idx === rays.length-1) {
+        gi.fillStyle = ray.colour; gi.font = "12px system-ui, sans-serif";
+        gi.fillText("(" + ray.u.toFixed(1) + ", " + ray.v.toFixed(1) + ")", x+14, y-12);
+      }
+      gi.restore();
+    });
+  }
+
+  imgpane.addEventListener("click", function (e) {
+    var rect = imgpane.getBoundingClientRect();
+    var x = e.clientX - rect.left, y = e.clientY - rect.top;
+    var u = (x - imgGeom.ox) / imgGeom.k, v = (y - imgGeom.oy) / imgGeom.k;
+    if (u < 0 || u > NU || v < 0 || v > NV) return;
+    // One ray at a time. Several rays from one camera only show that every
+    // pixel has a ray; the point being made here is about a SINGLE pixel, and
+    // a pencil of rays makes the depth ambiguity harder to see, not easier.
+    rays = [{ u: u, v: v, n: pixelToNormalised(u, v), colour: PALETTE[0] }];
+    draw();
+  });
+
+  // ---- the world pane --------------------------------------------------
+  function drawWorld() {
+    B = basis();
+    var dpr = window.devicePixelRatio || 1;
+    W = world.clientWidth; H = world.clientHeight;
+    cw.width = Math.round(W*dpr); cw.height = Math.round(H*dpr);
+    gw.setTransform(dpr,0,0,dpr,0,0); gw.clearRect(0,0,W,H);
+
+    var k = K();
+    // The image plane may be drawn at ANY depth -- every plane perpendicular
+    // to the optical axis carries the same picture, scaled. z = 1 is the
+    // conventional "normalised" one; drawing it further out just makes it
+    // bigger on screen, and the ray still pierces it at the same pixel.
+    var PZ = 2.4;
+    var hw = (NU/2)/k.fu * PZ, hh = (NV/2)/k.fv * PZ;
+    var O = [0,0,0];
+
+    // The camera's x-z plane (y = 0), as a light grid. It is the floor the
+    // rest of the scene sits on: without it the ray's depth is hard to judge,
+    // because an orthographic view gives no perspective cue.
+    var GX = 7, GZ = 18, STEP = 1;
+
+    // a very faint fill first, so the plane reads as a surface and not just
+    // as a set of lines floating in space
+    gw.save();
+    gw.fillStyle = "#000"; gw.globalAlpha = 0.035;
+    gw.beginPath();
+    [[-GX,0,-2], [GX,0,-2], [GX,0,GZ], [-GX,0,GZ]].forEach(function (q, i) {
+      var t = project(q); i ? gw.lineTo(t.x, t.y) : gw.moveTo(t.x, t.y);
+    });
+    gw.closePath(); gw.fill(); gw.restore();
+
+    for (var gx = -GX; gx <= GX; gx += STEP)
+      line3(gw, [gx, 0, -2], [gx, 0, GZ], C.grid, 0.6, [], .55);
+    for (var gz = -2; gz <= GZ; gz += STEP)
+      line3(gw, [-GX, 0, gz], [GX, 0, gz], C.grid, 0.6, [], .55);
+
+    // camera axes, drawn as arrows so the frame reads as a frame
+    line3(gw, [0,0,-1.2], [0,0,18], C.forest, 1, [2,4], .55);  // optical axis
+    arrow3(gw, O, [0.9,0,0], C.forest, 2);
+    arrow3(gw, O, [0,0.9,0], C.forest, 2);
+    arrow3(gw, O, [0,0,0.9], C.forest, 2);
+
+    // the image plane, at z = 1 in normalised units
+    var c = [[-hw,-hh,PZ],[hw,-hh,PZ],[hw,hh,PZ],[-hw,hh,PZ]];
+    gw.save(); gw.fillStyle = C.forest; gw.globalAlpha = .08;
+    gw.beginPath();
+    c.forEach(function (q,i){ var s=project(q); i?gw.lineTo(s.x,s.y):gw.moveTo(s.x,s.y); });
+    gw.closePath(); gw.fill(); gw.restore();
+    for (var i=0;i<4;i++) line3(gw, c[i], c[(i+1)%4], C.forest, 1.2, [], .7);
+
+    // the same intersection, seen in 3D: where the image plane cuts y = 0
+    line3(gw, [-hw, 0, PZ], [hw, 0, PZ], C.warmgray, 1, [3, 4], .8);
+
+    // the rays
+    var FAR = 18;
+    rays.forEach(function (ray) {
+      var n = ray.n;
+      var far = [n[0]*FAR, n[1]*FAR, FAR];
+      line3(gw, O, far, ray.colour, 0.9, [], .9);
+
+      // where the ray pierces the image plane
+      disc3(gw, [n[0]*PZ, n[1]*PZ, PZ], ray.colour, 4);
+
+      // One arrowhead, at 90% of the drawn length, to say the ray keeps going.
+      // A long row of candidate dots reads as a measured track rather than as
+      // "any of these, we cannot tell which", which is the opposite of the point.
+      var t9 = FAR * 0.9;
+      arrow3(gw, [n[0]*(t9-0.8), n[1]*(t9-0.8), t9-0.8],
+                 [n[0]*t9, n[1]*t9, t9], ray.colour, 0.9);
+
+    });
+
+    // the current lambda, on the most recent ray
+    var active = rays[rays.length-1];
+    if (active) {
+      var P = [active.n[0]*lam, active.n[1]*lam, lam];
+      disc3(gw, P, active.colour, 7);
+      gw.save();
+      var s = project(P);
+      gw.strokeStyle = active.colour; gw.lineWidth = 1; gw.setLineDash([3,3]);
+      gw.globalAlpha = .8;
+      var foot = project([active.n[0]*lam, active.n[1]*lam, 0]);
+      gw.beginPath(); gw.moveTo(s.x,s.y); gw.lineTo(foot.x,foot.y); gw.stroke();
+      gw.restore();
+    }
+
+    disc3(gw, O, C.charcoal, 4.5);
+
+    place("O", O, -16, 14);
+    place("Z", [0,0,1.15], 0, 14);
+    place("X", [1.05,0,0], 10, 0);
+    place("Y", [0,1.05,0], 0, 12);
+    place("IP", [0,-hh,PZ], 0, -12);
+  }
+
+  // ---- numbers ---------------------------------------------------------
+  function drawReadout() {
+    var el = document.getElementById("numbers"), note = document.getElementById("note");
+    var a = rays[rays.length-1];
+    if (!a) { el.textContent = ""; note.innerHTML = "click the image to cast a ray"; return; }
+    var P = [a.n[0]*lam, a.n[1]*lam, lam];
+    el.innerHTML =
+      '&nbsp;&nbsp;pixel (' + a.u.toFixed(1) + ', ' + a.v.toFixed(1) + ')' +
+      ' &nbsp;&rarr;&nbsp; direction (' + a.n[0].toFixed(3) + ', ' + a.n[1].toFixed(3) + ', 1)' +
+      ' &nbsp;&rarr;&nbsp; <span class="n">(' + P[0].toFixed(2) + ', ' +
+      P[1].toFixed(2) + ', ' + P[2].toFixed(2) + ')</span> at &lambda; = ' + lam.toFixed(2);
+    note.innerHTML = "every λ gives a different point in space and the " +
+                     "<b>same pixel</b> — one camera cannot choose between them";
+  }
+
+  function draw() { drawImage(); drawWorld(); drawReadout(); }
+
+  // ---- interaction -----------------------------------------------------
+  var drag = null;
+  world.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  world.addEventListener("pointerdown", function (e) {
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el,
+             px: view.px, py: view.py, pan: pan };
+    world.classList.add("dragging");
+    world.setPointerCapture(e.pointerId);
+  });
+  world.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) {
+      view.px = drag.px + (e.clientX - drag.x);
+      view.py = drag.py + (e.clientY - drag.y);
+    } else {
+      view.az = drag.az - (e.clientX - drag.x) * 0.008;
+      view.el = Math.max(-1.45, Math.min(1.45, drag.el + (e.clientY - drag.y) * 0.008));
+    }
+    draw();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null; world.classList.remove("dragging");
+    if (e && e.pointerId !== undefined) {
+      try { world.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+  }
+  world.addEventListener("pointerup", endDrag);
+  world.addEventListener("pointercancel", endDrag);
+  world.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    view.scale = Math.max(14, Math.min(160, view.scale * (e.deltaY < 0 ? 1.08 : 1/1.08)));
+    draw();
+  }, { passive: false });
+
+  document.getElementById("s_f").addEventListener("input", function () {
+    f = parseFloat(this.value);
+    document.getElementById("v_f").textContent = f.toFixed(0);
+    // the pixels stay where they were clicked; their directions change
+    rays.forEach(function (r) { r.n = pixelToNormalised(r.u, r.v); });
+    draw();
+  });
+  document.getElementById("s_lam").addEventListener("input", function () {
+    lam = parseFloat(this.value);
+    document.getElementById("v_lam").textContent = lam.toFixed(2);
+    draw();
+  });
+  document.getElementById("clear").addEventListener("click", function () {
+    rays = []; draw();
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale;
+    view.px = DEF.px; view.py = DEF.py; draw();
+  });
+
+  // ---- presets from the URL --------------------------------------------
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("f")) { f = parseFloat(q.get("f"));
+      document.getElementById("s_f").value = f;
+      document.getElementById("v_f").textContent = f.toFixed(0); }
+    if (q.has("lam")) { lam = parseFloat(q.get("lam"));
+      document.getElementById("s_lam").value = lam;
+      document.getElementById("v_lam").textContent = lam.toFixed(2); }
+    if (q.has("px")) {                       // px=u,v;u,v
+      q.get("px").split(";").forEach(function (pair) {
+        var a = pair.split(",").map(parseFloat);
+        if (a.length === 2 && a.every(isFinite))
+          rays.push({ u: a[0], v: a[1], n: pixelToNormalised(a[0], a[1]),
+                      colour: PALETTE[rays.length % PALETTE.length] });
+      });
+    }
+  })();
+
+  window.addEventListener("resize", draw);
+  draw();
+
+  // ---- MathJax, once ----------------------------------------------------
+  var typeset = false;
+  function useFallback() {
+    if (typeset) return; typeset = true;
+    labels.O.innerHTML = "<b>o</b><sub>C</sub>";
+    labels.Z.innerHTML = "<i>z</i>"; labels.X.innerHTML = "<i>x</i>";
+    labels.Y.innerHTML = "<i>y</i>";
+    document.getElementById("eq").innerHTML =
+      "<b>r</b><sub>P</sub><sup>W</sup> = &lambda; <b>K</b><sub>f</sub><sup>-1</sup> <b>r</b><sub>p</sub><sup>S</sup>";
+    Array.prototype.forEach.call(document.querySelectorAll(".cap"), function (e) {
+      e.innerHTML = e.innerHTML.replace(/\\\((.*?)\\\)/g, "$1"); });
+    draw();
+  }
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    var nodes = Object.keys(labels).map(function (k) { return labels[k]; });
+    nodes.push(document.getElementById("eq"));
+    Array.prototype.push.apply(nodes, document.querySelectorAll(".cap"));
+    window.MathJax.typesetPromise(nodes).then(draw)
+      .catch(function () { typeset = false; useFallback(); });
+  }
+  function whenReady() {
+    if (window.MathJax && window.MathJax.startup)
+      window.MathJax.startup.promise.then(typesetOnce).catch(useFallback);
+  }
+  document.getElementById("MathJax-script").addEventListener("load", whenReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  whenReady();
+  setTimeout(useFallback, 2500);
+})();
+</script>
+</body>
+</html>

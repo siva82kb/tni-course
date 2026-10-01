@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lens distortion</title>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], macros: { v: ['{\\mathbf{#1}}', 1], m: ['{\\begin{bmatrix}#1\\end{bmatrix}}', 1] } },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal: #2D3748; --forest: #2B6CB0; --crimson: #A51C30;
+    --seagreen: #2F855A; --warmgray: #718096; --grid: #CBD5E0;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #fff; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+  /* ---- toolbar -------------------------------------------------------- */
+  #panel {
+    flex: 0 0 auto; display: flex; align-items: flex-start;
+    background: #FAFBFC; border-bottom: 1px solid #E2E8F0;
+    padding: 5px 10px 6px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #panel .grp { padding: 0 12px; border-left: 1px solid #E2E8F0; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel .hd.r { color: var(--crimson); }
+  #panel .hd.t { color: var(--seagreen); }
+  #panel label { display: inline-block; }
+  #panel .two { display: grid; grid-template-columns: auto auto; column-gap: 12px; }
+  #panel .sl { display: block; margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 92px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 10px; height: 10px;
+    margin-top: -3.5px; border-radius: 50%; border: none; background: var(--crimson); }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none; border-radius: 50%; background: var(--crimson); }
+  #panel .sl.t input[type=range]::-webkit-slider-thumb { background: var(--seagreen); }
+  #panel .sl.t input[type=range]::-moz-range-thumb     { background: var(--seagreen); }
+  #panel input[type=checkbox] { width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0; }
+  #panel .k { display: inline-block; width: 1.6em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .k sub { font-size: 0.7em; font-style: normal; }
+  #panel .val { display: inline-block; width: 3.6em; text-align: right;
+                font-variant-numeric: tabular-nums; }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 1px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel button.on { border-color: var(--crimson); color: var(--crimson); font-weight: 600; }
+
+  /* ---- the image ------------------------------------------------------ */
+  #stage { position: relative; flex: 1 1 auto; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .key {
+    position: absolute; top: 8px; left: 12px; font-size: 12px;
+    pointer-events: none; user-select: none; line-height: 1.5;
+  }
+  .key i { display: inline-block; width: 16px; height: 0;
+           border-top-width: 2px; border-top-style: solid; vertical-align: 3px; margin-right: 5px; }
+
+  /* ---- readout -------------------------------------------------------- */
+  #readout {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 20px;
+    padding: 6px 14px 7px; border-top: 1px solid #E2E8F0; background: #FAFBFC;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #readout .n { color: var(--crimson); font-weight: 700; }
+  #readout .note { color: var(--warmgray); font-size: 11.5px; font-style: italic;
+                   font-family: system-ui, sans-serif; }
+  #readout .note b { color: var(--crimson); font-style: normal; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd r">radial distortion</div>
+      <div class="two">
+        <label class="sl"><span class="k">k<sub>1</sub></span>
+          <input type="range" id="s_k1" min="-0.4" max="0.4" step="0.005" value="0">
+          <span class="val" id="v_k1">0.000</span></label>
+        <label class="sl"><span class="k">k<sub>3</sub></span>
+          <input type="range" id="s_k3" min="-0.25" max="0.25" step="0.005" value="0">
+          <span class="val" id="v_k3">0.000</span></label>
+        <label class="sl"><span class="k">k<sub>2</sub></span>
+          <input type="range" id="s_k2" min="-0.35" max="0.35" step="0.005" value="0">
+          <span class="val" id="v_k2">0.000</span></label>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="hd t">tangential</div>
+      <label class="sl t"><span class="k">p<sub>1</sub></span>
+        <input type="range" id="s_p1" min="-0.06" max="0.06" step="0.001" value="0">
+        <span class="val" id="v_p1">0.000</span></label>
+      <label class="sl t"><span class="k">p<sub>2</sub></span>
+        <input type="range" id="s_p2" min="-0.06" max="0.06" step="0.001" value="0">
+        <span class="val" id="v_p2">0.000</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">presets</div>
+      <div class="row">
+        <button data-preset="none">none</button><button data-preset="barrel">barrel</button><button data-preset="pincushion">pincushion</button>
+      </div>
+      <div class="row">
+        <button data-preset="mustache">moustache</button><button data-preset="tangential">tangential</button><button data-preset="gopro" title="strong barrel that a single k1 cannot fit: k2 and k3 carry the rest">wide-angle: strong + higher-order</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">show</div>
+      <div class="row">
+        <label><input type="checkbox" id="c_ideal" checked> ideal grid</label>
+        <label><input type="checkbox" id="c_arrows"> displacement arrows</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="c_circle"> \(r = 1\) circle</label>
+        <label><input type="checkbox" id="c_crop" checked> crop to image</label>
+      </div>
+    </div>
+  </div>
+
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div class="key">
+      <i style="border-color:#2B6CB0"></i>ideal (what a pinhole would give)<br>
+      <i style="border-color:#A51C30"></i>distorted (what the lens gives)
+    </div>
+  </div>
+
+  <div id="readout">
+    <span id="model">\(\displaystyle r^2 = x^2 + y^2,\quad
+       \m{x_d \\ y_d} = \underbrace{\left(1 + k_1 r^2 + k_2 r^4 + k_3 r^6\right)\m{x \\ y}}_{\text{radial}}
+       + \underbrace{\m{2 p_1 x y + p_2\left(r^2 + 2x^2\right) \\ p_1\left(r^2 + 2y^2\right) + 2 p_2 x y}}_{\text{tangential}}\)</span>
+    <span>max displacement: <span class="n" id="maxd">0.0</span> px</span>
+    <span>at the corner: <span class="n" id="cornd">0.0</span> px</span>
+    <span class="note" id="kind"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = { charcoal: "#2D3748", forest: "#2B6CB0", crimson: "#A51C30",
+            seagreen: "#2F855A", warmgray: "#718096", grid: "#CBD5E0" };
+
+  var stage = document.getElementById("stage");
+  var cv = document.getElementById("cv"), g = cv.getContext("2d");
+
+  // ---- state ---------------------------------------------------------
+  var D = { k1: 0, k2: 0, k3: 0, p1: 0, p2: 0 };
+  var show = { ideal: true, arrows: false, circle: false, crop: true };
+  var KEYS = ["k1", "k2", "k3", "p1", "p2"];
+
+  // The image is square, N x N pixels. Normalised coordinates are centred
+  // and scaled by N/2, so the edge midpoints sit at r = 1 and the corners
+  // at r = sqrt(2). That is the convention the slider ranges assume.
+  // The drawn grid runs out to +/- EXT in normalised units, well past the
+  // image edge at +/- 1, so that strong barrel distortion pulls fresh grid
+  // lines INTO the frame instead of folding the outermost ones inward and
+  // leaving the corners empty. Spacing is kept at 0.2 either way.
+  var N = 400, EXT = 2.4, STEP = 0.2, SAMPLES = 220;
+
+  // ---- the distortion model (OpenCV's) --------------------------------
+  function distort(x, y) {
+    var r2 = x * x + y * y, r4 = r2 * r2, r6 = r4 * r2;
+    var k = 1 + D.k1 * r2 + D.k2 * r4 + D.k3 * r6;
+    return [x * k + 2 * D.p1 * x * y + D.p2 * (r2 + 2 * x * x),
+            y * k + D.p1 * (r2 + 2 * y * y) + 2 * D.p2 * x * y];
+  }
+  function toPix(x, y) { return [N / 2 + x * N / 2, N / 2 + y * N / 2]; }   // normalised -> image px
+
+  // Largest radius for which the radial map is still increasing. Beyond it the
+  // polynomial folds the plane back through the centre -- an artefact of the
+  // model, not of any lens -- so the grid is simply not drawn out there.
+  function validRadius() {
+    var prev = 0, r, gr;
+    for (r = 0.01; r <= EXT + 0.01; r += 0.01) {
+      var r2 = r * r;
+      gr = r * (1 + D.k1 * r2 + D.k2 * r2 * r2 + D.k3 * r2 * r2 * r2);
+      if (gr <= prev) return r - 0.01;
+      prev = gr;
+    }
+    return EXT;
+  }
+  var RMAX = EXT;
+
+  // ---- clipping to the image square -----------------------------------
+  // Liang-Barsky. Returns the visible part of the segment, or null.
+  function clip(a, b) {
+    if (!show.crop) return [a, b];
+    var t0 = 0, t1 = 1, dx = b[0] - a[0], dy = b[1] - a[1];
+    var p = [-dx, dx, -dy, dy], q = [a[0] - 0, N - a[0], a[1] - 0, N - a[1]];
+    for (var i = 0; i < 4; i++) {
+      if (p[i] === 0) { if (q[i] < 0) return null; continue; }
+      var t = q[i] / p[i];
+      if (p[i] < 0) { if (t > t1) return null; if (t > t0) t0 = t; }
+      else          { if (t < t0) return null; if (t < t1) t1 = t; }
+    }
+    return [[a[0] + t0 * dx, a[1] + t0 * dy], [a[0] + t1 * dx, a[1] + t1 * dy]];
+  }
+
+  // ---- geometry -------------------------------------------------------
+  // The grid lines, in normalised coordinates, densely sampled so that a
+  // straight line becomes a smooth curve once distorted.
+  function gridLines() {
+    var L = [], j, t, n = Math.round(EXT / STEP);
+    for (var i = -n; i <= n; i++) {
+      var c = i * STEP, hor = [], ver = [];
+      for (j = 0; j <= SAMPLES; j++) {
+        t = -EXT + 2 * EXT * j / SAMPLES;
+        hor.push([t, c]); ver.push([c, t]);
+      }
+      hor.lineOffset = Math.abs(c); ver.lineOffset = Math.abs(c);
+      L.push(hor, ver);
+    }
+    return L;
+  }
+  var LINES = gridLines();
+
+  function strokePolyline(pts, color, width, alpha, src) {
+    g.save();
+    g.strokeStyle = color; g.lineWidth = width; g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.lineJoin = "round"; g.lineCap = "round";
+    for (var i = 0; i + 1 < pts.length; i++) {
+      if (src) {                                   // skip anything past RMAX
+        var a = src[i], b = src[i + 1];
+        if (Math.hypot(a[0], a[1]) > RMAX || Math.hypot(b[0], b[1]) > RMAX) continue;
+      }
+      var seg = clip(pts[i], pts[i + 1]);
+      if (!seg) continue;
+      g.beginPath(); g.moveTo(seg[0][0], seg[0][1]); g.lineTo(seg[1][0], seg[1][1]); g.stroke();
+    }
+    g.restore();
+  }
+
+  // ---- draw ------------------------------------------------------------
+  function draw() {
+    var dpr = window.devicePixelRatio || 1;
+    var W = stage.clientWidth, H = stage.clientHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+
+    // centre the N x N image in the pane
+    var k = Math.min((W - 40) / N, (H - 34) / N);
+    var ox = (W - N * k) / 2, oy = (H - N * k) / 2;
+    g.save();
+    g.translate(ox, oy); g.scale(k, k);
+
+    // the image area
+    g.save(); g.fillStyle = "#F7FAFC"; g.fillRect(0, 0, N, N);
+    g.strokeStyle = "#A0AEC0"; g.lineWidth = 1 / k; g.strokeRect(0, 0, N, N); g.restore();
+
+    // r = 1 circle: where the normalised radius is one
+    if (show.circle) {
+      g.save(); g.strokeStyle = C.warmgray; g.lineWidth = 1 / k;
+      g.setLineDash([4 / k, 4 / k]); g.globalAlpha = 0.7;
+      g.beginPath(); g.arc(N / 2, N / 2, N / 2, 0, 2 * Math.PI); g.stroke(); g.restore();
+    }
+
+    RMAX = validRadius();
+
+    // the ideal grid -- only inside the image, since that is all a pinhole sees
+    if (show.ideal) {
+      LINES.forEach(function (L) {
+        if (L.lineOffset > 1) return;           // outside the image anyway
+        strokePolyline(L.map(function (q) { return toPix(q[0], q[1]); }), C.forest, 1 / k, 0.55);
+      });
+    }
+
+    // the distorted grid, drawn from a source grid that runs well past the
+    // image edge, so barrel distortion pulls fresh lines in rather than
+    // leaving the corners bare
+    LINES.forEach(function (L) {
+      if (L.lineOffset > RMAX) return;          // whole line is past the fold
+      strokePolyline(L.map(function (q) { var d = distort(q[0], q[1]); return toPix(d[0], d[1]); }),
+                     C.crimson, 1.6 / k, 1, L);
+    });
+
+    // displacement arrows at the grid crossings
+    if (show.arrows) {
+      g.save(); g.strokeStyle = C.seagreen; g.lineWidth = 1 / k; g.globalAlpha = 0.85;
+      var na = Math.round(1 / STEP);
+      for (var i = -na; i <= na; i++) for (var j = -na; j <= na; j++) {
+        var x = i * STEP, y = j * STEP;
+        var a = toPix(x, y), d = distort(x, y), b = toPix(d[0], d[1]);
+        var seg = clip(a, b); if (!seg) continue;
+        g.beginPath(); g.moveTo(seg[0][0], seg[0][1]); g.lineTo(seg[1][0], seg[1][1]); g.stroke();
+        var L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (L > 6) {
+          var an = Math.atan2(b[1] - a[1], b[0] - a[0]), hl = 5, hw = 0.45;
+          g.beginPath(); g.moveTo(b[0], b[1]);
+          g.lineTo(b[0] - hl * Math.cos(an - hw), b[1] - hl * Math.sin(an - hw));
+          g.lineTo(b[0] - hl * Math.cos(an + hw), b[1] - hl * Math.sin(an + hw));
+          g.closePath(); g.fillStyle = C.seagreen; g.fill();
+        }
+      }
+      g.restore();
+    }
+
+    // the principal point
+    g.save(); g.fillStyle = C.charcoal;
+    g.beginPath(); g.arc(N / 2, N / 2, 2.5 / k, 0, 2 * Math.PI); g.fill(); g.restore();
+
+    g.restore();
+    drawReadout();
+  }
+
+  // ---- readout ---------------------------------------------------------
+  function drawReadout() {
+    // biggest displacement anywhere on the image, and at the corner
+    var maxd = 0;
+    for (var i = 0; i <= 40; i++) for (var j = 0; j <= 40; j++) {
+      var x = -1 + 2 * i / 40, y = -1 + 2 * j / 40;
+      var d = distort(x, y);
+      maxd = Math.max(maxd, Math.hypot(d[0] - x, d[1] - y) * N / 2);
+    }
+    var cx = 1, cy = 1, dc = distort(cx, cy);
+    var cornd = Math.hypot(dc[0] - cx, dc[1] - cy) * N / 2;
+    var signed = (Math.hypot(dc[0], dc[1]) - Math.hypot(cx, cy)) * N / 2;
+
+    document.getElementById("maxd").textContent = maxd.toFixed(1);
+    document.getElementById("cornd").textContent = cornd.toFixed(1);
+
+    var n = document.getElementById("kind"), txt;
+    if (maxd < 0.3) txt = "no distortion — the two grids coincide";
+    else if (Math.abs(D.p1) + Math.abs(D.p2) > 1e-6 && Math.abs(D.k1) + Math.abs(D.k2) + Math.abs(D.k3) < 1e-6)
+      txt = "<b>tangential</b> (decentring) — the lens elements are not coaxial. Lines across <b>P</b> bend with the <i>same</i> curvature everywhere, unlike barrel; lines along <b>P</b> stay straight. A merely tilted sensor is a homography — it would keep lines straight";
+    else if (signed < -0.3) txt = "<b>barrel</b> — corners pulled in, straight lines bow outward";
+    else if (signed > 0.3) txt = "<b>pincushion</b> — corners pushed out, straight lines bow inward";
+    else txt = "<b>moustache</b> — barrel near the centre, pincushion near the edge; this is why k<sub>2</sub> exists";
+    var hi = Math.abs(D.k2) + Math.abs(D.k3) > 0.02;
+    var tail = hi
+      ? " &nbsp;·&nbsp; k<sub>2</sub>, k<sub>3</sub> are carrying what k<sub>1</sub> alone cannot fit — a wide field needs more terms, not a different defect"
+      : " &nbsp;·&nbsp; the centre never moves: distortion grows with r";
+    n.innerHTML = txt + tail;
+  }
+
+  // ---- controls --------------------------------------------------------
+  function sync() {
+    KEYS.forEach(function (kk) {
+      document.getElementById("s_" + kk).value = D[kk];
+      document.getElementById("v_" + kk).textContent = D[kk].toFixed(3);
+    });
+  }
+  KEYS.forEach(function (kk) {
+    document.getElementById("s_" + kk).addEventListener("input", function () {
+      D[kk] = parseFloat(this.value);
+      document.getElementById("v_" + kk).textContent = D[kk].toFixed(3);
+      draw();
+    });
+  });
+  [["c_ideal", "ideal"], ["c_arrows", "arrows"], ["c_circle", "circle"], ["c_crop", "crop"]]
+    .forEach(function (p) {
+      document.getElementById(p[0]).addEventListener("change", function () {
+        show[p[1]] = this.checked; draw();
+      });
+    });
+
+  var PRESETS = {
+    none:       { k1: 0,     k2: 0,    k3: 0, p1: 0,     p2: 0 },
+    barrel:     { k1: -0.18, k2: 0,    k3: 0, p1: 0,     p2: 0 },
+    pincushion: { k1: 0.18,  k2: 0,    k3: 0, p1: 0,     p2: 0 },
+    mustache:   { k1: -0.22, k2: 0.16, k3: 0, p1: 0,     p2: 0 },
+    tangential: { k1: 0,     k2: 0,    k3: 0, p1: 0.030, p2: 0.020 },
+    gopro:      { k1: -0.26, k2: 0.09, k3: -0.02, p1: 0.002, p2: -0.001 }
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-preset]"), function (b) {
+    b.addEventListener("click", function () {
+      var p = PRESETS[this.getAttribute("data-preset")];
+      KEYS.forEach(function (kk) { D[kk] = p[kk]; });
+      Array.prototype.forEach.call(document.querySelectorAll("button[data-preset]"),
+        function (o) { o.classList.remove("on"); });
+      this.classList.add("on");
+      sync(); draw();
+    });
+  });
+
+  // presets from the URL: ?k1=-0.3&k2=0.1&p1=0.01 or ?preset=barrel
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("preset") && PRESETS[q.get("preset")]) {
+      var p = PRESETS[q.get("preset")];
+      KEYS.forEach(function (kk) { D[kk] = p[kk]; });
+      var b = document.querySelector('button[data-preset="' + q.get("preset") + '"]');
+      if (b) b.classList.add("on");
+    }
+    KEYS.forEach(function (kk) { if (q.has(kk)) { var v = parseFloat(q.get(kk)); if (isFinite(v)) D[kk] = v; } });
+    if (q.has("ideal")) { show.ideal = q.get("ideal") !== "0"; document.getElementById("c_ideal").checked = show.ideal; }
+    if (q.has("arrows")) { show.arrows = q.get("arrows") !== "0"; document.getElementById("c_arrows").checked = show.arrows; }
+  })();
+
+  window.addEventListener("resize", draw);
+  sync(); draw();
+
+  // ---- MathJax, once ----------------------------------------------------
+  var typeset = false;
+  function useFallback() {
+    if (typeset) return; typeset = true;
+    document.getElementById("model").innerHTML =
+      "x<sub>d</sub> = x(1 + k<sub>1</sub>r² + k<sub>2</sub>r⁴ + k<sub>3</sub>r⁶) + 2p<sub>1</sub>xy + p<sub>2</sub>(r² + 2x²)  ·  " +
+      "y<sub>d</sub> = y(1 + k<sub>1</sub>r² + k<sub>2</sub>r⁴ + k<sub>3</sub>r⁶) + p<sub>1</sub>(r² + 2y²) + 2p<sub>2</sub>xy";
+    draw();
+  }
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    window.MathJax.typesetPromise([document.getElementById("model"),
+                                   document.getElementById("panel")])
+      .then(draw).catch(function () { typeset = false; useFallback(); });
+  }
+  function whenReady() {
+    if (window.MathJax && window.MathJax.startup)
+      window.MathJax.startup.promise.then(typesetOnce).catch(useFallback);
+  }
+  document.getElementById("MathJax-script").addEventListener("load", whenReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  whenReady();
+  setTimeout(useFallback, 2500);
+})();
+</script>
+</body>
+</html>

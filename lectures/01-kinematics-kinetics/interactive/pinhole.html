@@ -23,8 +23,12 @@
     overflow: hidden;
   }
 
-  /* Two panes: the world on the left, what the camera records on the right. */
-  #app { display: flex; width: 100%; height: 100%; }
+  /* A toolbar across the top, then two panes: the world on the left, what
+     the camera records on the right. The toolbar takes a fixed strip so
+     the panes get every remaining pixel -- on a slide, height is what is
+     scarce, and a panel floating over the 3D view was costing a third of it. */
+  #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+  #panes { display: flex; flex: 1 1 auto; min-height: 0; }
   #world { position: relative; flex: 0 0 58%; height: 100%; cursor: grab;
            border-right: 1px solid #E2E8F0; }
   #world.orbiting { cursor: grabbing; }
@@ -32,7 +36,7 @@
   #image { position: relative; flex: 1 1 auto; height: 100%; }
   canvas { display: block; width: 100%; height: 100%; }
   @media (max-width: 700px) {
-    #app { flex-direction: column; }
+    #panes { flex-direction: column; }
     #world { flex: 0 0 55%; border-right: 0; border-bottom: 1px solid #E2E8F0; }
   }
 
@@ -54,19 +58,25 @@
   }
   .hdr b { color: var(--charcoal); font-weight: 700; }
 
-  /* Compact panel, as in the other interactives: this sits on a slide. */
+  /* The toolbar: one strip, groups laid out left to right, each group a
+     short column. Compact, as in the other interactives: this sits on a slide. */
   #panel {
-    position: absolute; top: 8px; left: 8px; width: 214px;
-    background: rgba(255,255,255,0.92);
-    border: 1px solid #E2E8F0; border-radius: 5px;
-    padding: 6px 8px; font-size: 10.5px; line-height: 1.35;
+    flex: 0 0 auto; display: flex; align-items: flex-start; gap: 0;
+    background: #FAFBFC; border-bottom: 1px solid #E2E8F0;
+    padding: 5px 10px 6px; font-size: 10.5px; line-height: 1.35;
     font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: auto; white-space: nowrap;
   }
+  #panel .grp { padding: 0 12px; border-left: 1px solid #E2E8F0; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 3px; }
   #panel label { display: inline-block; }
-  #panel .slider { display: block; margin-bottom: 4px; }
+  #panel .slider { display: block; margin-bottom: 2px; }
+  #panel .two { display: grid; grid-template-columns: auto auto; column-gap: 10px; }
   #panel input[type=range] {
     -webkit-appearance: none; appearance: none;
-    width: 108px; height: 10px; margin: 0 3px; padding: 0;
+    width: 84px; height: 10px; margin: 0 3px; padding: 0;
     vertical-align: middle; background: transparent; cursor: pointer;
   }
   #panel input[type=range]::-webkit-slider-runnable-track {
@@ -94,10 +104,8 @@
               font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
   #panel .k sub { font-size: 0.7em; font-style: normal; }
   #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
-  #panel .row.sep { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
-  #panel .row.title { color: var(--charcoal); font-weight: 600; }
   #panel select {
-    font: inherit; font-size: 10px; width: 100%; margin: 2px 0;
+    font: inherit; font-size: 10px; width: 92px; margin: 0 2px 0 0; vertical-align: middle;
     border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal);
   }
   #panel button {
@@ -130,61 +138,74 @@
 </head>
 <body>
 <div id="app">
-  <div id="world">
-    <canvas id="cw"></canvas>
 
-    <div id="panel">
-      <label class="slider"><span class="k">f</span>
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">camera</div>
+      <div class="slider"><label><span class="k">f</span>
         <input type="range" id="sf" min="0.3" max="3" step="0.05" value="1">
         <span class="val" id="vf">1.00</span></label>
-      <div class="row">image plane:
-        <label><input type="radio" name="plane" value="real"> real (behind, inverted)</label><br>
-        <span style="display:inline-block;width:5.1em"></span>
+        &nbsp;&nbsp;<label><input type="checkbox" id="crays" checked> rays</label>
+        <label><input type="checkbox" id="cfloor" checked> X–Z plane</label></div>
+      <div class="row">plane:
         <label><input type="radio" name="plane" value="virtual" checked> virtual (in front)</label>
+        <label><input type="radio" name="plane" value="real"> real (behind, inverted)</label>
       </div>
-      <div class="row">
-        <label><input type="checkbox" id="crays" checked> rays</label>
-        <label><input type="checkbox" id="cfloor" checked> X–Z plane</label>
-      </div>
+    </div>
 
-      <div class="row sep title">objects</div>
-      <select id="objsel"></select>
+    <div class="grp">
+      <div class="hd">objects</div>
       <div class="row">
-        <button data-add="point">+ point</button><button data-add="segment">+ segment</button><button data-add="cube">+ cube</button><br>
-        <button data-add="sphere">+ sphere</button><button data-add="plate">+ plate</button><button data-add="ground">+ ground</button>
+        <select id="objsel"></select>
         <button id="scaled" title="a copy twice as far away and twice as big: same rays, same image">×2 copy</button>
         <button id="remove" class="danger">remove</button>
       </div>
-      <label class="slider"><span class="k">X</span>
-        <input type="range" id="sX" min="-4" max="4" step="0.05" value="0">
-        <span class="val" id="vX">0</span></label>
-      <label class="slider"><span class="k">Y</span>
-        <input type="range" id="sY" min="-3" max="3" step="0.05" value="0">
-        <span class="val" id="vY">0</span></label>
-      <label class="slider"><span class="k">Z</span>
-        <input type="range" id="sZ" min="-2" max="15" step="0.05" value="5">
-        <span class="val" id="vZ">5</span></label>
-      <label class="slider"><span class="k">size</span>
-        <input type="range" id="sS" min="0.2" max="4" step="0.05" value="1">
-        <span class="val" id="vS">1</span></label>
+      <div class="row">
+        <button data-add="point">+ point</button><button data-add="segment">+ segment</button><button data-add="cube">+ cube</button><button data-add="sphere">+ sphere</button><button data-add="plate">+ plate</button><button data-add="ground">+ ground</button>
+      </div>
+    </div>
 
-      <div class="row sep title">presets</div>
+    <div class="grp">
+      <div class="hd">selected object</div>
+      <div class="two">
+        <label class="slider"><span class="k">X</span>
+          <input type="range" id="sX" min="-4" max="4" step="0.05" value="0">
+          <span class="val" id="vX">0</span></label>
+        <label class="slider"><span class="k">Z</span>
+          <input type="range" id="sZ" min="-2" max="15" step="0.05" value="5">
+          <span class="val" id="vZ">5</span></label>
+        <label class="slider"><span class="k">Y</span>
+          <input type="range" id="sY" min="-3" max="3" step="0.05" value="0">
+          <span class="val" id="vY">0</span></label>
+        <label class="slider"><span class="k">size</span>
+          <input type="range" id="sS" min="0.2" max="4" step="0.05" value="1">
+          <span class="val" id="vS">1</span></label>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">presets</div>
       <div class="row">
         <button data-preset="default">one point</button><button data-preset="cube">one cube</button><button data-preset="vanish">vanishing point</button>
       </div>
       <div class="row"><button id="resetview">reset view</button></div>
-      <div class="row sep">camera frame: <span class="k" style="width:auto;color:#A51C30">X</span> right,
-        <span class="k" style="width:auto;color:#2F855A">Y</span> down,
-        <span class="k" style="width:auto;color:#2B6CB0">Z</span> optical axis</div>
     </div>
+  </div>
 
-    <div id="hint">drag an object to move it &middot; drag empty space to orbit &middot; shift-drag pans &middot; wheel zooms</div>
+  <div id="panes">
+  <div id="world">
+    <canvas id="cw"></canvas>
+    <div id="hint">drag an object to move it &middot; drag empty space to orbit &middot; shift-drag pans &middot; wheel zooms
+      &nbsp;·&nbsp; <span style="color:#A51C30">X</span> right,
+      <span style="color:#2F855A">Y</span> down,
+      <span style="color:#2B6CB0">Z</span> optical axis</div>
   </div>
 
   <div id="image">
     <div class="hdr"><b>Image plane</b> &mdash; what the camera records</div>
     <canvas id="ci"></canvas>
     <div id="readout"></div>
+  </div>
   </div>
 </div>
 
@@ -207,8 +228,8 @@
   var cam = { f: 1.0, w: 2.4, h: 1.8, plane: "virtual" };   // sensor w x h, same units as the world
   var show = { rays: true, floor: true };
   // Eye behind and above the camera, to its right, so +Z runs away to the
-  // right of the screen and the scene stays clear of the control panel.
-  var DEF = { az: 0.62, el: 0.34, scale: 50, px: -20, py: 20 };
+  // right of the screen.
+  var DEF = { az: 0.62, el: 0.34, scale: 50, px: -30, py: 0 };
   var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: DEF.px, py: DEF.py };
   var objects = [], selected = -1, nextId = 1;
   var EPS = 0.05;              // a point this close to the pinhole plane is not imaged
@@ -362,9 +383,9 @@
     d.className = "lbl " + cls; d.innerHTML = html;
     world.appendChild(d); labels[key] = d;
   }
-  mkLabel("x", "x", "X<sub>c</sub>");
-  mkLabel("y", "y", "Y<sub>c</sub>");
-  mkLabel("z", "z", "Z<sub>c</sub>");
+  mkLabel("x", "x", "<b>x</b><sub>C</sub>");
+  mkLabel("y", "y", "<b>y</b><sub>C</sub>");
+  mkLabel("z", "z", "<b>z</b><sub>C</sub>");
   mkLabel("o", "o", "O");
   mkLabel("plane", "plane", "image plane");
   function placeLabel(key, p, dx, dy) {
@@ -402,12 +423,12 @@
     var imgPts = [];
     objects.forEach(function (o, idx) {
       var G = geometry(o), sel = idx === selected;
-      var st = { color: o.color, width: sel ? 2.4 : 1.4, alpha: sel ? 1 : 0.85 };
+      var st = { color: o.color, width: sel ? 1.5 : 0.9, alpha: sel ? 1 : 0.85 };
       G.E.forEach(function (e) { seg(G.V[e[0]], G.V[e[1]], st); });
       if (show.rays) G.R.forEach(function (k) {
         var p = G.V[k], ip = imagePoint3D(p);
         if (!ip) return;
-        var rs = { color: o.color, width: 0.9, alpha: sel ? 0.7 : 0.4 };
+        var rs = { color: o.color, width: 0.6, alpha: sel ? 0.6 : 0.35 };
         seg(p, O, rs);
         if (cam.plane === "real") seg(O, ip, rs);
         imgPts.push({ p: ip, color: o.color, sel: sel });
@@ -434,9 +455,9 @@
     disc(gw, project(O), C.charcoal, 4.2);                       // the pinhole
     objects.forEach(function (o, idx) {
       if (o.type !== "point") return;
-      disc(gw, project(o.c), o.color, idx === selected ? 5.2 : 4.2);
+      disc(gw, project(o.c), o.color, idx === selected ? 3.4 : 2.8);
     });
-    imgPts.forEach(function (ip) { disc(gw, project(ip.p), ip.color, ip.sel ? 3.4 : 2.6, 0.95); });
+    imgPts.forEach(function (ip) { disc(gw, project(ip.p), ip.color, ip.sel ? 2.2 : 1.7, 0.95); });
 
     placeLabel("x", [1.25, 0, 0], 0, 0);
     placeLabel("y", [0, 1.25, 0], 0, 0);
@@ -498,6 +519,11 @@
     // principal point
     disc(gi, { x: cx, y: cy }, C.forest, 2.4, 0.9);
 
+    // Only what lands on the sensor is recorded. Clip the projections to it,
+    // so anything outside the field of view simply disappears from the image.
+    gi.save();
+    gi.beginPath(); gi.rect(s0.x, s0.y, s1.x - s0.x, s1.y - s0.y); gi.clip();
+
     // far to near, so a nearer object on the same rays paints over the
     // farther one, as it would on a real sensor
     var order = objects.map(function (o, i) { return i; })
@@ -505,7 +531,7 @@
     order.forEach(function (idx) {
       var o = objects[idx], G = geometry(o), sel = idx === selected;
       gi.save();
-      gi.strokeStyle = o.color; gi.lineWidth = sel ? 2.2 : 1.3;
+      gi.strokeStyle = o.color; gi.lineWidth = sel ? 1.4 : 0.9;
       gi.globalAlpha = sel ? 1 : 0.85;
       G.E.forEach(function (e) {
         var ce = clipEdge(G.V[e[0]], G.V[e[1]]);
@@ -516,13 +542,14 @@
       gi.restore();
       if (show.rays) G.R.forEach(function (kk) {
         var uv = toImage(G.V[kk]);
-        if (uv) disc(gi, toPx(uv), o.color, sel ? 3.6 : 2.8, 0.95);
+        if (uv) disc(gi, toPx(uv), o.color, sel ? 2.3 : 1.8, 0.95);
       });
       if (o.type === "point") {
         var uv = toImage(o.c);
-        if (uv) disc(gi, toPx(uv), o.color, sel ? 5 : 4);
+        if (uv) disc(gi, toPx(uv), o.color, sel ? 3.2 : 2.6);
       }
     });
+    gi.restore();
 
     drawReadout();
   }
@@ -549,7 +576,9 @@
       ' = <span class="n">' + fmt(uv[0]) + '</span></div>' +
       '<div class="eq">v = ' + pre + '<span class="f">f</span> Y / Z = ' + pre +
       '<span class="f">' + fmt(cam.f) + '</span> × ' + fmt(c[1]) + ' / ' + fmt(c[2]) +
-      ' = <span class="n">' + fmt(uv[1]) + '</span></div>';
+      ' = <span class="n">' + fmt(uv[1]) + '</span></div>' +
+      (Math.abs(uv[0]) > cam.w / 2 || Math.abs(uv[1]) > cam.h / 2
+        ? '<div class="warn">outside the sensor: out of the field of view, not recorded</div>' : '');
   }
 
   function fmt(v) {
