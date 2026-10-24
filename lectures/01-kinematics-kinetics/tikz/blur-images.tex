@@ -1,0 +1,44 @@
+\documentclass[border=6pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage{amsmath}
+\usepackage{libertine}
+\usepackage{xcolor}
+\definecolor{charcoal}{HTML}{2D3748}
+\definecolor{forest}{HTML}{2B6CB0}
+\definecolor{warmgray}{HTML}{718096}
+\definecolor{harvardcrimson}{HTML}{A51C30}
+\definecolor{seagreen}{HTML}{2F855A}
+
+% How motion blur smears the tag's cells into the pixel grid. The tag36h11 id 0
+% pattern, 0.10 m at z = 2.5 m with f = 800 px (32 px wide, 4 px per cell),
+% tilted 30 degrees, moving sideways during the exposure by b = 0, 2, 4 and 8 px.
+% The pixel values are computed by notes/01-kinematics-kinetics/make_blur_pixels.py
+% and read from ../figures/blur-pixels.tex; the 1 px grid is drawn on top.
+%   pdflatex blur-images.tex && pdftocairo -svg blur-images.pdf ../figures/blur-images.svg
+\input{../figures/blur-pixels.tex}
+\begin{document}
+\begin{tikzpicture}[font=\small, x=1cm, y=1cm]
+  \def\sc{0.115}                                   % cm per pixel in the drawing
+  % one image at x = #1: the pixels (#2), the blur length (#3), the speed it means (#4)
+  \newcommand{\blurimg}[4]{%
+    \begin{scope}[shift={(#1, 0)}, scale=\sc]
+      \fill[white] (-20, -20) rectangle (20, 20);
+      \begin{scope}
+        \clip (-20, -20) rectangle (20, 20);
+        #2
+      \end{scope}
+      \draw[warmgray, opacity=0.55, line width=0.25pt, step=1] (-20, -20) grid (20, 20);
+      \node[anchor=south, font=\footnotesize, text=charcoal] at (0, 22) {$b = #3$ px};
+      \node[anchor=north, font=\scriptsize, text=charcoal, align=center] at (0, -22) {#4};
+    \end{scope}
+  }
+  \blurimg{0}{\blurimgZERO}{0}{at rest}
+  \blurimg{5.4}{\blurimgTWO}{2}{half a cell\\ \textcolor{harvardcrimson}{0.4 m/s at 1/60 s}}
+  \blurimg{10.8}{\blurimgFOUR}{4}{one cell\\ \textcolor{harvardcrimson}{0.75 m/s at 1/60 s}}
+  \blurimg{16.2}{\blurimgEIGHT}{8}{two cells\\ \textcolor{harvardcrimson}{1.5 m/s at 1/60 s}}
+  \node[anchor=north, font=\footnotesize, text=warmgray, align=center] at (8.1, -3.5)
+    {A 32 px tag ($d = 0.10$ m at $z = 2.5$ m, $f = 800$ px), 4 px per cell, tilted $30^\circ$, moving sideways during the exposure.\\
+     Each pixel is the average of what passed over it: a smear of $b$ pixels, with $b = v\,T_{\mathrm{exp}}\,f/z$.};
+\end{tikzpicture}
+\end{document}

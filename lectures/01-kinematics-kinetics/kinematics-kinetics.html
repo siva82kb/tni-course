@@ -804,7 +804,7 @@ Sivakumar Balasubramanian
 <p><img data-src="figures/fullbody-rb.svg" style="height:540px; width:auto; max-height:none; display:block;"></p>
 <p><img data-src="figures/fullbody-annot.svg" style="height:540px; width:auto; max-height:none; display:block;"></p>
 </div>
-</div><div class="column" style="font-size: 0.9em;">
+</div><div class="column" style="width:58%; font-size: 0.9em;">
 <div class="fragment">
 <p><span class="highlight">General approach</span>: track all 6DOFs of each limb segment <span class="math inline">\(\longrightarrow\)</span> derive the individual joint variables.</p>
 </div>
@@ -1137,8 +1137,8 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <ul>
 <li><span class="red">Requires a measured calibration object</span> with known, <span class="red">non-coplanar</span> points that fill the capture volume — estimates extrapolate poorly outside it.</li>
 <li>Ignores <span class="red">lens distortion</span> — unmodelled distortion biases all 11 parameters.</li>
-<li>Fits 11 free parameters without enforcing the structure of <span class="math inline">\(\boldsymbol{\Pi} = \v{K}\m{\v{R} \mid \v{o}}\)</span> (orthogonal <span class="math inline">\(\v{R}\)</span>), so the spare degrees of freedom absorb measurement noise.</li>
-<li>Minimises algebraic rather than reprojection error; needs data normalisation to be well-conditioned.</li>
+<li>Fits 11 free parameters without enforcing the structure of <span class="math inline">\(\boldsymbol{\Pi} = \v{K}\m{\v{R} \mid \v{o}}\)</span> (orthogonal <span class="math inline">\(\v{R}\)</span>), so the spare degrees of freedom absorb measurement noise. &lt;!– Revisit in a later version: this is fixed by refinement (as in the fiducial notes §7), unlike the points above.</li>
+<li>Minimises algebraic rather than reprojection error; needs data normalisation to be well-conditioned. –&gt;</li>
 </ul>
 </div>
 </div>
@@ -1177,10 +1177,10 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <div style="margin-top: -0.5em;">
 <p><span class="highlight">How it decides:</span></p>
 <ul>
-<li>positions of the corners on the checkered board are known.</li>
-<li>detects the corners for the given size; this provides the correspondence between the 3D points and the image points.</li>
-<li>searches for the set of numbers that best <span class="red">predicts where every corner actually appeared</span></li>
-<li>leftover mismatch, in pixels, is the reprojection error.</li>
+<li>Positions of the corners on the checkered board are known.</li>
+<li>Detects the corners for the given size; this provides the correspondence between the 3D points and the image points.</li>
+<li>Searches for the set of numbers that best <span class="red">predicts where every corner actually appeared</span></li>
+<li>Leftover mismatch, in pixels, is the reprojection error.</li>
 </ul>
 </div>
 </div></div>
@@ -1189,7 +1189,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">Camera calibration — what to check</span></p>
 <div style="font-size: 1.00em; margin-top: -1.0em;">
-<p>Calibration <span class="red">always returns numbers</span>. It never refuses. So the question is never “did it run?” but “should I believe it?”</p>
+<p>Calibration <span class="red">always returns numbers</span>. So the question is never “did it run?” but “should I believe it?”</p>
 </div>
 <div style="font-size: 1.0em; margin-top: -0.5em;">
 <ul>
@@ -1208,18 +1208,20 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">Single camera inverse problem</span></p>
 <p><span class="highlight">Can we estimate the position of points in 3D space from a single camera?</span></p>
-<div style="margin-top: -0.5em; font-size: 0.9em;">
+<div style="margin-top: -0.75em; font-size: 0.9em;">
 <p>Let’s assume that we have calibrated the camera. <span class="math inline">\(\v{K}\)</span> is estimated and <span class="math inline">\(\v{R} = \v{I}\)</span> and <span class="math inline">\(\v{o} = \v{0}\)</span> assuming camera coordinate is the world coordinate.</p>
 </div>
-<div style="margin-top: -0.5em; font-size: 0.9em;">
+<div style="margin-top: -0.75em; font-size: 0.9em;">
 <p><span class="highlight">Forward problem</span>: 3D point <span class="math inline">\(\v{r}_P^W\)</span> in world to 2D point in the image <span class="math inline">\(\v{r}_p^S\)</span>. <span class="math display">\[\lambda \v{r}_p^S = \v{K}_f \m{\v{I}_3 &amp; \v{0}} \v{r}_P^W\]</span></p>
 </div>
-<div style="margin-top: -0.5em; font-size: 0.9em;">
+<div style="margin-top: -0.75em; font-size: 0.9em;">
 <p><span class="math inline">\(\lambda &gt; 0\)</span> is an unknown here because we are operating with homogeneous coordinates, and <span class="math inline">\(\v{r}_p^S = \m{x_p^S \\ y_p^S \\ 1}\)</span>.</p>
 </div>
-<div style="margin-top: -0.5em; font-size: 0.9em;">
+<div style="margin-top: -0.75em; font-size: 0.9em;">
 <p><span class="highlight">Inverse problem</span>: Knowing <span class="math inline">\(\v{r}_p^S\)</span>, we would like to find the 3D points that would have produced it.</p>
 <p>We can now invert the relationship to find the following,</p>
+</div>
+<div style="margin-top: -0.75em; font-size: 0.9em;">
 <p><span class="math display">\[ \v{r}_P^W = \lambda \v{K}_f^{-1} \v{r}_p^S \]</span></p>
 </div>
 <div class="fragment">
@@ -1284,7 +1286,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <p>Our discussion, thus far, has entirely focused on the ideal scenario.</p>
 <p>In practice there are several issues that require careful consideration.</p>
 <ul>
-<li><span class="highlight">Spatial sampling of the image plane</span>: <span class="deemph">a point’s image is located only to within a fraction of a pixel, and that error grows with distance from the camera.</span></li>
+<li><span class="highlight">Spatial sampling of the image plane</span>: <span class="deemph">the image is recorded on a pixel grid, so a small or thresholded marker moves in pixel-sized steps. Each pixel corresponds to a larger distance in space the further away the marker is — roughly <span class="math inline">\(z/f\)</span>.</span></li>
 <li><span class="highlight">Image sensor noise</span>: <span class="deemph">noise moves the detected centre from frame to frame, so a still marker appears to jitter.</span></li>
 <li><span class="highlight">Image distortion</span>: <span class="deemph">removed by calibration — what is left is only as good as the calibration.</span></li>
 <li><span class="highlight">Identification of corresponding points</span>: <span class="deemph">which blob is which marker, in every camera and every frame? Swapped labels corrupt the data without any warning.</span></li>
@@ -1294,11 +1296,506 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <section id="camera-based-movement-tracking-24" class="slide level2">
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">Human movement tracking setup</span></p>
-<p>Tracking full body kinematics typically involves markers placed on the individual body segments, which are then tracked using a multi-camera setup.</p>
+<div style="font-size: 0.85em; margin-top:-0.5em;">
+<p>When tracking full body kinematics typically interested in:</p>
+<ul>
+<li>Movement of the whole-body centre of mass.</li>
+<li>Relative movement between adjacent bones or joint kinematics.</li>
+</ul>
+<p>Tracking kinematics is acheived by placing markers on the individual body segments, tracked using a multi-camera setup.</p>
 <div style="text-align:center; margin-top:-0.5em;">
-<p><img data-src="figures/mocap-subject.jpeg" style="display:inline-block; height:400px; width:auto; max-height:none; margin:0 1em 0 0; vertical-align:top;"> <img data-src="figures/mocap-markers.png" style="display:inline-block; height:400px; width:auto; max-height:none; margin:0; vertical-align:top;"></p>
+<p><img data-src="figures/mocap-subject.jpeg" style="display:inline-block; height:350px; width:auto; max-height:none; margin:0 1em 0 0; vertical-align:top;"> <img data-src="figures/mocap-markers.png" style="display:inline-block; height:350px; width:auto; max-height:none; margin:0; vertical-align:top;"></p>
 </div>
 <p>Each rigid body has 3-4 markers to track its pose in 3D.</p>
+</div>
+</section>
+<section id="camera-based-movement-tracking-25" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Human movement tracking setup</span></p>
+<div style="font-size: 0.9em; margin-top:-0.5em;">
+<p>Each rigid body has 3-4 markers to track its pose in 3D.</p>
+<p>Consider three markers <span class="math inline">\(m_1, m_2\)</span> and <span class="math inline">\(m_3\)</span> on a rigid body <span class="math inline">\(B\)</span>.</p>
+<div class="columns" style="align-items:center; margin-top:-0.5em;">
+<div class="column" style="width:50%;">
+<!-- Five stages of one figure (tikz/markers-frame-lbp.tex), stacked. Every
+     stage paints its own white background, so each one hides the last. -->
+<div class="r-stack" style="width:fit-content; margin:0 auto;">
+<p><img data-src="figures/markers-frame-lbp-1.svg" style="height:440px; width:auto; max-height:none; display:block;"></p>
+<p><img data-src="figures/markers-frame-lbp-2.svg" class="fragment" style="height:440px; width:auto; max-height:none; display:block;" data-fragment-index="1"></p>
+<p><img data-src="figures/markers-frame-lbp-3.svg" class="fragment" style="height:440px; width:auto; max-height:none; display:block;" data-fragment-index="2"></p>
+<p><img data-src="figures/markers-frame-lbp-4.svg" class="fragment" style="height:440px; width:auto; max-height:none; display:block;" data-fragment-index="3"></p>
+<p><img data-src="figures/markers-frame-lbp-5.svg" class="fragment" style="height:440px; width:auto; max-height:none; display:block;" data-fragment-index="4"></p>
+</div>
+</div><div class="column" style="width:42%; font-size: 0.8em;">
+<p>The cameras give <span class="math inline">\(\v{r}_{m_1}^{A}, \v{r}_{m_2}^{A}, \v{r}_{m_3}^{A}\)</span>.</p>
+<div class="fragment" data-fragment-index="1" style="margin-top:-0.5em;">
+<p><span class="highlight">Two vectors in the body</span> <span class="math display">\[\v{d}_2 = \v{r}_{m_2}^{A} - \v{r}_{m_1}^{A} \qquad \v{d}_3 = \v{r}_{m_3}^{A} - \v{r}_{m_1}^{A}\]</span></p>
+</div>
+<div class="fragment" data-fragment-index="2" style="margin-top:-0.5em;">
+<p><span class="highlight">First axis</span> <span class="math inline">\(\quad \v{x}_{B}^{A} = \dfrac{\v{d}_2}{\Vert \v{d}_2 \Vert}, \qquad \v{o}_{B}^{A} = \v{r}_{m_1}^{A}\)</span></p>
+</div>
+<div class="fragment" data-fragment-index="3" style="margin-top:-0.5em;">
+<p><span class="highlight">Normal to the marker plane</span> <span class="math inline">\(\quad \v{z}_{B}^{A} = \dfrac{\v{x}_{B}^{A} \times \v{d}_3}{\Vert \v{x}_{B}^{A} \times \v{d}_3 \Vert}\)</span></p>
+</div>
+<div class="fragment" data-fragment-index="4" style="margin-top:-0.5em;">
+<p><span class="highlight">Close the frame</span> <span class="math inline">\(\quad \v{y}_{B}^{A} = \v{z}_{B}^{A} \times \v{x}_{B}^{A}\)</span> <span class="math display">\[\v{R}_{B}^{A} = \m{\v{x}_{B}^{A} &amp; \v{y}_{B}^{A} &amp; \v{z}_{B}^{A}}\]</span></p>
+<p><span class="math display">\[\v{o}_{B}^{A} = \v{r}_{m_{1}}^{A}\]</span></p>
+</div>
+</div></div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-26" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Human movement tracking setup</span></p>
+<div style="font-size: 0.95em; margin-top: -0.5em;">
+<p>The full 6DOF pose of a rigid body can be tracked with three markers.</p>
+<div style="margin-top: -0.5em;">
+<p><span class="math display">\[\v{R}_{B}^{A} = \m{\v{x}_{B}^{A} &amp; \v{y}_{B}^{A} &amp; \v{z}_{B}^{A}} \qquad  \v{o}_{B}^{A} = \v{r}_{m_{1}}^{A}\]</span></p>
+</div>
+<div style="margin-top: -0.5em;">
+<p>6DOF poses of the individual segments give multi-segment kinematics, from which joint kinematics are derived. When we have the rotation matrices <span class="math inline">\(\v{R}_{B_p}^{A}\)</span> and <span class="math inline">\(\v{R}_{B_d}^{A}\)</span> of two adjacent segmenets, we can obtain the joint angles as follows:</p>
+</div>
+<div style="margin-top: -0.5em;">
+<p><span class="math display">\[\v{R}_{B_d}^{B_p} = {\v{R}_{B_p}^{A}}^\top\v{R}_{B_d}^{A} \longrightarrow  \left( \alpha_{pd}, \beta_{pd}, \gamma_{pd}\right)\]</span></p>
+</div>
+<div style="margin-top: -0.5em;">
+<p><span class="highlight">Assumptions:</span></p>
+<ul>
+<li><span class="highlight">Each segment is a rigid body</span>: <span class="deemph">one bone, non-deformable. Some “segments” are several bones (forearm: radius and ulna; the foot).</span></li>
+<li><span class="highlight">Markers move with the bone</span>: <span class="deemph">they sit on skin, which slides, stretches and wobbles over the bone — the soft-tissue artefact, typically the largest error in the chain.</span></li>
+<li><span class="highlight">Joints are ideal rotational joints</span>: <span class="deemph">hinge or ball-and-socket, with axes fixed in the segments. Real axes shift (the knee), and joints translate a little.</span></li>
+</ul>
+</div>
+<div style="margin-top: -0.5em;">
+<p>Each of these is a source of error when reconstructing body kinematics.</p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-27" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Human movement tracking setup</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p><span class="math display">\[\v{R}_{B_d}^{B_p} = {\v{R}_{B_p}^{A}}^\top\v{R}_{B_d}^{A} \longrightarrow  \left( \alpha_{pd}, \beta_{pd}, \gamma_{pd}\right)\]</span></p>
+<div style="margin-top: -0.5em;">
+<p>There are various conventions for describing these joint angles, but an anatomical one is preferred for easy clinical interpretation, e.g.&nbsp;flexion/extension, abduction/adduction, and internal/external rotation.</p>
+</div>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:55%;">
+<p>Anatomical joint angles require appropriate marker placement on the proximal and distal limb segments.</p>
+<p>Two sets of markers, or reference frames, are typically employed for this purpose:</p>
+<ol type="1">
+<li><span class="highlight">Anatomical reference frame</span>: <span class="deemph">built from markers on palpable bony landmarks, so its axes have anatomical meaning — but those markers are prone to occlusion during movement.</span></li>
+<li><span class="highlight">Tracking reference frame</span>: <span class="deemph">built from a cluster of markers placed conveniently on the limb segment; it has no anatomical meaning of its own, so a static calibration trial records where the anatomical frame sits in it.</span></li>
+</ol>
+<p><span class="cite">After Uchida &amp; Delp, <em>Biomechanics of Movement</em> (2021), Ch. 7.</span></p>
+</div><div class="column" style="width:45%;">
+<p><img data-src="figures/anat-track-frame.svg" style="height:430px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+</div></div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-28" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Human movement tracking setup</span></p>
+<div style="font-size: 1.00em; margin-top: -0.5em;">
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:55%;">
+<p><span class="highlight">Static calibration</span> is done to find the relationship between the two reference frames:</p>
+<p><span class="math display">\[\v{R}_{anatomical}^{tracking}\]</span></p>
+<p>The anatomically relevant joint angles can then be estimated from the tracking reference frames.</p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p><span class="math display">\[\v{R}_{tibia}^{femur} = \v{R}_{thigh}^{femur}\v{R}_{lab}^{thigh}\v{R}_{shank}^{lab}\v{R}_{tibia}^{shank}\]</span></p>
+</div>
+<p><span class="math inline">\(\v{R}_{tibia}^{femur}\)</span> can be decomposed into anatomically relevant joint angles.</p>
+<p>This process of obtaining the joint angles from the marker measurements, with no other assumptions, is called <span class="highlight">unconstrained inverse kinematics</span>.</p>
+</div><div class="column" style="width:45%;">
+<p><img data-src="figures/anat-track-frame.svg" style="height:430px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+</div></div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-29" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Human movement tracking setup</span></p>
+<div style="font-size: 1.00em; margin-top: -0.5em;">
+<p>Pros/Cons with <span class="highlight">unconstrained inverse kinematics</span>:</p>
+<div class="columns" style="margin-top: 0.25em; font-size: 0.85em;">
+<div class="column" style="width:49%;">
+<p><span class="highlight">Pros</span></p>
+<ul>
+<li><span class="red">Transparent</span>: every segment pose comes straight from its own markers.</li>
+<li><span class="red">Ease of implementation</span>: simple and easy to implement with good support.</li>
+<li><span class="red">Assumes nothing about the joints</span>: whatever the joint does shows up in the result.</li>
+</ul>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:49%;">
+<p><span class="highlight">Cons</span></p>
+<ul>
+<li><span class="red">Anatomical constraints are ignored</span>: nothing imposes the joint structure or fixed segment lengths.</li>
+<li><span class="red">Soft-tissue artefact passes straight through</span>: nothing constrains it.</li>
+<li><span class="red">Needs three markers per segment, always</span>: lose one and that segment’s pose is gone for those frames.</li>
+<li><span class="red">Errors feed into subsequent calculations</span>: errors in joint angles will impact inverse dynamics calculations.</li>
+</ul>
+</div></div>
+<div class="fragment" style="margin-top: 0.25em; font-size: 0.85em;">
+<p>Some of these issues are addressed by the <span class="highlight">constrained (model-based) inverse kinematics</span> approach: <span class="deemph">fit a kinematic model with joint constraints to <em>all</em> markers at once, minimising marker error (Lu &amp; O’Connor, 1999). It suppresses artefact and keeps the chain intact, at the price of imposing a joint model that may be incorrect for the given subject.</span></p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-30" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Human movement tracking setup</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p><span class="highlight">Constrained inverse kinematics</span></p>
+<div class="columns" style="align-items:center; margin-top: -0.25em;">
+<div class="column" style="width:38%;">
+<p><img data-src="figures/const-inv-kin.png" style="height:520px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+<div style="margin-top:-0.5em; text-align:center;">
+<p><span class="cite">Measured markers (blue) and the model’s markers (orange).</span></p>
+</div>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:60%; font-size: 0.85em;">
+<div style="margin-top: -0.5em;">
+<p>Start from a <span class="red">model of the skeleton</span>: rigid segments of fixed length, joined by joints with a chosen number of DOFs (hinge knee, ball-and-socket hip…). Its configuration is one vector of <span class="red">generalised coordinates</span> <span class="math inline">\(\v{q}\)</span> — the joint angles themselves.</p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p>Markers are placed on the model at the same anatomical spots as on the subject. For any <span class="math inline">\(\v{q}\)</span>, the model predicts where every marker should be: <span class="math inline">\(\hat{\v{r}}_{m_i}^{A}(\v{q})\)</span>.</p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p>At each instant, find the pose that puts the model’s markers <span class="red">closest to the measured ones</span>, all at once: <span class="math display">\[\v{q}^{*} = \arg\min_{\v{q}} \sum_{i} w_i \left\Vert \v{r}_{m_i}^{A} - \hat{\v{r}}_{m_i}^{A}(\v{q}) \right\Vert^2\]</span> <span class="deemph">A weighted least-squares fit; the joint constraints are built into the model, so they can never be violated.</span></p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p><span class="highlight">What it buys</span>: <span class="deemph">joint angles come out directly; uncorrelated marker noise is averaged across all markers rather than passed through; a lost marker is tolerated; segments never come apart.</span></p>
+<p><span class="highlight">What it costs</span>: <span class="deemph">the model must first be scaled to the subject; any joint the model gets wrong (a knee that is not a hinge, a lax joint) is forced to behave as the model says — and the residual marker error is the only warning you get; soft-tissue artefact moves markers together, so it is not averaged away — the constraints can only push it into the joint angles the model allows.</span></p>
+</div>
+</div></div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-31" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Unconstrained vs.&nbsp;constrained inverse kinematics</span></p>
+<iframe src="interactive/ik.html" style="width:1300px; max-width:none; margin-left:calc(50% - 650px); height:560px; border:0; display:block;" title="Unconstrained versus constrained inverse kinematics">
+</iframe>
+</section>
+<section id="camera-based-movement-tracking-32" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Tracking with fiducial markers — what a tag is</span></p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:46%; font-size: 0.9em;">
+<p>A <span class="highlight">fiducial</span> is a printed pattern with two parts, and each has one job.</p>
+<div class="fragment" style="margin-top: -0.25em;">
+<p><span class="red">The square shape — finds the tag.</span> <span class="deemph">Four straight edges of a black border, picked out even when small, oblique or partly covered. But every dark square-ish thing passes this test: windows, tiles, the paper it is printed on.</span></p>
+</div>
+<div class="fragment" style="margin-top: -0.25em;">
+<p><span class="red">The bits inside — say what it is.</span> <span class="deemph">Read the 36 cells and check them against the code book: <em>is this a tag at all?</em> (reject the windows), <em>which tag?</em> (thousands of IDs), and <em>which way up?</em> — a bare square is the same turned by 90°, the code is not, so the code says which corner is which.</span></p>
+</div>
+</div><div class="column" style="width:54%;">
+<p><img data-src="figures/apriltag.svg" style="width:100%; max-height:none; display:block; margin:0 auto;"></p>
+</div></div>
+<div style="margin-top: -0.25em;">
+<p><span class="cite">Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. <em>Proc. IEEE ICRA</em>, 3400–3407.</span></p>
+</div>
+</section>
+<section id="camera-based-movement-tracking-33" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Tracking with fiducial markers — one tag, one camera, full pose</span></p>
+<div style="font-size: 0.95em; margin-top: -0.5em;">
+<p><span class="highlight">Why a single image is enough.</span> The tag is a plane of <span class="red">known size</span> with <span class="red">four corners at known positions</span> in its own frame <span class="math inline">\(W\)</span> — and, being flat, every point on it has <span class="math inline">\(z_W = 0\)</span>.</p>
+<div class="fragment" style="margin-top: -0.25em;">
+<p>Put that into our camera model: <span class="math display">\[\lambda\,\v{r}_p^{S} = \v{K}_f \m{\v{r}_1 &amp; \v{r}_2 &amp; \v{r}_3 &amp; \v{o}_{W}^{C}} \m{x_W \\ y_W \\ 0 \\ 1} = \underbrace{\v{K}_f \m{\v{r}_1 &amp; \v{r}_2 &amp; \v{o}_{W}^{C}}}_{\v{H},\ 3\times3} \m{x_W \\ y_W \\ 1}\]</span></p>
+</div>
+<div class="fragment" style="margin-top: -0.25em;">
+<p>The third column of <span class="math inline">\(\v{R}_W^C\)</span> multiplies <span class="math inline">\(z_W = 0\)</span> and <span class="red">drops out</span>. What is left, <span class="math inline">\(\v{H}\)</span>, is a <span class="math inline">\(3 \times 3\)</span> map from tag coordinates to pixels — <span class="highlight">exactly the planar case we met in Zhang’s calibration</span>, with the tag playing the part of the checkerboard.</p>
+</div>
+<div class="fragment" style="margin-top: -0.25em;">
+<p><span class="highlight">Counting</span>: each corner gives two equations (its <span class="math inline">\(x_S\)</span> and <span class="math inline">\(y_S\)</span>); four corners give <span class="red">eight</span>. <span class="math inline">\(\v{H}\)</span> has nine entries but is defined only up to scale, so <span class="red">eight unknowns</span>. The four corners determine <span class="math inline">\(\v{H}\)</span> — and the code has told us which corner is which.</p>
+</div>
+<div style="margin-top: -0.25em;">
+<p><span class="cite">Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. <em>Proc. IEEE ICRA</em>, 3400–3407.</span></p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-34" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Tracking with fiducial markers — from <span class="math inline">\(\v{H}\)</span> to the pose</span></p>
+<div style="font-size: 0.95em; margin-top: -0.5em;">
+<p>With the camera calibrated, <span class="math inline">\(\v{K}_f\)</span> is known, and <span class="math inline">\(\v{H}\)</span> gives back the pose of the tag in the camera: <span class="math display">\[\v{K}_f^{-1}\v{H} = c\m{\v{r}_1 &amp; \v{r}_2 &amp; \v{o}_{W}^{C}}\]</span></p>
+<div class="fragment" style="font-size: 0.9em;">
+<ol type="1">
+<li><span class="red">The scale <span class="math inline">\(c\)</span></span>: the columns of a rotation matrix have unit length, so <span class="math inline">\(c\)</span> is read off <span class="math inline">\(\Vert\v{r}_1\Vert\)</span> and <span class="math inline">\(\Vert\v{r}_2\Vert\)</span>.</li>
+<li><span class="red">The metric</span>: the tag’s printed side <span class="math inline">\(d\)</span> turns tag units into millimetres — that is how a single camera knows how far away the tag is.</li>
+<li><span class="red">The missing column</span>: <span class="math inline">\(\v{r}_3 = \v{r}_1 \times \v{r}_2\)</span>, since the columns of a rotation are orthonormal.</li>
+<li><span class="red">The sign</span>: <span class="math inline">\(\pm c\)</span> both fit; the tag must be in front of the camera, which picks one.</li>
+<li><span class="red">Tidying up</span>: noise means <span class="math inline">\(\m{\v{r}_1 &amp; \v{r}_2 &amp; \v{r}_3}\)</span> is not quite a rotation; nudge it to the nearest one.</li>
+</ol>
+</div>
+<div class="fragment" style="margin-top: -0.25em;">
+<p><span class="red">So one tag is a complete marker cluster</span>: position <em>and</em> orientation of the segment it is stuck to, from one camera, with no triangulation and no correspondence problem — the tag tells you its own ID.</p>
+</div>
+<div style="margin-top: -0.25em;">
+<p><span class="cite">Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. <em>Proc. IEEE ICRA</em>, 3400–3407. Every step above, with a worked numerical example: <a href="../../notes/01-kinematics-kinetics/fiducial-notes.html">companion notes</a>.</span></p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-35" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Tracking with fiducial markers — the steps, live</span></p>
+<iframe src="interactive/fiducial.html" style="width:1300px; max-width:none; margin-left:calc(50% - 650px); height:560px; border:0; display:block;" title="Pose of a fiducial from one image, step by step">
+</iframe>
+</section>
+<section id="camera-based-movement-tracking-36" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">Tracking with fiducial markers — how the detector finds a tag</span></p>
+<div class="columns" style="align-items:flex-start; margin-top:-0.75em;">
+<div class="column" style="width:50%;">
+<!-- Six stages of the AprilTag library on one photograph, stacked. The library
+     writes its own intermediate images when run with debug on; see
+     apriltag-stages/build-stages.py for how the panels are made. -->
+<div class="r-stack" style="width:fit-content; margin:0 auto;">
+<p><img data-src="figures/apriltag-stage-1.png" style="height:380px; width:auto; max-height:none; display:block;"></p>
+<p><img data-src="figures/apriltag-stage-2.png" class="fragment" style="height:380px; width:auto; max-height:none; display:block;" data-fragment-index="1"></p>
+<p><img data-src="figures/apriltag-stage-3.png" class="fragment" style="height:380px; width:auto; max-height:none; display:block;" data-fragment-index="2"></p>
+<p><img data-src="figures/apriltag-stage-4.png" class="fragment" style="height:380px; width:auto; max-height:none; display:block;" data-fragment-index="3"></p>
+<p><img data-src="figures/apriltag-stage-5.png" class="fragment" style="height:380px; width:auto; max-height:none; display:block;" data-fragment-index="4"></p>
+<p><img data-src="figures/apriltag-stage-6.png" class="fragment" style="height:380px; width:auto; max-height:none; display:block;" data-fragment-index="5"></p>
+</div>
+<div style="margin-top:0.25em; font-size:0.85em;">
+<p><span class="cite">Wang, J. &amp; Olson, E. (2016). AprilTag 2: Efficient and robust fiducial detection. <em>Proc. IEEE/RSJ IROS</em>. Photo: NASA Kennedy, Swarmathon, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC BY-SA 2.0</a>, from the test set of the <a href="https://github.com/AprilRobotics/apriltag">AprilTag library</a>. Stage images are the library’s own debug output (tag36h11); quads, ids and the sample grid are drawn from its results.</span></p>
+</div>
+</div><div class="column" style="width:50%; font-size: 0.65em;">
+<p><span class="highlight">0. The photograph.</span> A robot holding a tagged cube: two tag faces, and some decoys — the round sensor housings, a cable, a tyre. <span class="deemph">The detector works on the grey-scale image only.</span></p>
+<div class="fragment" data-fragment-index="1" style="margin-top:-0.5em;">
+<p><span class="red">1. Adaptive threshold.</span> Each pixel is called black or white against the darkest and brightest pixels in its own neighbourhood; uneven lighting does not matter. <span class="deemph">Where the two are too close, flat asphalt, the pixel is left undecided.</span></p>
+</div>
+<div class="fragment" data-fragment-index="2" style="margin-top:-0.5em;">
+<p><span class="red">2. Connected components.</span> Every blob of black and every blob of white gets a label, one colour each. <span class="deemph">The tag’s border is one black blob; the quiet zone around it one white blob.</span></p>
+</div>
+<div class="fragment" data-fragment-index="3" style="margin-top:-0.5em;">
+<p><span class="red">3. Boundaries.</span> The pixels where a black blob meets a white blob, grouped by <em>which</em> pair of blobs they separate. <span class="deemph">Each closed outline is one candidate for a border.</span></p>
+</div>
+<div class="fragment" data-fragment-index="4" style="margin-top:-0.5em;">
+<p><span class="red">4. Quads.</span> Each outline is tested for four corners and fitted with four lines. <span class="deemph">14 candidates here — the two tag faces, and every sensor housing and cable end that is square-ish enough. The shape alone passes them all.</span></p>
+</div>
+<div class="fragment" data-fragment-index="5" style="margin-top:-0.5em;">
+<p><span class="red">5. Decode.</span> The homography from each quad’s corners samples the 8 × 8 cells; the 36 bits are matched to the code book. <span class="deemph">Two accepted, both id 0, with the corner order fixed by the code; the other twelve rejected.</span></p>
+</div>
+<div class="fragment" data-fragment-index="5" style="margin-top:-0.5em;">
+<p><span class="highlight">Why this pipeline.</span> <span class="deemph">The 2011 detector found edges from image gradients and chained line segments into quads. The 2016 redesign replaced that with the threshold-and-components stages above, for speed and better detection of small tags; the tag design and the decode are unchanged.</span></p>
+</div>
+</div></div>
+</section>
+<section id="camera-based-movement-tracking-37" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — I. Distance</span></p>
+<p><span class="highlight">Effect of marker distance on pose estimation</span></p>
+<div style="font-size: 0.75em; margin-top: -1.00em;">
+<p>Everything a tag can tell the camera is carried by its <span class="highlight">size in the image</span>, <span class="math inline">\(s = f d / z\)</span> pixels, and the corner error <span class="math inline">\(\sigma\)</span> in pixels. <span class="deemph">Here the tag is <span class="math inline">\(d = 0.10\)</span> m across and the camera has <span class="math inline">\(f = 800\)</span> px, so <span class="math inline">\(s = 80/z\)</span>: 100 px at 0.8 m, 40 px at 2 m. Every corner coordinate carries <span class="math inline">\(\sigma = 0.5\)</span> px of noise.</span></p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:60%;">
+<p><img data-src="figures/limit-distance-depth.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:40%;">
+<div class="fragment">
+<p><span class="highlight">Depth comes from apparent size</span> <span class="math display">\[z = \frac{f d}{s} \;\Rightarrow\; \delta z = -\frac{f d}{s^2}\,\delta s = -\frac{z^2}{f d}\,\delta s\]</span> <span class="math display">\[|\delta z| \approx \frac{\sigma\, z^2}{f d}\]</span></p>
+<p><span class="red">Double the distance, four times the depth error.</span></p>
+</div>
+</div></div>
+<div style="margin-top: -0.5em; font-size: 1.0em;">
+<p><span class="cite">Projected corners with 0.5 px of Gaussian noise, pose by the closed form and refinement of the notes, median and interquartile range of 500 runs: <a href="../../notes/01-kinematics-kinetics/make_limit_data.py">make_limit_data.py</a>.</span></p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-38" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — I. Distance</span></p>
+<p><span class="highlight">How a tilt shows up in the image</span></p>
+<div style="font-size: 0.70em; margin-top: -1.00em;">
+<p>A length seen at an angle looks shorter: that is <span class="highlight">foreshortening</span>. Tilt the tag by <span class="math inline">\(\theta\)</span> about its horizontal axis and look at what the camera gets.</p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/foreshortening.svg" style="width:100%; max-height:none; display:block;"></p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<ul>
+<li><span class="red">Across the line of sight</span> the tag spans <span class="math inline">\(d\cos\theta\)</span> instead of <span class="math inline">\(d\)</span>, so its height in the image is <span class="math inline">\(h = s\cos\theta\)</span>. Its width through the centre is still <span class="math inline">\(s = fd/z\)</span>.</li>
+<li>The <span class="red">tilt</span> is read from the ratio of two pixel lengths, <span class="math inline">\(h/s = \cos\theta\)</span>.</li>
+<li>The two ends sit at depths <span class="math inline">\(z \mp \tfrac{d}{2}\sin\theta\)</span>, so the near edge is <span class="red">longer</span> and the far edge <span class="red">shorter</span>, by about <span class="math inline">\(s\,(d/z)\sin\theta\)</span> between them. That difference is what says <em>which way</em> the tag leans.</li>
+</ul>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-39" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — I. Distance</span></p>
+<p><span class="highlight">Effect of marker distance on pose estimation</span></p>
+<div style="font-size: 0.75em; margin-top: -1.00em;">
+<p>Same tag, same camera, same noise: <span class="math inline">\(s = 80/z\)</span> px and <span class="math inline">\(\sigma = 0.5\)</span> px.</p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:60%;">
+<p><img data-src="figures/limit-distance-rot.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:40%;">
+<p><span class="highlight">Orientation comes from foreshortening</span>: the tilt is read from the ratio <span class="math inline">\(h/s = \cos\theta\)</span> of two pixel lengths, each off by about <span class="math inline">\(\sigma\)</span>: <span class="math display">\[\delta(\cos\theta) \approx \frac{\sigma}{s} \;\Rightarrow\; \delta\theta \approx \frac{\sigma}{s\,\sin\theta} \;\propto\; \frac{\sigma\, z}{f d}\]</span> <span class="red">Double the distance, twice the orientation error</span> — gentler than depth, because a ratio needs no scale. <span class="deemph">At <span class="math inline">\(30^\circ\)</span> and 100 px: <span class="math inline">\(2 \times 0.5/100\)</span> rad <span class="math inline">\(\approx 0.6^\circ\)</span>; the simulation gives <span class="math inline">\(0.85^\circ\)</span>.</span></p>
+<!-- ::: {.fragment}
+[The same triangle as stereo.]{.highlight} Two cameras a baseline $B$ apart see one point along two rays that meet at an angle of about $B/z$, and the depth error is $\sigma z^2/(fB)$. One camera sees the tag's two corners, $d$ apart, along two rays that meet at an angle of about $d/z$: the same triangle, turned round. [So a tag measures depth like a stereo pair whose baseline is $d$]{.red} --- and $d = 0.1$ m against a baseline of 1 m is ten times the error.
+::: -->
+</div></div>
+<div style="margin-top: -0.5em; font-size: 0.8em;">
+<p><span class="cite">Projected corners with 0.5 px of Gaussian noise, pose by the closed form and refinement of the notes, median and interquartile range of 500 runs: <a href="../../notes/01-kinematics-kinetics/make_limit_data.py">make_limit_data.py</a>.</span></p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-40" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — II. Face-on</span></p>
+<p><span class="highlight">Change the tilt by 5°. How much does the picture change?</span></p>
+<div style="font-size: 0.65em; margin-top: -1.00em;">
+<p>The same 100 px tag, drawn from the camera model at six tilts about its horizontal axis.</p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/faceon-images.svg" style="width:100%; max-height:none; display:block;"></p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<ul>
+<li>Near face-on the three pictures are <span class="red">the same picture</span>: 0°, 5° and 10° differ by less than a pixel, and the corners are only known to half a pixel.</li>
+<li><span class="highlight">Run the solver backwards.</span> It measures the height <span class="math inline">\(h\)</span> and asks which tilt gives it: <span class="math inline">\(\cos\theta = h/s\)</span>. Tag face-on, true height 100 px, measured 99.5 px because of the noise: <span class="math inline">\(\cos\theta = 0.995\)</span>, <span class="red"><span class="math inline">\(\theta = 5.7°\)</span></span>. Half a pixel has become six degrees. At 40°, true height 76.7 px, measured 76.2 px: <span class="math inline">\(\theta = 40.4°\)</span>. The same half pixel is now <span class="red">0.4°</span>.</li>
+<li><span class="highlight">This is Module 1’s rule.</span> A sensor gives <span class="math inline">\(y = \mathcal{F}(x_m) + e_n\)</span> and the noise referred back to the measurand is <span class="math inline">\(e_n \big/ \frac{\partial \mathcal{F}}{\partial x_m}\)</span>. Here the output is the height <span class="math inline">\(h = s\cos\theta\)</span>, the measurand is <span class="math inline">\(\theta\)</span>, the sensitivity is <span class="math inline">\(\partial h/\partial\theta = -s\sin\theta\)</span> and the noise is <span class="math inline">\(\sigma\)</span>, so <span class="math inline">\(\delta\theta \approx \sigma/(s\sin\theta)\)</span>. <span class="red">A face-on tag is a sensor operated where its sensitivity is zero.</span> <span class="deemph">Position and depth are unaffected; only the tilt is lost.</span></li>
+</ul>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-41" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — II. Face-on</span></p>
+<div class="columns" style="align-items:center; margin-top:-0.5em;">
+<div class="column" style="width:52%;">
+<p><img data-src="figures/limit-headon.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:48%; font-size: 0.7em;">
+<p><span class="highlight">The simulation agrees.</span> Orientation error against tilt for the same tag, with the same corner noise as before.</p>
+<div class="fragment">
+<p>Error <span class="math inline">\(\approx\)</span> noise <span class="math inline">\(\div\)</span> sensitivity: <span class="math display">\[\delta\theta \;\approx\; \frac{\sigma}{s\,\sin\theta}\]</span> <span class="deemph">The dashed line is this law; it fits from about 8° out. At face-on it says infinity, and the solver returns about 6°, whatever tilt the noise happens to suggest.</span></p>
+</div>
+<div class="fragment">
+<p><span class="highlight">Position and depth are unaffected</span>: only orientation about the two in-plane axes is lost. <span class="red">Mount tags tilted, never square to the camera.</span></p>
+</div>
+</div></div>
+<div style="margin-top: -0.5em; font-size: 0.8em;">
+<p><span class="cite">Same model as the distance slides, tag fixed at 0.8 m: <a href="../../notes/01-kinematics-kinetics/make_limit_data.py">make_limit_data.py</a>.</span></p>
+</div>
+</section>
+<section id="camera-based-movement-tracking-42" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — III. Edge-on</span></p>
+<p><span class="highlight">Turn the tag towards edge-on. What happens to the cells?</span></p>
+<div style="font-size: 0.65em; margin-top: -1.00em;">
+<p>The real tag pattern, projected through the camera model at five tilts, with the grid of 1 px squares drawn over it. A small tag, 4 px per cell face-on, so that the pixels can be seen.</p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/edgeon-images.svg" style="width:100%; max-height:none; display:block;"></p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<ul>
+<li><span class="highlight">Both directions change, but not alike.</span> The columns converge, because the far edge is farther away than the near one: a few percent here, 4 px to 3.9 px. The rows collapse by <span class="math inline">\(\cos\theta\)</span>: 4 px, 3 px, 2 px, 1 px, 0.3 px.</li>
+</ul>
+</div>
+<!-- row-height derivation, held back until verified in the notes
+::: {.fragment style="margin-top: -0.5em;"}
+[The row at the far edge, in three lines.]{.highlight} It is $d/8$ thick on the tag.
+Seen at tilt $\theta$ its extent across the line of sight is $\tfrac{d}{8}\cos\theta$;
+it sits at depth $z + \tfrac{d}{2}\sin\theta$, half a tag farther than the centre;
+and the pinhole divides by depth:
+$$h_{\mathrm{row}} = \frac{f \cdot \tfrac{d}{8}\cos\theta}{z + \tfrac{d}{2}\sin\theta} = \frac{s}{8}\cos\theta \cdot \frac{z}{z + \tfrac{d}{2}\sin\theta}, \qquad s = \frac{fd}{z}.$$
+[The first factor is the foreshortening, the same for every row; the second is the extra distance, which only the far rows pay in full.]{.deemph}
+:::
+-->
+<div class="fragment" style="margin-top: -0.5em;">
+<ul>
+<li><span class="red">Reading a bit means landing a sample inside its cell.</span> Once a row is about a pixel high, any lens blur averages a black row with its white neighbour to grey: the border is still found, the code is not read, the tag is dropped. <span class="deemph">How far that lets the tag turn is the next slide.</span></li>
+</ul>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-43" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — III. Edge-on</span></p>
+<p><span class="highlight">Turn the tag towards edge-on: what gives out first?</span></p>
+<div style="font-size: 0.65em; margin-top: -1.00em;">
+<p>Not the geometry. The tilt estimate keeps <span class="highlight">improving</span> as <span class="math inline">\(\theta\)</span> grows, as the face-on plot showed. What gives out is <span class="red">reading the bits</span>.</p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:50%;">
+<p><img data-src="figures/limit-oblique.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:50%;">
+<p><span class="highlight">The height of the far row</span>, for three sizes of tag in the image. <!-- row-height formula, held back until verified in the notes
+$$h_{\mathrm{row}} = \frac{s}{8}\cos\theta \cdot \frac{z}{z + \tfrac{d}{2}\sin\theta}\ \text{px.}$$
+--></p>
+<div class="fragment">
+<p>A sample must land inside each cell in both directions. Once a row is thinner than <span class="red">about 2 px</span>, the lens blur mixes it with its neighbours, the bits cannot be read and the tag is dropped, however well its border was found.</p>
+</div>
+<div class="fragment">
+<p>So the usable tilt depends on the tag’s size in the image: <span class="red">about 80° for 100 px, 70° for 50 px, 50° for 25 px.</span> <span class="deemph">Olson’s 70° is this number for his camera and tag.</span></p>
+</div>
+<div class="fragment">
+<p>Together with face-on: <span class="red">tags work from roughly 15° to 70°</span>, and farther away the window closes from the top.</p>
+</div>
+</div></div>
+<div style="margin-top: -0.5em; font-size: 0.8em;">
+<p><span class="cite">Geometry only; the 2 px threshold is roughly twice a typical lens blur. Figure source: <a href="tikz/limit-oblique.tex">limit-oblique.tex</a>.</span></p>
+</div>
+</div>
+</section>
+<section id="camera-based-movement-tracking-44" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — IV. Motion blur</span></p>
+<p><span class="highlight">Move the tag during the exposure. What happens to the cells?</span></p>
+<div style="font-size: 0.65em; margin-top: -1.00em;">
+<p>The same tag as before, tilted 30°, sliding sideways while the shutter is open. Each pixel records the average of everything that passed over it.</p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/blur-images.svg" style="width:100%; max-height:none; display:block;"></p>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<ul>
+<li>During an exposure <span class="math inline">\(T_{\mathrm{exp}}\)</span> a tag moving at <span class="math inline">\(v\)</span> across the view travels <span class="math inline">\(v\,T_{\mathrm{exp}}\)</span> metres, which is <span class="red"><span class="math inline">\(b = v\,T_{\mathrm{exp}}\,f/z\)</span> pixels</span> in the image. Every edge becomes a ramp <span class="math inline">\(b\)</span> pixels long. <!-- - [A bit is read by sampling the brightness at the centre of its cell.]{.highlight} The smear turns every black--white boundary into a ramp $b$ px long, eating $b/2$ px into the cell from each side; the rest of the cell is untouched. --> <!-- - [Half a cell]{.red} ($b = 2$ px): the ramps take the outer pixel of each 4 px cell, the centre is still pure black or white, every bit reads. [One cell]{.red} ($b = 4$ px): the ramps meet at the centre; an isolated black cell keeps full black only in a sliver, and any extra blur tips it. [Two cells]{.red} ($b = 8$ px): the window is wider than the cell, the centre of a black cell averages as much white neighbour as black, and black and white cells give the same grey. --></li>
+<li>The border’s long edges keep a well-defined middle, so the corners are still found and a pose could be fitted; but without the code the detector cannot say it is a tag, which tag, or which way up, and drops it.</li>
+</ul>
+</div>
+</div>
+<!-- slide held back until the speed-limit maths is verified in the notes
+## Camera-based movement tracking
+
+[What limits tag tracking --- IV. Motion blur]{.framesub}
+
+[How fast can a tag move?]{.highlight}
+
+::: {style="font-size: 0.65em; margin-top: -1.00em;"}
+The decode fails when the smear reaches one cell, $b = s/8$. Put in $b = v\,T_{\mathrm{exp}}\,f/z$ and $s = fd/z$:
+$$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \frac{d}{8\,T_{\mathrm{exp}}}$$
+
+::: {.fragment}
+- [Neither $f$ nor $z$ appears.]{.red} Moving the camera closer makes the tag bigger and the smear bigger in the same proportion. The speed limit is set by the tag's size and the exposure alone: a 10 cm tag at 1/60 s fails at about [0.75 m/s]{.red}, the speed of a hand in a fast reach.
+- [The remedy is exposure, not resolution]{.highlight}: 1/500 s raises the limit to 6 m/s, at the cost of light. A sharper camera does not help if its shutter stays open as long.
+- A bigger tag helps in proportion, and so does the usual trick: [a cell is more than one bit]{.deemph} --- the detector's sampling tolerates some smear, so these numbers are the cliff, not the first loss.
+:::
+
+::: {style="margin-top: -0.5em; font-size: 0.8em;"}
+[Pixel values computed by [make_blur_pixels.py](../../notes/01-kinematics-kinetics/make_blur_pixels.py); figure source [blur-images.tex](tikz/blur-images.tex).]{.cite}
+:::
+:::
+-->
+</section>
+<section id="camera-based-movement-tracking-45" class="slide level2">
+<h2>Camera-based movement tracking</h2>
+<p><span class="framesub">What limits tag tracking — in one place</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>Every limit is a statement about <span class="highlight"><span class="math inline">\(s = f d / z\)</span></span>, the tag’s size in pixels, and the corner error <span class="highlight"><span class="math inline">\(\sigma\)</span></span>:</p>
+<ul>
+<li><span class="red">Distance</span>: depth error <span class="math inline">\(\sigma z^2/(f d)\)</span>, orientation error <span class="math inline">\(\sigma z/(f d)\)</span>. A tag is a stereo rig with baseline <span class="math inline">\(d\)</span>.</li>
+<li><span class="red">Face-on</span>: orientation error <span class="math inline">\(\sigma/(s\sin\theta)\)</span>, unbounded at <span class="math inline">\(\theta = 0\)</span>, and the sign of the tilt can flip. Mount tags tilted.</li>
+<li><span class="red">Edge-on</span>: detection fails when the far cells fall below the lens blur, <span class="math inline">\(\cos\theta_{\max} \approx 16/s\)</span>. About 80° for a 100 px tag.</li>
+<li><span class="red">Motion blur</span>: the decode fails at one cell of smear, <span class="math inline">\(v_{\max} \approx d/(8T_{\mathrm{exp}})\)</span>, whatever the camera.</li>
+<li><span class="red">Lighting</span>: the adaptive threshold tolerates gradients, not glare; a highlight across the border removes the quad.</li>
+</ul>
+</div>
+<div class="fragment" style="font-size: 0.85em; margin-top: -0.5em;">
+<p><span class="highlight">For movement tracking</span>: <span class="deemph">cheap, a single camera suffices, every segment self-identifies — but depth from one camera is a stereo pair with a 10 cm baseline, orientation needs the tag off square, and the tag sits on skin like any other marker. This is the regime where the chain constraint earns its keep.</span></p>
+</div>
+<div style="margin-top: -0.25em; font-size: 0.85em;">
+<p><span class="cite">Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. <em>Proc. IEEE ICRA</em>, 3400–3407.</span> <span class="cite">Wang, J. &amp; Olson, E. (2016). AprilTag 2: Efficient and robust fiducial detection. <em>Proc. IEEE/RSJ IROS</em>.</span></p>
+</div>
 
 </section></section>
     </div>

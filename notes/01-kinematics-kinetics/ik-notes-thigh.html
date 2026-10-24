@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inverse kinematics of a single link</title>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']],
+           tags: 'ams',
+           macros: { v: ['{\\mathbf{#1}}', 1], m: ['{\\begin{bmatrix}#1\\end{bmatrix}}', 1],
+                     R: '{\\mathbf{R}}', T: '{\\top}' } },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<script id="MathJax-script" defer src="../../lectures/01-kinematics-kinetics/interactive/vendor/tex-svg.js"></script>
+<style>
+:root { --blue:#1B4F8A; --blue-dk:#123462; --blue-lt:#EAF1F8; --silver:#8E9BAA; --silver-lt:#F0F3F6;
+        --charcoal:#2D2D2D; --slate:#3A3A3A; --warmgray:#718096; --crimson:#A51C30;
+        --rule:#E2E8F0; --paper:#fff; --tint:#F7FAFC; --code:#F5F7FA;
+        --sans:"Raleway", "Inter", -apple-system, "Segoe UI", sans-serif;
+        --serif:"Linux Libertine O", Libertine, Palatino, "Palatino Linotype", Georgia, serif; }
+@font-face { font-family:"Raleway"; font-weight:400; font-style:normal; src:url("fonts/raleway-400.ttf") format("truetype"); }
+@font-face { font-family:"Raleway"; font-weight:500; font-style:normal; src:url("fonts/raleway-500.ttf") format("truetype"); }
+@font-face { font-family:"Raleway"; font-weight:600; font-style:normal; src:url("fonts/raleway-600.ttf") format("truetype"); }
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body { margin: 0; color: var(--slate); font: 17px/1.55 var(--serif); }
+
+/* ---- course banner, in the style of the site's title block ---- */
+.banner { background: linear-gradient(135deg, var(--blue-dk) 0%, var(--blue) 70%, #2a66a8 100%);
+          color: #fff; border-bottom: 4px solid var(--silver); font-family: var(--sans); }
+.banner .in { max-width: 1060px; margin: 0 auto; padding: 22px 28px 18px; display: flex; flex-wrap: wrap;
+              align-items: flex-end; justify-content: space-between; gap: 10px 32px; }
+.banner .course { font-size: 22px; font-weight: 500; letter-spacing: .01em; line-height: 1.2; }
+.banner .dept { font-size: 12.5px; font-weight: 400; opacity: .85; margin-top: 4px; letter-spacing: .02em; }
+.banner .kind { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; opacity: .9;
+                border: 1px solid rgba(255,255,255,.55); border-radius: 3px; padding: 3px 8px; margin-bottom: 2px; }
+.crumbs { background: var(--silver-lt); border-bottom: 1px solid var(--rule); font-family: var(--sans); font-size: 12.5px; }
+.crumbs .in { max-width: 1060px; margin: 0 auto; padding: 8px 28px; color: var(--warmgray);
+              display: flex; justify-content: space-between; align-items: baseline; gap: 24px; flex-wrap: wrap; }
+.crumbs .nav { white-space: nowrap; }
+.crumbs .nav .sep2 { margin: 0 10px; opacity: .6; }
+.crumbs a { color: var(--blue); text-decoration: none; font-weight: 500; }
+.crumbs a:hover { text-decoration: underline; }
+.crumbs .sep { margin: 0 8px; opacity: .6; }
+.crumbs .here { color: var(--charcoal); }
+
+/* ---- page frame ---- */
+.wrap { display: grid; grid-template-columns: 220px minmax(0, 760px); gap: 48px; max-width: 1060px; margin: 0 auto; padding: 36px 28px 60px; }
+nav { position: sticky; top: 24px; align-self: start; font: 13px/1.5 var(--sans); color: var(--warmgray); }
+nav .t { text-transform: uppercase; letter-spacing: .1em; font-size: 10.5px; font-weight: 600; margin-bottom: 10px; color: var(--silver); }
+nav ol { list-style: none; margin: 0; padding: 0; }
+nav li { margin: 0 0 6px; }
+nav a { color: inherit; text-decoration: none; border-bottom: 1px solid transparent; }
+nav a:hover { color: var(--blue); border-color: var(--blue); }
+nav .back { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--rule); }
+nav .back a { color: var(--blue); font-weight: 500; }
+
+/* ---- headings and text ---- */
+header h1 { font-family: var(--sans); font-size: 30px; line-height: 1.2; font-weight: 600; margin: 0 0 6px; color: var(--charcoal); letter-spacing: -.01em; }
+header .sub { color: var(--warmgray); font-size: 18px; margin: 0 0 18px; }
+header .meta { font: 12.5px/1.5 var(--sans); color: var(--warmgray); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 10px 0; margin-bottom: 36px; }
+h2 { font-family: var(--sans); font-size: 22px; font-weight: 600; margin: 48px 0 12px; padding-top: 10px; border-top: 2px solid var(--silver); color: var(--charcoal); letter-spacing: -.005em; }
+h2 .n { color: var(--blue); font-weight: 500; margin-right: 10px; }
+h3 { font-family: var(--sans); font-size: 16px; font-weight: 600; margin: 28px 0 8px; color: var(--blue); letter-spacing: .01em; }
+h2:target, h3:target { scroll-margin-top: 24px; }
+p { margin: 0 0 14px; }
+em.term { font-style: normal; color: var(--crimson); }
+.lead { font-size: 18.5px; }
+a { color: var(--blue); }
+a.sec { color: var(--blue); text-decoration: none; border-bottom: 1px dotted var(--blue); white-space: nowrap; }
+a.sec:hover { border-bottom-style: solid; }
+
+/* ---- code, notes, tables, figures ---- */
+figure.code { margin: 16px 0 22px; border: 1px solid var(--rule); border-radius: 4px; background: var(--code); }
+figure.code figcaption { font: 11.5px/1.4 var(--sans); color: var(--warmgray); padding: 6px 12px; border-bottom: 1px solid var(--rule); letter-spacing: .02em; }
+figure.code figcaption b { color: var(--blue); font-weight: 600; }
+pre { margin: 0; padding: 12px 14px; overflow-x: auto; font: 12.5px/1.5 "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; color: #1A202C; }
+.note { border-left: 3px solid var(--blue); background: var(--blue-lt); padding: 10px 16px; margin: 16px 0 20px; font-size: 15.5px; }
+.note.warn { border-color: var(--crimson); background: var(--tint); }
+.note b { color: var(--blue); } .note.warn b { color: var(--crimson); }
+table { border-collapse: collapse; margin: 12px 0 22px; font-size: 15.5px; width: 100%; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 11px/1.4 var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--silver); }
+td code, p code, li code { font: 13px "SF Mono", Menlo, Consolas, monospace; background: var(--code); padding: 1px 5px; border-radius: 3px; }
+ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0 0 18px; }
+ol.steps > li { counter-increment: s; position: relative; padding-left: 44px; margin: 0 0 14px; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 2px; width: 28px; height: 28px; border-radius: 50%; background: var(--blue); color: #fff; font: 600 14px/28px var(--sans); text-align: center; }
+ol.refs { padding-left: 22px; font-size: 15.5px; } ol.refs li { margin-bottom: 8px; }
+figure.fig { margin: 18px 0 26px; }
+figure.fig img { display: block; width: 100%; max-width: 720px; height: auto; margin: 0 auto; }
+figure.fig figcaption { font: 13.5px/1.5 var(--sans); color: var(--warmgray); margin: 10px auto 0; max-width: 680px; }
+mjx-container[display="true"] { margin: 14px 0 18px !important; overflow-x: auto; overflow-y: hidden; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+
+/* ---- previous / next, at the end of every note ---- */
+.pn { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin: 48px 0 0;
+      padding-top: 14px; border-top: 2px solid var(--silver); font: 14px/1.4 var(--sans); }
+.pn a { color: var(--blue); text-decoration: none; font-weight: 500; }
+.pn a:hover { text-decoration: underline; }
+.pn .next { text-align: right; }
+.pn .all { color: var(--warmgray); font-size: 12.5px; white-space: nowrap; }
+
+/* ---- footer ---- */
+.foot { border-top: 1px solid var(--rule); background: var(--silver-lt); font: 12.5px/1.6 var(--sans); color: var(--warmgray); }
+.foot .in { max-width: 1060px; margin: 0 auto; padding: 16px 28px 22px; }
+.foot a { color: var(--blue); text-decoration: none; }
+.foot a:hover { text-decoration: underline; }
+
+@media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } nav { position: static; } .cols { grid-template-columns: 1fr; } }
+@media print { nav, .crumbs { display: none; } .banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+               .wrap { grid-template-columns: 1fr; padding: 0; } body { font-size: 11.5pt; } figure.code { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="banner"><div class="in"><div><div class="course">Transducers &amp; Instrumentation</div><div class="dept">Department of Bioengineering &middot; Christian Medical College Vellore</div></div><div class="kind">Companion notes</div></div></div>
+<div class="crumbs"><div class="in"><div class="trail"><a href="../../index.html">Course home</a><span class="sep">&rsaquo;</span><a href="../../lectures/01-kinematics-kinetics/kinematics-kinetics.html">Module 2: Kinematics and kinetics</a><span class="sep">&rsaquo;</span><span class="here">Notes: single link</span></div><div class="nav"><a href="../01-kinematics-kinetics/ik-notes-leg.html">Inverse kinematics of a two-link leg &rarr;</a></div></div></div>
+<div class="wrap">
+<nav>
+  <div class="t">Contents</div>
+  <ol>
+    <li><a href="#model">1&ensp;The model</a></li>
+    <li><a href="#fk">2&ensp;Forward kinematics</a></li>
+    <li><a href="#motion">3&ensp;The true motion</a></li>
+    <li><a href="#slide">4&ensp;Skin artefact I: stretch with joint angle</a></li>
+    <li><a href="#wobble">5&ensp;Skin artefact II: wobbling mass</a></li>
+    <li><a href="#noise">6&ensp;Measurement noise</a></li>
+    <li><a href="#loop">7&ensp;One frame of the simulation</a></li>
+    <li><a href="#uik">8&ensp;Unconstrained inverse kinematics</a></li>
+    <li><a href="#cik">9&ensp;Constrained inverse kinematics</a></li>
+    <li><a href="#compare">10&ensp;What to expect</a></li>
+    <li><a href="#appA">A&ensp;Appendix A: the pose-fit derivation</a></li>
+    <li><a href="#appB">B&ensp;Appendix B: the Jacobian derivation</a></li>
+    <li><a href="#refs">11&ensp;References</a></li>
+  </ol>
+</nav>
+<main>
+<header>
+  <h1>Inverse kinematics of a single link</h1>
+  <p class="sub">Model, artefacts and the two estimators, as implemented in the simulation: one thigh on a pinned hip, hip angle</p>
+  <div class="meta">Transducers &amp; Instrumentation &middot; Module 2, Kinematics and Kinetics &middot; companion notes to <code>ik.html</code>. Every code block below is cut from that file when these notes are built, so what you read is what runs.</div>
+</header>
+<h2 id="model"><span class="n">1</span>The model</h2>
+
+<p class="lead">One rigid link, the thigh, pinned at the hip. Three markers. We want the hip angle.</p>
+<p>Everything is planar and in SI units (metres, seconds, radians inside the code; degrees on the sliders and charts). The <em class="term">lab frame</em> \(A\) has its origin at the hip, \(x\) pointing to the right of the screen and \(y\) up (a right leg seen from the person's right: they face \(+x\), so the thigh swings towards \(+x\) in flexion and the shank folds back towards \(-x\)). The hip is a pin: it cannot translate. </p>
+<figure class="fig"><img src="ik-model-thigh.svg" alt="The model, annotated">
+<figcaption><b>The model, drawn as the simulation draws it.</b> Lab frame \(A\) at the pinned hip; the link frame at the proximal joint with \(x\) along the link; the direction angle \(\varphi_1\) from \(+x_A\) and the joint angle \(\theta_1\); the three template markers on the link. Inset: a marker is a mass on the skin, tied to its rest point on the bone by a spring and damper (<a class="sec" href="#slide">§4–5</a>), and what the cameras report is that position plus noise (<a class="sec" href="#noise">§6</a>).</figcaption></figure>
+
+<h3>Reference frames and angles</h3>
+<p>Each link carries its own frame with the origin at the link's proximal joint and the \(x\)-axis running along the link towards its distal end. A link's orientation in \(A\) is its <em class="term">direction angle</em> \(\varphi\), measured from the lab \(x\)-axis. Rotation matrices carry the slides' frame labels, \(\R^{A}_{T}\) being "the thigh frame \(T\) expressed in \(A\)", and in the plane each one is a rotation by a single angle:</p>
+\[\R^{A}_{T} = \R(\varphi_1), \qquad \R(\varphi) \equiv \m{\cos\varphi & -\sin\varphi \\ \sin\varphi & \cos\varphi}, \qquad \R(\varphi)^{-1} = \R(\varphi)^\T = \R(-\varphi). \tag{1.1}\]
+<p>The joint angles are what a clinician would quote: <em class="term">hip flexion</em> \(\theta_1\) is the angle of the thigh from vertical-down, positive towards \(+x\). In terms of direction angles,</p>
+\[\varphi_1 = -\tfrac{\pi}{2} + \theta_1. \tag{1.2}\]
+
+<h3>The marker template</h3>
+<div class="note"><b>On notation.</b> A superscript on a vector names the <em>reference frame it is expressed in</em>, as on the slides: \(\v{r}^{A}_{m_i}\) is in the lab frame \(A\), \(\v{l}^{T}_i\) is in the thigh frame \(T\). It is <em>not</em> a transpose. The skin and camera quantities \(\v{\rho}^{A}_i, \v{p}^{A}_i, \v{m}^{A}_i\) all live in the lab frame and are written with \(A\) throughout. All vectors here are columns, and the transpose, when it appears, is written \(\top\): \(\R^{\top}\), \(\v{J}_i^{\top}\).</div>
+<p>Three markers sit on each link at fixed positions in the link's own frame, the <em class="term">template</em> \(\v{l}_i\). They are deliberately not symmetric and not on the link's axis: the frame built from them is attached to the body but is not the body's own symmetry frame. These positions are what a calibration would supply; the simulation assumes that calibration is perfect.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; geometry and marker templates (the shank's are unused in thigh-only mode)</figcaption><pre><code>var L1 = 0.42, L2 = 0.40;               // m
+var W  = 0.05;                          // half-width of the drawn links
+// marker positions in each link&#x27;s own frame: x along the link from its
+// proximal joint, y across. Three per link, not collinear.
+var TL = [[0.12, 0.052], [0.26, -0.045], [0.33, 0.048]];
+var SL = [[0.08, 0.045], [0.20, -0.040], [0.30, 0.042]];</code></pre></figure>
+<table>
+<tr><th>symbol</th><th>meaning</th><th>in the code</th></tr>
+<tr><td>\(\v{r}^{A}\), \(\v{l}^{T}\), \(\v{l}^{S}\)</td><td>a <b>superscript names the frame</b> a vector is expressed in (lab \(A\), thigh \(T\), shank \(S\)) --- the deck's convention. All vectors are columns; the transpose is \(\top\).</td><td></td></tr>
+<tr><td>\(L_1\)</td><td>link length, m</td><td><code>L1</code></td></tr>
+<tr><td>\(\theta_1\)</td><td>hip flexion</td><td><code>q[0]</code></td></tr>
+<tr><td>\(\varphi_1\)</td><td>direction angle of the thigh</td><td><code>ps.p1</code></td></tr>
+<tr><td>\(\R^{A}_{T}\)</td><td>rotation of the thigh frame, as on the slides; \(= \R(\varphi_1)\)</td><td><code>rot(ps.p1, &middot;)</code></td></tr>
+<tr><td>\(\v{l}^{T}_i\)</td><td>marker \(i\) of the thigh, in its link frame</td><td><code>TL[i]</code></td></tr>
+<tr><td>\(\v{r}^{A}_{m_i}\)</td><td>true, bone-fixed position of marker \(i\) in the lab</td><td><code>bonePoint(k, i, q)</code></td></tr>
+<tr><td>\(\v{\rho}^{A}_i\)</td><td>rest point of marker \(i\): bone-fixed position plus the skin stretch</td><td><code>restPoint(k, i, q)</code>, kept in <code>m.r</code></td></tr>
+<tr><td>\(\v{p}^{A}_i\)</td><td>actual position of marker \(i\) on the skin</td><td><code>m.p</code></td></tr>
+<tr><td>\(\v{m}^{A}_i\)</td><td>measured position of marker \(i\): \(\v{p}^{A}_i\) plus camera noise</td><td><code>meas[i]</code></td></tr>
+<tr><td>\(\hat{\cdot}\)</td><td>an estimate</td><td>returned by <code>uik()</code>, <code>cik()</code></td></tr>
+</table>
+<h2 id="fk"><span class="n">2</span>Forward kinematics</h2>
+
+<p>Forward kinematics maps joint angles to marker positions. For the thigh, whose frame sits on the pinned hip,</p>
+\[\v{r}^{A}_{m_i} = \R^{A}_{T}\,\v{l}^{T}_i = \R(\varphi_1)\,\v{l}^{T}_i, \qquad i = 1,2,3. \tag{2.1}\]
+<p>Read it as the slides' rule for changing frames, \(\v{r}^{A} = \R^{A}_{T}\,\v{r}^{T} + \v{o}^{A}_{T}\), with the thigh's origin \(\v{o}^{A}_{T} = \v{0}\) because the hip is pinned at the lab origin.</p>
+
+<p>That is the whole forward model: given \(\theta_1\), every marker position follows. Two things are baked in — the link is rigid, and the hip is pinned. These are exactly the constraints the constrained estimator will exploit.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; direction angles from joint angles, and the 2-D rotation</figcaption><pre><code>function poses(q) {                     // link direction angles from +x, y up
+  var p1 = -Math.PI/2 + q[0], p2 = p1 - q[1];
+  return { p1: p1, p2: p2, knee: [L1*Math.cos(p1), L1*Math.sin(p1)] };
+}
+function rot(a, v) { var c = Math.cos(a), s = Math.sin(a); return [c*v[0]-s*v[1], s*v[0]+c*v[1]]; }</code></pre></figure>
+<p><code>poses</code> implements (1.2) and the knee position of (2.2); <code>rot(a, v)</code> is \(\R(a)\,\v{v}\). Put together, they give the forward kinematics of a marker, \(\v{r}^{A}_{m_i}\):</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; equations (2.1): where marker <i>i</i> of link <i>k</i> is on the bone</figcaption><pre><code>function bonePoint(k, i, q) {
+  var ps = poses(q);
+  if (k === 0) return rot(ps.p1, TL[i]);
+  var r = rot(ps.p2, SL[i]);
+  return [ps.knee[0] + r[0], ps.knee[1] + r[1]];
+}</code></pre></figure>
+<p>This is the point the markers would sit at if skin did not move. You will meet the same calculation a second time in <code>modelMarkers</code> (<a class="sec" href="#cik">§9</a>): the constrained estimator needs these positions <em>and</em> their derivatives with respect to the joint angles, so that function repeats the rotate-and-add of <code>bonePoint</code> inline and builds the derivatives from the same rotations as it goes, rather than calling <code>bonePoint</code>.</p>
+<h2 id="motion"><span class="n">3</span>The true motion</h2>
+
+<p>The joint angles are driven, not simulated dynamically: the simulation prescribes smooth trajectories and the question is only how well they can be recovered from the markers. Each angle is a sum of two sinusoids whose frequencies are not simple multiples of one another, so the motion never exactly repeats, with amplitudes and a cadence (0.9 Hz) in the range of walking:</p>
+\[\theta_1(t) = 22^\circ \sin(2\pi\,0.9\,t) + 7^\circ \sin(2\pi\,0.37\,t + 1). \tag{3.1}\]
+<p>The code below also returns <code>th2</code>, the knee angle \(\theta_2\): the same function serves the two-link leg model, where \(\theta_2\) sets the shank. With the thigh on its own there is no shank, so it drives nothing and can be ignored here. The <em>speed</em> slider scales how fast \(t\) advances per displayed frame (<a class="sec" href="#loop">§7</a>), so it changes velocities and accelerations without changing the path.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; the prescribed joint angles</figcaption><pre><code>function truth(t) {
+  var th1 = D2R*(22*Math.sin(2*Math.PI*0.9*t) + 7*Math.sin(2*Math.PI*0.37*t + 1.0));
+  var th2 = D2R*(28 + 26*Math.sin(2*Math.PI*0.9*t - 0.7) + 7*Math.sin(2*Math.PI*0.53*t));
+  if (th2 &lt; 0) th2 = 0;
+  return [th1, th2];
+}</code></pre></figure><h2 id="slide"><span class="n">4</span>Skin artefact I: stretch with the joint angle</h2>
+
+<p>The larger part of soft-tissue artefact in walking is not inertial at all. It is deterministic: as a joint flexes, the skin and muscle over the neighbouring segments slide and stretch, and the markers go with them. The simplest model of this, and the one the simulation uses, is that the displacement is <em>linear</em> in the joint angle, and nothing more: a marker's rest point is displaced <em>along its link</em> by an amount proportional to the flexion of the joint under study (the hip, in this mode):</p>
+\[\v{\rho}^{A}_i = \v{r}^{A}_{m_i} + g\,a_i\,\theta_1\m{\cos\varphi \\ \sin\varphi}, \tag{4.1}\]
+<p>where \(\v{r}^{A}_{m_i}\) is the bone point of <a class="sec" href="#fk">§2</a>, \((\cos\varphi, \sin\varphi)\) is the link's direction, \(\theta_1\) is in degrees, \(a_i\) is a per-marker slope in mm per degree, and \(g\) is the <em>gain</em> slider (0 switches the effect off, so \(\v{\rho}^{A}_i = \v{r}^{A}_{m_i}\); 1 gives the slopes below). The slopes grow towards the knee, where the skin moves most:</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; the per-marker slopes</figcaption><pre><code>var TA = [0.15, 0.30, 0.45];            // mm per degree
+var SA = [-0.25, -0.15, -0.10];</code></pre></figure><figure class="code"><figcaption><b>ik.html</b> &middot; the rest point, equation (4.1)</figcaption><pre><code>function restPoint(k, i, q) {
+  var ps = poses(q), jt = mode === &quot;leg&quot; ? q[1] : q[0];
+  var slide = P.slide*(k === 0 ? TA[i] : SA[i])*(jt/D2R)*1e-3;
+  var ang = k === 0 ? ps.p1 : ps.p2, b = bonePoint(k, i, q);
+  return [b[0] + slide*Math.cos(ang), b[1] + slide*Math.sin(ang)];
+}</code></pre></figure>
+<div class="note warn"><b>Two honest caveats.</b> (1) The slopes are illustrative values, chosen so that the effect is clearly visible at gain 1; they are not fitted to any data, and the real magnitudes vary with marker site, subject and task. (2) The <em>sign</em> (thigh skin bunching distally towards the knee, shank skin proximally) is likewise an assumption. Neither caveat changes the lesson of <a class="sec" href="#compare">§10</a>, which depends only on the artefact being systematic rather than random.</div>
+<h2 id="wobble"><span class="n">5</span>Skin artefact II: the wobbling mass</h2>
+
+<p>Markers are stuck to skin, and skin is not bone. When the segment accelerates, the soft tissue (and the marker on it) lags and overshoots. A simple model of this, and a common one, is the <em class="term">wobbling mass</em>: the marker is a point mass tied to its rest point \(\v{\rho}^{A}_i\) of <a class="sec" href="#slide">§4</a> by a spring and a damper. The stiffness and damping are set by the sliders.</p>
+<p>The stiffness and damping matrices are <em>diagonal in the link frame</em>, because skin is held differently along a limb than across it. With unit mass, the equation of motion of marker \(i\) on a link of direction angle \(\varphi\) is</p>
+\[\ddot{\v{p}}^{A}_i = -\R(\varphi)\,\v{K}\,\R(\varphi)^\T (\v{p}^{A}_i - \v{\rho}^{A}_i)
+                  -\R(\varphi)\,\v{C}\,\R(\varphi)^\T (\dot{\v{p}}^{A}_i - \dot{\v{\rho}}^{A}_i), \tag{5.1}\]
+\[\begin{aligned}
+  \v{K} &= \m{k_a & 0 \\ 0 & k_x}, & k_a &= (2\pi f_{along})^2, & k_x &= (2\pi f_{across})^2; \\
+  \v{C} &= \m{c_a & 0 \\ 0 & c_x}, & c_a &= 2\zeta\,(2\pi f_{along}), & c_x &= 2\zeta\,(2\pi f_{across}).
+\end{aligned} \tag{5.2}\]
+
+<p>The sliders set the two undamped natural frequencies and one damping ratio \(\zeta\); (5.2) converts them to stiffness and damping per unit mass. The rotation by \(\R(\varphi)^\T\) takes the offset and the relative velocity into the link frame, the diagonal matrices act there, and \(\R(\varphi)\) brings the force back to the lab. The damper acts on the velocity <em>relative to the rest point</em>, so a marker on a link moving at constant velocity feels no drag.</p>
+<h3>Integration</h3>
+<p>(5.1) is a second-order differential equation for each marker, and the simulation has to step it forward in time. It does so in the simplest possible way. Writing \(\v{v}^{A}_i\) for the marker's velocity, (5.1) says what the acceleration \(\ddot{\v{p}}^{A}_i\) is right now; over a short interval \(\delta t\) we take the velocity to change by acceleration \(\times\, \delta t\), and the position to change by velocity \(\times\, \delta t\). That is Euler's method, the first thing anyone tries for a differential equation.</p>
+<p>One detail matters. Plain Euler updates position with the <em>old</em> velocity, and for a spring that is a bad choice: the energy of the oscillation creeps up a little every step and the marker ends up swinging more and more. Updating the velocity first and then moving the position with the <em>new</em> velocity costs nothing extra and does not have that defect — the oscillation keeps its amplitude. This variant is called the <em class="term">semi-implicit Euler</em> method (the name only records that one half of the update uses the updated value). The step is taken ten times per displayed frame so that even the stiffest spring on the slider (25 Hz, a period of 40 ms) is sampled some 24 times per cycle. The rest-point velocity \(\dot{\v{\rho}}^{A}_i\) is taken as the change in \(\v{\rho}^{A}_i\) over the last sub-step divided by \(\delta t\). At \(t=0\) every marker starts on its rest point, at rest.</p>
+\[\v{v}^{A}_i \leftarrow \v{v}^{A}_i + \ddot{\v{p}}^{A}_i\,\delta t, \qquad \v{p}^{A}_i \leftarrow \v{p}^{A}_i + \v{v}^{A}_i\,\delta t, \qquad \delta t = \tfrac{1}{10}\cdot\tfrac{\text{speed}}{60}\ \text{s}. \tag{5.3}\]
+
+<p>Euler's method and its limitations are the opening of any treatment of ordinary differential equations; see the further reading at the end, or the <a href="https://en.wikipedia.org/wiki/Semi-implicit_Euler_method">Wikipedia entry for the semi-implicit Euler method</a>.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; marker state, and one sub-step of (5.1)–(5.3)</figcaption><pre><code>function initMarkers() {
+  mk = [];
+  var q = truth(0);
+  for (var k = 0; k &lt; (mode === &quot;leg&quot; ? 2 : 1); k++) for (var i = 0; i &lt; 3; i++) {
+    var r = restPoint(k, i, q);
+    mk.push({ k: k, i: i, p: r.slice(), v: [0,0], r: r.slice() });
+  }
+}
+function stepMarkers(t, dt) {
+  var q = truth(t), ps = poses(q);
+  var ka = Math.pow(2*Math.PI*P.fa, 2), kx = Math.pow(2*Math.PI*P.fx, 2);
+  var ca = 2*P.zeta*2*Math.PI*P.fa,     cx = 2*P.zeta*2*Math.PI*P.fx;
+  mk.forEach(function (m) {
+    var r = restPoint(m.k, m.i, q);
+    var rv = [(r[0]-m.r[0])/dt, (r[1]-m.r[1])/dt];     // rest-point velocity
+    m.r = r;
+    var ang = m.k === 0 ? ps.p1 : ps.p2;
+    var d = rot(-ang, [m.p[0]-r[0], m.p[1]-r[1]]);      // offset, link frame
+    var w = rot(-ang, [m.v[0]-rv[0], m.v[1]-rv[1]]);    // relative velocity
+    var f = rot(ang, [-ka*d[0] - ca*w[0], -kx*d[1] - cx*w[1]]);
+    m.v[0] += f[0]*dt; m.v[1] += f[1]*dt;               // semi-implicit Euler
+    m.p[0] += m.v[0]*dt; m.p[1] += m.v[1]*dt;
+  });
+}</code></pre></figure>
+<div class="note"><b>What this artefact looks like to an estimator.</b> Because (5.1) is linear, the marker is a <em>filtered</em> copy of its rest point. In the link frame, axis by axis, the transfer function from rest point to marker is
+\[\frac{P(s)}{R(s)} = \frac{cs + k}{s^2 + cs + k},\]
+a causal second-order low-pass filter (module 1's LTI systems again): unity gain for slow movement, a resonance near \(f_{along}\) or \(f_{across}\) when \(\zeta\) is small, and attenuation with a phase lag above — the marker always arrives late. All three markers on a link are filtered the same way and lag the bone <em>together</em>. The cluster moves almost as a rigid unit, so to any method it looks as if the bone itself moved. Only the small differences between markers — from their different offsets and the different stiffness along and across — can be averaged out. This is the "rigid component" of soft-tissue artefact in the literature, and it is why neither estimator removes it (<a class="sec" href="#compare">§10</a>).</div>
+<h2 id="noise"><span class="n">6</span>Measurement noise</h2>
+
+<p>A camera system reports each marker with a random error that is, to a good approximation, independent between markers, between frames and between axes, with zero mean. The simulation adds exactly that:</p>
+\[\v{m}^{A}_i = \v{p}^{A}_i + \sigma\,\v{\varepsilon}_i, \qquad \v{\varepsilon}_i \sim \mathcal{N}(\v{0}, \v{I}_2), \tag{6.1}\]
+<p>Note that it is \(\v{p}^{A}_i\), the marker where it actually is on the skin (<a class="sec" href="#slide">§4–5</a>), that is measured — not the bone point \(\v{r}^{A}_{m_i}\) of <a class="sec" href="#fk">§2</a>. The two coincide only when both artefact sliders are at zero; otherwise the cameras faithfully report a marker that is itself in the wrong place. Here \(\sigma\) is the <em>noise</em> slider in millimetres, drawn afresh for every marker on every frame. A computer's random-number generator gives uniform numbers; to turn two of them into a Gaussian one, the code uses the Box–Muller transform: for \(u, v\) uniform on \((0,1)\), \(\sqrt{-2\ln u}\,\cos 2\pi v\) is a standard normal sample.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; the sampler, and the measurement</figcaption><pre><code>function gauss() {
+  var u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function measure() {                    // what the cameras report
+  var s = P.noise*1e-3;
+  return mk.map(function (m) { return [m.p[0] + s*gauss(), m.p[1] + s*gauss()]; });
+}</code></pre></figure>
+<div class="note"><b>Order of magnitude.</b> A calibrated optical system in a lab achieves sub-millimetre residuals; the slider's default of 2 mm is deliberately pessimistic so that the noise is visible. The point of the comparison in <a class="sec" href="#compare">§10</a> is that noise is the <em>least</em> important error in practice — which is why it comes last here, after the two artefacts that move the marker before any camera sees it.</div>
+<h2 id="loop"><span class="n">7</span>One frame of the simulation</h2>
+
+<p>The browser calls <code>tick()</code> once per displayed frame, 60 times a second. Each call advances the simulation by \(\Delta t = \text{speed}/60\) s and does the following, in this order:</p>
+<ol class="steps">
+<li><b>Advance the world, in ten sub-steps.</b> For each sub-step of \(\delta t = \Delta t / 10\): evaluate the true joint angle at the current time from (3.1); from it compute every marker's bone point (<a class="sec" href="#fk">§2</a>) and rest point (<a class="sec" href="#slide">§4</a>); move every marker on the skin by one step of the wobbling-mass equation (5.1)–(5.3); advance the clock by \(\delta t\). After ten sub-steps the clock has moved by \(\Delta t\) and the markers have followed the bone with whatever lag the springs impose. (If the simulation is paused, or the speed is zero, this step is skipped and nothing moves.)</li>
+<li><b>Measure.</b> Call <code>measure()</code> once: for each of the 3 markers, take its current position on the skin \(\v{p}^{A}_i\) and add fresh Gaussian noise of standard deviation \(\sigma\) to each coordinate (<a class="sec" href="#noise">§6</a>). The result, <code>meas</code>, is the only thing the estimators are ever shown.</li>
+<li><b>Record the truth</b> for this instant: the joint angle <code>q = truth(t)</code>. This is what the estimates will be compared with. The estimators do not see it.</li>
+<li><b>Unconstrained estimate.</b> <code>uik(meas)</code>: build the thigh's frame from its own three markers (<a class="sec" href="#uik">§8</a>, Step A), then read off the hip angle and record how far the estimated hip is from its pin (Step B).</li>
+<li><b>Constrained estimate.</b> <code>cik(meas)</code>: starting from the previous frame's answer, run Gauss–Newton on all 3 markers at once (<a class="sec" href="#cik">§9</a>) to get \(\hat{\v{q}}\).</li>
+<li><b>Store and draw.</b> Append \(\{t,\ \text{truth},\ \text{unconstrained},\ \text{constrained},\ \text{gap}\}\) to the history, drop anything older than the 8 s window, redraw the leg and the charts, and ask the browser for the next frame.</li>
+</ol>
+<p>Two consequences of this ordering are worth noticing. The artefact is applied <em>before</em> the noise, as in <a class="sec" href="#slide">§4–6</a>, so the measurement is noise on top of a marker that may already be in the wrong place. And both estimators see the <em>same</em> measurement each frame, so the comparison between them is never confounded by different noise draws.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; the frame loop</figcaption><pre><code>var t = 0, paused = false, SUB = 10, FPS = 60;
+var hist = [];                          // {t, tru:[th1,th2], u:[..], c:[..], gap}
+var WIN = 8;                            // seconds shown
+var last = null;
+
+function tick() {
+  var dt = (1/FPS)*P.speed;
+  if (!paused &amp;&amp; P.speed &gt; 0) {
+    for (var s = 0; s &lt; SUB; s++) { stepMarkers(t, dt/SUB); t += dt/SUB; }
+  }
+  var meas = measure(), q = truth(t), U = uik(meas), K = cik(meas);
+  last = { meas: meas, q: q, U: U, K: K };
+  if (!paused &amp;&amp; P.speed &gt; 0) {
+    hist.push({ t: t, tru: q, u: [U.th1, U.th2], c: [K.th1, K.th2], gap: U.gap, hip: Math.hypot(U.T.o[0], U.T.o[1]) });
+    while (hist.length &amp;&amp; hist[0].t &lt; t - WIN) hist.shift();
+  }
+  draw();
+  requestAnimationFrame(tick);</code></pre></figure>
+<p>The estimators see only <code>meas</code>. They are also given the marker templates \(\v{l}_i\) and, for the constrained estimator, the pinned hip — that is, the simulation assumes a perfect calibration. The error you see is therefore entirely due to noise and artefact, never to a wrong model of the subject.</p>
+<h2 id="uik"><span class="n">8</span>Unconstrained inverse kinematics</h2>
+
+<p>The unconstrained estimator treats the thigh as a rigid body on its own: from its three measured markers alone, find its pose in the lab — its rotation \(\hat{\R}^{A}_{T} = \R(\hat\varphi_1)\) and origin \(\hat{\v{o}}^{A}_{T}\) — with no reference to anything else. Here there is one link, so the whole method is Step A followed by reading off the hip angle.</p>
+<h3>Step A — the pose of the thigh from its markers</h3>
+<p>Two ways to do it are provided; the radio button chooses.</p>
+<p>First, what is being looked for. The template \(\v{l}^{T}_i\) says where each marker sits <em>relative to the link's own origin</em>, in the link's own frame. If the link were turned by \(\varphi\) and its origin were at \(\v{o}\) in the lab, marker \(i\) would be at \(\R(\varphi)\,\v{l}^{T}_i + \v{o}\) — the slides' rule for changing frames. The unknowns are therefore the link's angle \(\varphi\) and the lab position \(\v{o}\) of its origin — for the thigh, that origin is the hip; the data are the three measured \(\v{m}^{A}_i\). Nothing tells the estimator where the origin is beforehand — it must work that out from the markers too.</p>
+<p><b>A1, the lecture's construction.</b> Use the first two markers only. The measured direction from \(\v{m}^{A}_1\) to \(\v{m}^{A}_2\), compared with the same direction in the template, gives the rotation. The origin then follows from marker 1 alone: it must be wherever the rotated template puts \(\v{l}^{T}_1\) onto the measured \(\v{m}^{A}_1\):</p>
+\[\hat{\varphi}_1 = \operatorname{atan2}(\v{m}^{A}_2 - \v{m}^{A}_1) - \operatorname{atan2}(\v{l}^{T}_2 - \v{l}^{T}_1), \qquad
+  \hat{\v{o}}^{A}_{T} = \v{m}^{A}_1 - \R(\hat{\varphi}_1)\,\v{l}^{T}_1. \tag{8.1}\]
+<p>This is exactly the three-marker frame of the slides collapsed to the plane: \(\v{x}_T\) along \(m_1 \to m_2\), origin at \(m_1\). The third marker is not used at all, which is why this variant is noisier than it needs to be.</p>
+<p><b>A2, least-squares rigid fit.</b> Use all three. For any candidate \((\varphi, \v{o})\), each marker has a mismatch \(\v{m}^{A}_i - \R(\varphi)\,\v{l}^{T}_i - \v{o}\) between where it was measured and where the candidate pose would put it. We want the pose that makes the three mismatches as small as possible together — the smallest sum of squared lengths:</p>
+\[\min_{\varphi,\,\v{o}} \sum_{i=1}^{3} \big\| \v{m}^{A}_i - \R(\varphi)\,\v{l}^{T}_i - \v{o} \big\|^2. \tag{8.2}\]
+<p>Setting the derivative with respect to \(\v{o}\) to zero shows that the optimal translation maps the template centroid onto the measured centroid, \(\hat{\v{o}}^{A}_{T} = \bar{\v{m}}^{A} - \R(\hat\varphi_1)\,\bar{\v{l}}^{T}\). Substituting back, with centred coordinates \(\v{a}_i = \v{l}^{T}_i - \bar{\v{l}}^{T}\) and \(\v{b}_i = \v{m}^{A}_i - \bar{\v{m}}^{A}\), the problem reduces to maximising \(\sum_i \v{b}_i^\T \R(\varphi)\,\v{a}_i = S_c \cos\varphi + S_s \sin\varphi\), where</p>
+\[S_c = \sum_i \v{a}_i \cdot \v{b}_i = \sum_i (a_{ix} b_{ix} + a_{iy} b_{iy}), \qquad
+  S_s = \sum_i \v{a}_i \times \v{b}_i = \sum_i (a_{ix} b_{iy} - a_{iy} b_{ix}), \tag{8.3}\]
+<p>whose maximum over \(\varphi\) is at</p>
+\[\hat{\varphi}_1 = \operatorname{atan2}(S_s,\, S_c), \qquad \hat{\v{o}}^{A}_{T} = \bar{\v{m}}^{A} - \R(\hat{\varphi}_1)\,\bar{\v{l}}^{T}. \tag{8.4}\]
+<p>The three steps from (8.2) to (8.4) — eliminating \(\v{o}\), reducing to a maximisation over \(\varphi\), and solving it — are worked through line by line in <a class="sec" href="#appA">Appendix A</a>. Closed form, no iteration: in two dimensions the best-fit rotation is a single <code>atan2</code>.</p>
+<p>This task — lay one set of points over another as well as possible using only a rotation and a translation — is a standard problem with a name, the <a href="https://en.wikipedia.org/wiki/Orthogonal_Procrustes_problem"><em class="term">Procrustes problem</em></a>. In two dimensions a rotation has a single angle, which is why the answer collapses to one <code>atan2</code>. In three dimensions a rotation has three, so that last step cannot be done with an <code>atan2</code>; instead the \(3\times3\) matrix \(\sum_i \v{b}_i\v{a}_i^\top\) is factorised (its singular-value decomposition) and the rotation is read off the factors. That three-dimensional version is usually called the Kabsch algorithm, and it is what motion-capture software runs. Everything up to that last step is the same.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; Step A, both variants: (8.1) and (8.3)–(8.4)</figcaption><pre><code>function linkPose(meas, tmpl) {
+  var ang, o;
+  if (method === &quot;two&quot;) {
+    // the lecture&#x27;s construction: x along m1 -&gt; m2, origin from m1
+    ang = Math.atan2(meas[1][1]-meas[0][1], meas[1][0]-meas[0][0])
+        - Math.atan2(tmpl[1][1]-tmpl[0][1], tmpl[1][0]-tmpl[0][0]);
+    var r0 = rot(ang, tmpl[0]);
+    o = [meas[0][0]-r0[0], meas[0][1]-r0[1]];
+  } else {
+    // least-squares rigid fit of all three (2-D Procrustes)
+    var cm = [0,0], ct = [0,0], i;
+    for (i = 0; i &lt; 3; i++) { cm[0]+=meas[i][0]/3; cm[1]+=meas[i][1]/3; ct[0]+=tmpl[i][0]/3; ct[1]+=tmpl[i][1]/3; }
+    var sx = 0, sy = 0;
+    for (i = 0; i &lt; 3; i++) {
+      var a = [tmpl[i][0]-ct[0], tmpl[i][1]-ct[1]], b = [meas[i][0]-cm[0], meas[i][1]-cm[1]];
+      sx += a[0]*b[0] + a[1]*b[1]; sy += a[0]*b[1] - a[1]*b[0];
+    }
+    ang = Math.atan2(sy, sx);
+    var rc = rot(ang, ct);
+    o = [cm[0]-rc[0], cm[1]-rc[1]];
+  }
+  return { ang: ang, o: o };
+}</code></pre></figure>
+<h3>Step B — the hip angle, and where the hip went</h3>
+<p>With the thigh pose \((\hat{\R}^{A}_{T}, \hat{\v{o}}^{A}_{T})\), i.e. \(\hat\varphi_1\) and \(\hat{\v{o}}_T\), invert (1.2):</p>
+\[\hat\theta_1 = \hat\varphi_1 + \tfrac{\pi}{2}, \tag{8.5}\]
+<p>wrapped into \((-\pi, \pi]\) by \(\operatorname{atan2}(\sin a, \cos a)\) so that noise near \(\pm180^\circ\), where <code>atan2</code> jumps from one sign to the other, cannot produce a \(360^\circ\) jump.</p>
+<p>Nothing in Step A knows the hip is pinned. The estimated origin \(\hat{\v{o}}_T\) is where the thigh's markers say the hip is; its distance from the true pin,</p>
+\[\text{hip position error} = \| \hat{\v{o}}_T \|, \tag{8.6}\]
+<p>is reported and charted. It is the one-link version of the "knee gap" in the two-link notes: a physical quantity that the unconstrained reconstruction gets wrong and the constrained one cannot, by construction.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; Steps B–C</figcaption><pre><code>function wrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+function uik(meas) {
+  var T = linkPose(meas.slice(0,3), TL);
+  if (mode === &quot;thigh&quot;) {
+    // the hip is pinned at the origin; where does the thigh&#x27;s frame put it?
+    return { th1: wrap(T.ang + Math.PI/2), th2: NaN, T: T, S: null, gap: Math.hypot(T.o[0], T.o[1]) };
+  }
+  var S = linkPose(meas.slice(3,6), SL);
+  // atan2 angles can straddle +-pi (the shank points near -180 degrees at deep
+  // flexion), so the differences must be wrapped or a frame jumps by 360
+  var th1 = wrap(T.ang + Math.PI/2), th2 = wrap(T.ang - S.ang);
+  var kneeT = [T.o[0] + L1*Math.cos(T.ang), T.o[1] + L1*Math.sin(T.ang)];
+  var gap = Math.hypot(kneeT[0]-S.o[0], kneeT[1]-S.o[1]);
+  return { th1: th1, th2: th2, T: T, S: S, gap: gap };
+}</code></pre></figure><h2 id="cik"><span class="n">9</span>Constrained inverse kinematics</h2>
+
+<div class="note"><b>Same cost, fewer freedoms.</b> This is the same kind of problem as the least-squares fit of <a class="sec" href="#uik">§8</a> (A2): choose the pose that puts the model's markers closest to the measured ones. What changes is <em>which poses are allowed</em>.</p>
+<p>In <a class="sec" href="#uik">§8</a> each link was fitted on its own and could take any rigid pose: its angle and its origin were both unknowns (three of them), and nothing kept the links together. Here the origins are not unknowns at all — the thigh's is pinned at the hip. The only unknown left is the joint angle \(\theta_1\), all 3 markers enter one fit, and the pose that comes out is always one the model can reach. That is what "constrained" means.</p>
+<p>So "unconstrained" in <a class="sec" href="#uik">§8</a> never meant that no least squares was involved. It meant that each link was free to sit wherever its own three markers put it.</div>
+<p>The constrained estimator starts from the forward model of <a class="sec" href="#fk">§2</a> — which already contains the pinned hip and the rigid link — and asks for the joint angle \(q = \theta_1\) that best explain <em>all</em> the measured markers at once. It is a nonlinear least-squares problem in \(\theta_1\):</p>
+\[\hat{\v{q}} = \arg\min_{\v{q}} E(\v{q}), \qquad E(\v{q}) = \sum_{i=1}^{3} \big\| \v{m}^{A}_i - \hat{\v{r}}^{A}_i(\v{q}) \big\|^2, \tag{9.1}\]
+<p>where \(\hat{\v{r}}^{A}_i(\v{q})\) is the forward model (2.1) evaluated at \(\v{q}\): where marker \(i\) <em>would</em> be if the joint angles were \(\v{q}\). The constraints are never written down as constraints; they are satisfied automatically because the only thing the estimator can vary is \(\v{q}\).</p>
+<h3>Step A — the model markers and their Jacobian</h3>
+<p>(9.1) cannot be solved in one shot, because the model markers depend on the angles through sines and cosines. The standard way to minimise a sum of squares like this is the <em class="term">Gauss–Newton method</em>: guess \(\v{q}\), pretend the model is linear near that guess, solve the resulting linear least-squares problem for a correction, apply it, and repeat until the correction is negligible. It needs \(\hat{\v{r}}^{A}_i(\v{q})\) and its derivative with respect to each joint angle. The one derivative rule required is that of a rotated vector with respect to its angle,</p>
+\[\frac{\partial}{\partial \varphi}\,\R(\varphi)\,\v{l} = \R\!\left(\varphi + \tfrac{\pi}{2}\right)\v{l}, \tag{9.2}\]
+<p>i.e. the same vector turned a quarter turn — which is why the code rotates by <code>ps.p1 + Math.PI/2</code>. With \(\partial\varphi_1/\partial\theta_1 = 1\), the Jacobian rows are:</p>
+
+\[\frac{\partial \hat{\v{r}}^{A}_i}{\partial \theta_1} = \R\!\left(\varphi_1 + \tfrac{\pi}{2}\right)\v{l}^T_i, \tag{9.3}\]
+<p>a \(2\times1\) column for each marker. (The code also carries the shank rows of the two-link model; in thigh-only mode they are simply never read.) Where (9.2) comes from, and how (9.3) follows from it, is worked out in <a class="sec" href="#appB">Appendix B</a>.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; Step A: model markers (2.1)–(2.2) and their Jacobians (9.3)–(9.4)</figcaption><pre><code>function modelMarkers(q) {
+  var ps = poses(q), out = [], J = [], i;
+  for (i = 0; i &lt; 3; i++) {             // thigh: r = R(p1) l, p1 = th1 - pi/2
+    var r = rot(ps.p1, TL[i]), dr = rot(ps.p1 + Math.PI/2, TL[i]);
+    out.push(r); J.push([dr, [0,0]]);
+  }
+  for (i = 0; i &lt; 3; i++) {             // shank: r = knee + R(p2) l, p2 = p1 - th2
+    var s = rot(ps.p2, SL[i]), dk = rot(ps.p1 + Math.PI/2, [L1, 0]), ds = rot(ps.p2 + Math.PI/2, SL[i]);
+    out.push([ps.knee[0]+s[0], ps.knee[1]+s[1]]);
+    J.push([[dk[0]+ds[0], dk[1]+ds[1]], [-ds[0], -ds[1]]]);
+  }
+  return { r: out, J: J };
+}</code></pre></figure>
+<h3>Step B — one Gauss–Newton iteration</h3>
+<p>Linearise the model about the current guess \(\v{q}\): \(\hat{\v{r}}^{A}_i(\v{q} + \v{\delta}) \approx \hat{\v{r}}^{A}_i(\v{q}) + \v{J}_i\,\v{\delta}\). With the residuals \(\v{e}_i = \v{m}^{A}_i - \hat{\v{r}}^{A}_i(\v{q})\), the cost (9.1) becomes an ordinary linear least-squares problem in \(\v{\delta}\). Setting its derivative with respect to \(\v{\delta}\) to zero gives a small linear system — the <em class="term">normal equations</em> of least squares — and its solution is the correction:</p>
+\[\Big(\sum_i \v{J}_i^\T \v{J}_i\Big)\v{\delta} = \sum_i \v{J}_i^\T \v{e}_i, \qquad \v{q} \leftarrow \v{q} + \v{\delta}. \tag{9.5}\]
+
+<p>With a single unknown, (9.5) is a scalar equation: \(\delta = \big(\sum_i \v{J}_i^\T \v{e}_i\big) / \big(\sum_i \v{J}_i^\T \v{J}_i\big)\) — the variables <code>g</code> and <code>a</code> in the code. The loop accumulates both over the three markers, divides, updates, and repeats.</p>
+
+<h3>Step C — starting point and stopping</h3>
+<p>The iteration starts from the previous frame's answer rather than from scratch (the motion is continuous, so the previous answer is already close — a "warm start"), runs at most six times, and stops early when the update falls below \(10^{-7}\) rad. In practice one or two iterations suffice. The estimated angle is read directly from \(\hat{\v{q}}\): no wrapping is needed, because \(\v{q}\) is a continuous variable that is nudged, never recomputed from an <code>atan2</code>.</p>
+<figure class="code"><figcaption><b>ik.html</b> &middot; Steps B–C, equation (9.5)</figcaption><pre><code>function cik(meas) {
+  var q = qc.slice();
+  if (mode === &quot;thigh&quot;) {
+    // one unknown, theta1: the thigh pivots on the pinned hip
+    for (var k = 0; k &lt; 6; k++) {
+      var mt = modelMarkers(q), a = 0, g = 0;
+      for (var i = 0; i &lt; 3; i++) {
+        var e = [meas[i][0]-mt.r[i][0], meas[i][1]-mt.r[i][1]], j = mt.J[i][0];
+        a += j[0]*j[0]+j[1]*j[1]; g += j[0]*e[0]+j[1]*e[1];
+      }
+      var d = g/a; q[0] += d; if (Math.abs(d) &lt; 1e-7) break;
+    }
+    qc = q; return { th1: q[0], th2: NaN };
+  }
+  for (var it = 0; it &lt; 6; it++) {
+    var mm = modelMarkers(q), A = [[0,0],[0,0]], b = [0,0];
+    for (var i = 0; i &lt; 6; i++) {
+      var e = [meas[i][0]-mm.r[i][0], meas[i][1]-mm.r[i][1]], j1 = mm.J[i][0], j2 = mm.J[i][1];
+      A[0][0] += j1[0]*j1[0]+j1[1]*j1[1]; A[0][1] += j1[0]*j2[0]+j1[1]*j2[1];
+      A[1][1] += j2[0]*j2[0]+j2[1]*j2[1];
+      b[0] += j1[0]*e[0]+j1[1]*e[1];      b[1] += j2[0]*e[0]+j2[1]*e[1];
+    }
+    A[1][0] = A[0][1];
+    var det = A[0][0]*A[1][1] - A[0][1]*A[1][0]; if (Math.abs(det) &lt; 1e-12) break;
+    var d1 = ( A[1][1]*b[0] - A[0][1]*b[1])/det, d2 = (-A[1][0]*b[0] + A[0][0]*b[1])/det;
+    q[0] += d1; q[1] += d2;
+    if (Math.abs(d1) + Math.abs(d2) &lt; 1e-7) break;
+  }
+  qc = q;
+  return { th1: q[0], th2: q[1] };
+}</code></pre></figure>
+<div class="note"><b>What is, and is not, in the fit.</b> Weighted least squares in general carries a weight \(w_i\) per marker (trusted markers count more); the simulation uses \(w_i = 1\). Production tools (OpenSim's inverse kinematics is the common example) solve the same problem with more joints, three dimensions and safeguards on the step size, but the structure is this one. Gauss–Newton and its safeguarded relatives are treated in the texts listed under further reading.</div>
+<h2 id="compare"><span class="n">10</span>What to expect, and why</h2>
+
+<p>Set one error source at a time and read the RMS error of the hip angle in the readout. The behaviour follows from the models above, not from anything hidden:</p>
+<table>
+<tr><th>error source</th><th>unconstrained</th><th>constrained</th><th>why</th></tr>
+<tr><td>Gaussian noise only</td><td>larger; A1 worse than A2</td><td><b>smallest</b></td><td>Noise is independent and zero-mean. The constrained fit averages it over all 3 markers; A2 averages over 3; A1 uses 2 and ignores the third.</td></tr>
+<tr><td>wobbling mass only</td><td>about equal</td><td>about equal</td><td>The cluster lags the bone as a near-rigid unit (<a class="sec" href="#wobble">§5</a>). It looks like bone motion to both methods; there is nothing to average.</td></tr>
+<tr><td>skin stretch only</td><td><b>small</b></td><td>larger</td><td>The stretch is systematic in the joint angle, so it never averages out. The constrained model can only move joint angles, so it absorbs the displaced markers into the angle estimate. The unconstrained frame is barely affected because the markers slide <em>along</em> the link, which hardly rotates the \(m_1 m_2\) line.</td></tr>
+</table>
+<p>The practical conclusion, which the simulation itself demonstrates: constraints clean up noise, not skin. In a real laboratory the noise is well under a millimetre and the artefact is ten or more, so the regime where the constrained fit shines is the one that matters least. Its real advantages are elsewhere — a chain that cannot come apart, tolerance of a missing marker, and output that feeds a musculoskeletal model directly — and its real cost is that a joint the model gets wrong is forced to behave as the model says.</p>
+<h2 id="appA"><span class="n">A</span>Appendix: deriving the least-squares pose, (8.2) to (8.4)</h2>
+
+<p>The problem is: given the template points \(\v{l}_i\) and the measured points \(\v{m}^{A}_i\), \(i = 1,2,3\), find the angle \(\varphi\) and translation \(\v{o}\) that minimise</p>
+\[E(\varphi, \v{o}) = \sum_{i=1}^{3} \big\| \v{m}^{A}_i - \R(\varphi)\,\v{l}_i - \v{o} \big\|^2. \tag{A.1}\]
+<h3>Step 1 — the translation, for any angle</h3>
+<p>Hold \(\varphi\) fixed and differentiate with respect to \(\v{o}\). The derivative of \(\|\v{u}\|^2 = \v{u}^\top\v{u}\) with respect to \(\v{u}\) is \(2\v{u}\), and \(\v{u}_i = \v{m}^{A}_i - \R\v{l}_i - \v{o}\) depends on \(\v{o}\) with a minus sign, so</p>
+\[\frac{\partial E}{\partial \v{o}} = -2 \sum_i \big(\v{m}^{A}_i - \R(\varphi)\,\v{l}_i - \v{o}\big) = \v{0}
+  \quad\Longrightarrow\quad 3\,\v{o} = \sum_i \v{m}^{A}_i - \R(\varphi)\sum_i \v{l}_i. \tag{A.2}\]
+<p>Dividing by 3 and writing \(\bar{\v{m}}^{A} = \tfrac13\sum_i \v{m}^{A}_i\) and \(\bar{\v{l}} = \tfrac13\sum_i \v{l}_i\) for the two centroids,</p>
+\[\v{o}^{*}(\varphi) = \bar{\v{m}}^{A} - \R(\varphi)\,\bar{\v{l}}. \tag{A.3}\]
+<p>In words: whatever the angle, the best translation is the one that carries the template's centroid onto the measured centroid. (\(E\) is a sum of squares in \(\v{o}\), so this stationary point is its minimum.)</p>
+<h3>Step 2 — eliminate the translation</h3>
+<p>Put (A.3) back into (A.1). Each term becomes</p>
+\[\v{m}^{A}_i - \R\v{l}_i - \bar{\v{m}}^{A} + \R\bar{\v{l}} = \underbrace{(\v{m}^{A}_i - \bar{\v{m}}^{A})}_{\v{b}_i} - \R\,\underbrace{(\v{l}_i - \bar{\v{l}})}_{\v{a}_i}, \tag{A.4}\]
+<p>so the centred coordinates of <a class="sec" href="#uik">§8</a> appear by themselves, and the translation is gone. What is left is not \(E\) itself but \(E\) evaluated along the curve on which the translation is already optimal for each angle — a function of the angle alone, which deserves its own name:</p>
+\[E^{*}(\varphi) \equiv E\big(\varphi, \v{o}^{*}(\varphi)\big) = \sum_i \| \v{b}_i - \R(\varphi)\,\v{a}_i \|^2. \tag{A.5}\]
+<p>Minimising \(E^{*}\) over \(\varphi\) does give the minimum of \(E\) over both unknowns: for any \(\varphi\), no choice of \(\v{o}\) can beat \(\v{o}^{*}(\varphi)\), so the best pair \((\hat\varphi, \hat{\v{o}})\) must lie on that curve, and along it \(E\) is \(E^{*}\).</p>
+<p>Expand the square: \(\|\v{b} - \R\v{a}\|^2 = \|\v{b}\|^2 - 2\,\v{b}^\top\R\v{a} + \|\R\v{a}\|^2\). A rotation does not change a length, so \(\|\R\v{a}_i\|^2 = \|\v{a}_i\|^2\). Therefore</p>
+\[E^{*}(\varphi) = \underbrace{\sum_i \|\v{b}_i\|^2 + \sum_i \|\v{a}_i\|^2}_{\text{does not depend on } \varphi} \;-\; 2 \sum_i \v{b}_i^\top \R(\varphi)\,\v{a}_i, \tag{A.6}\]
+<p>and minimising \(E^{*}\) over \(\varphi\) is the same as <em>maximising</em> \(F(\varphi) = \sum_i \v{b}_i^\top \R(\varphi)\,\v{a}_i\).</p>
+<h3>Step 3 — write the angle out</h3>
+<p>With \(\R(\varphi) = \m{\cos\varphi & -\sin\varphi \\ \sin\varphi & \cos\varphi}\) and \(\v{a}_i = (a_{ix}, a_{iy})\),</p>
+\[\R(\varphi)\,\v{a}_i = \m{a_{ix}\cos\varphi - a_{iy}\sin\varphi \\ a_{ix}\sin\varphi + a_{iy}\cos\varphi},\]
+\[\begin{aligned}
+  \v{b}_i^\top \R(\varphi)\,\v{a}_i &= b_{ix}(a_{ix}\cos\varphi - a_{iy}\sin\varphi) + b_{iy}(a_{ix}\sin\varphi + a_{iy}\cos\varphi) \\
+  &= (a_{ix}b_{ix} + a_{iy}b_{iy})\cos\varphi + (a_{ix}b_{iy} - a_{iy}b_{ix})\sin\varphi.
+\end{aligned} \tag{A.7}\]
+<p>The first bracket is the dot product \(\v{a}_i\cdot\v{b}_i\); the second is the two-dimensional cross product \(\v{a}_i\times\v{b}_i\) (a scalar in the plane). Summing over the three markers gives exactly (8.3):</p>
+\[F(\varphi) = S_c\cos\varphi + S_s\sin\varphi, \qquad S_c = \sum_i \v{a}_i\cdot\v{b}_i, \quad S_s = \sum_i \v{a}_i\times\v{b}_i. \tag{A.8}\]
+<h3>Step 4 — maximise over the angle</h3>
+<p>Write the pair \((S_c, S_s)\) in polar form, \(S_c = \rho\cos\psi\), \(S_s = \rho\sin\psi\) with \(\rho = \sqrt{S_c^2 + S_s^2}\) and \(\psi = \operatorname{atan2}(S_s, S_c)\). Then by the cosine addition formula</p>
+\[F(\varphi) = \rho\,(\cos\psi\cos\varphi + \sin\psi\sin\varphi) = \rho\cos(\varphi - \psi), \tag{A.9}\]
+<p>which is largest, equal to \(\rho\), when \(\varphi = \psi\). (Setting \(F'(\varphi) = -S_c\sin\varphi + S_s\cos\varphi = 0\) gives \(\tan\varphi = S_s/S_c\), which has two solutions \(180^\circ\) apart; the \(\operatorname{atan2}\) picks the one where \(F\) is a maximum rather than a minimum.) So</p>
+\[\hat{\varphi} = \operatorname{atan2}(S_s,\, S_c), \qquad \hat{\v{o}} = \bar{\v{m}}^{A} - \R(\hat{\varphi})\,\bar{\v{l}}, \tag{A.10}\]
+<p>the second line being (A.3) evaluated at the best angle. This is (8.4). Note what made it closed-form: in two dimensions a rotation has a single parameter, so the maximisation in Step 4 is of one sinusoid. In three dimensions Steps 1 and 2 go through unchanged, but a rotation then has three parameters, and the maximisation is solved by factorising the \(3\times3\) matrix \(\sum_i \v{b}_i\v{a}_i^\top\) (the Kabsch algorithm mentioned in <a class="sec" href="#uik">§8</a>).</p>
+<h2 id="appB"><span class="n">B</span>Appendix: deriving the Jacobians, (9.2) to (9.3)</h2>
+
+<p>Gauss–Newton needs the derivative of each model marker position with respect to each joint angle. Every marker position in <a class="sec" href="#fk">§2</a> is a rotated template vector, plus a rotated offset for the shank, so one derivative does all the work: that of a rotated vector with respect to its angle.</p>
+<h3>Step 1 — the derivative of a rotated vector, (9.2)</h3>
+<p>Take a fixed vector \(\v{l} = (l_x, l_y)\) and rotate it by \(\varphi\):</p>
+\[\R(\varphi)\,\v{l} = \m{\cos\varphi & -\sin\varphi \\ \sin\varphi & \cos\varphi}\m{l_x \\ l_y} = \m{l_x\cos\varphi - l_y\sin\varphi \\ l_x\sin\varphi + l_y\cos\varphi}. \tag{B.1}\]
+<p>Only \(\varphi\) varies, so differentiate each component (the derivative of \(\cos\) is \(-\sin\), of \(\sin\) is \(\cos\)):</p>
+\[\frac{\partial}{\partial\varphi}\,\R(\varphi)\,\v{l} = \m{-l_x\sin\varphi - l_y\cos\varphi \\ \phantom{-}l_x\cos\varphi - l_y\sin\varphi}. \tag{B.2}\]
+<p>Now write out \(\R(\varphi + \tfrac{\pi}{2})\,\v{l}\), using \(\cos(\varphi + \tfrac{\pi}{2}) = -\sin\varphi\) and \(\sin(\varphi + \tfrac{\pi}{2}) = \cos\varphi\):</p>
+\[\R\!\left(\varphi + \tfrac{\pi}{2}\right)\v{l} = \m{-\sin\varphi & -\cos\varphi \\ \phantom{-}\cos\varphi & -\sin\varphi}\m{l_x \\ l_y} = \m{-l_x\sin\varphi - l_y\cos\varphi \\ \phantom{-}l_x\cos\varphi - l_y\sin\varphi}. \tag{B.3}\]
+<p>(B.2) and (B.3) are the same vector, which is (9.2). The picture behind it: as \(\varphi\) increases, the tip of \(\R(\varphi)\v{l}\) moves round a circle of radius \(\|\v{l}\|\); its velocity is tangent to that circle, i.e. the vector itself turned a quarter-turn, with the same length. Equivalently \(\frac{\partial}{\partial\varphi}\R(\varphi) = \R(\varphi)\,\v{S}\) with \(\v{S} = \m{0 & -1 \\ 1 & 0}\), the quarter-turn matrix, which is why the code can take any derivative by calling <code>rot</code> with the angle shifted by <code>Math.PI/2</code>.</p>
+<h3>Step 2 — the thigh markers, (9.3)</h3>
+<p>From (2.1), \(\hat{\v{r}}^{A}_i(\v{q}) = \R(\varphi_1)\,\v{l}^{T}_i\) with \(\varphi_1 = -\tfrac{\pi}{2} + \theta_1\) from (1.2). The angle depends on the joint angle through \(\varphi_1\), so by the chain rule and \(\partial\varphi_1/\partial\theta_1 = 1\),</p>
+\[\frac{\partial \hat{\v{r}}^{A}_i}{\partial\theta_1} = \frac{\partial}{\partial\varphi_1}\big(\R(\varphi_1)\,\v{l}^{T}_i\big)\cdot\frac{\partial\varphi_1}{\partial\theta_1} = \R\!\left(\varphi_1 + \tfrac{\pi}{2}\right)\v{l}^{T}_i \cdot 1. \tag{B.4}\]
+
+<p>That is (9.3): for each marker a single \(2\times1\) column, the template vector turned a quarter-turn. In <code>modelMarkers</code> it is the variable <code>dr</code> — <code>rot</code> called with the angle shifted by <code>Math.PI/2</code>, which is Step 1 applied directly. (The shank rows that the same function builds, with their second column for a knee angle, are the two-link version; see the two-link notes, Appendix B.)</p>
+<h2 id="refs"><span class="n">11</span>Sources and further reading</h2>
+
+<p>The claims in these notes rest on the derivations and the simulation above. The list below is divided into <b>sources</b> — works read and relied on — and <b>further reading</b>, pointers to where a topic is treated in depth, offered without any claim about what they conclude.</p>
+<h3>Sources</h3>
+<ol class="refs">
+<li>Uchida, T. K. &amp; Delp, S. L. (2021). <i>Biomechanics of Movement: The Science of Sports, Robotics, and Rehabilitation</i>. MIT Press. — marker-based kinematics, anatomical and tracking frames, and the two estimators (<a class="sec" href="#uik">§8–9</a>).</li>
+</ol>
+<h3>Further reading</h3>
+<ol class="refs">
+<li>Dumas, R. &amp; Jacquelin, E. (2017). Stiffness of a wobbling mass models analysed by a smooth orthogonal decomposition of the skin movement relative to the underlying bone. <i>Journal of Biomechanics</i>, 62, 47–52. — on wobbling-mass models of soft-tissue artefact (<a class="sec" href="#wobble">§5</a>).</li>
+<li>Leardini, A., Chiari, L., Della Croce, U. &amp; Cappozzo, A. (2005). Human movement analysis using stereophotogrammetry. Part 3: Soft tissue artifact assessment and compensation. <i>Gait &amp; Posture</i>, 21, 212–225. — a review of soft-tissue artefact (<a class="sec" href="#slide">§4–5</a>).</li>
+<li>Cappello, A., Cappozzo, A., La Palombara, P. F., Lucchetti, L. &amp; Leardini, A. (1997). Multiple anatomical landmark calibration for optimal bone pose estimation. <i>Human Movement Science</i>, 16, 259–274. — on artefact compensation (<a class="sec" href="#slide">§4</a>).</li>
+<li>Camomilla, V., Cereatti, A., Cheze, L. &amp; Cappozzo, A. (2013). A hip joint kinematics driven model for the generation of realistic thigh soft tissue artefacts. <i>Journal of Biomechanics</i>, 46, 625–630. — on modelling thigh artefact (<a class="sec" href="#slide">§4</a>).</li>
+<li>Kabsch, W. (1976). A solution for the best rotation to relate two sets of vectors. <i>Acta Crystallographica A</i>, 32, 922–923; and Horn, B. K. P. (1987). Closed-form solution of absolute orientation using unit quaternions. <i>Journal of the Optical Society of America A</i>, 4, 629–642. — on the three-dimensional rigid fit (<a class="sec" href="#uik">§8</a>, Appendix A).</li>
+<li>Lu, T.-W. &amp; O'Connor, J. J. (1999). Bone position estimation from skin marker co-ordinates using global optimisation with joint constraints. <i>Journal of Biomechanics</i>, 32, 129–134. — on constrained inverse kinematics (<a class="sec" href="#cik">§9</a>).</li>
+<li>Andersen, M. S., Benoit, D. L., Damsgaard, M., Ramsey, D. K. &amp; Rasmussen, J. (2010). Do kinematic models reduce the effects of soft tissue artefacts in skin marker-based motion analysis? An in vivo study of knee kinematics. <i>Journal of Biomechanics</i>, 43, 268–273. — on joint constraints and soft-tissue artefact (<a class="sec" href="#compare">§10</a>).</li>
+<li>Press, W. H., Teukolsky, S. A., Vetterling, W. T. &amp; Flannery, B. P. (2007). <i>Numerical Recipes: The Art of Scientific Computing</i>, 3rd ed. Cambridge University Press. — on random numbers, nonlinear least squares and integrating differential equations (<a class="sec" href="#wobble">§5</a>, <a class="sec" href="#noise">§6</a>, <a class="sec" href="#cik">§9</a>). The book's site is <a href="https://numerical.recipes">numerical.recipes</a>.</li>
+<li>Nocedal, J. &amp; Wright, S. J. (2006). <i>Numerical Optimization</i>, 2nd ed. Springer. — on least-squares methods (<a class="sec" href="#cik">§9</a>).</li>
+</ol>
+
+<div class="pn"><div class="prev"><span></span></div><div class="all"><a href="../../index.html#notes">All notes</a> &middot; 1 of 3</div><div class="next"><a href="../01-kinematics-kinetics/ik-notes-leg.html">Inverse kinematics of a two-link leg &rarr;</a></div></div>
+</main>
+</div>
+<div class="foot"><div class="in">&copy; 2026 Sivakumar Balasubramanian &middot; Transducers &amp; Instrumentation, Department of Bioengineering &middot; Christian Medical College Vellore.<br>Released under the <a href="https://github.com/siva82kb/tni-course/blob/main/LICENSE">MIT License</a>, like the rest of the course materials: you may use, copy and adapt these notes, figures and code freely, keeping the copyright notice.</div></div>
+<script>
+  // Typeset section by section once MathJax is ready. One pass over the whole
+  // page is not reliable for a document this long; section passes are.
+  (function () {
+    function run() {
+      var main = document.querySelector("main"), chunks = [], cur = [];
+      Array.prototype.forEach.call(main.childNodes, function (n) {
+        if (n.nodeType === 1 && n.tagName === "H2") { if (cur.length) chunks.push(cur); cur = []; }
+        cur.push(n);
+      });
+      if (cur.length) chunks.push(cur);
+      var groups = chunks.map(function (ch) {
+        var d = document.createElement("div"); main.insertBefore(d, ch[0]);
+        ch.forEach(function (n) { d.appendChild(n); }); return d;
+      });
+      groups.unshift(document.querySelector("header"));
+      var i = 0;
+      (function next() {
+        if (i >= groups.length) return;
+        MathJax.typesetPromise([groups[i++]]).then(next, next);
+      })();
+    }
+    var s = document.getElementById("MathJax-script");
+    function ready() { if (window.MathJax && MathJax.startup) MathJax.startup.promise.then(run); }
+    s.addEventListener("load", ready); ready();
+  })();
+</script>
+</body>
+</html>

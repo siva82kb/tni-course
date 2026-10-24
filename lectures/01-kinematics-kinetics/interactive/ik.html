@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unconstrained vs constrained inverse kinematics</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748; --forest: #2B6CB0; --crimson: #A51C30;
+    --seagreen: #2F855A; --warmgray: #718096; --grid: #CBD5E0;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #fff; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+  #panel {
+    flex: 0 0 auto; display: flex; align-items: flex-start;
+    background: #FAFBFC; border-bottom: 1px solid #E2E8F0;
+    padding: 5px 10px 6px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #panel .grp { padding: 0 8px; border-left: 1px solid #E2E8F0; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel label { display: block; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 68px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 10px; height: 10px;
+    margin-top: -3.5px; border-radius: 50%; border: none; background: var(--crimson); }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none; border-radius: 50%; background: var(--crimson); }
+  #panel .k { display: inline-block; width: 4.2em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .val { display: inline-block; width: 3.0em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--crimson); }
+  #panel .unit { color: var(--warmgray); margin-left: 2px; }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray);
+                font-variant-numeric: tabular-nums; }
+  #panel input[type=checkbox], #panel input[type=radio] {
+    width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 1px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel a { color: var(--forest); text-decoration: none; border-bottom: 1px solid var(--forest); }
+  #panel .sw { display: inline-block; width: 10px; height: 10px; vertical-align: -1px;
+               margin-right: 3px; border-radius: 2px; }
+
+  #panes { display: flex; flex: 1 1 auto; min-height: 0; }
+  .pane { position: relative; height: 100%; }
+  #leg { flex: 0 0 40%; }
+  #charts { flex: 1 1 60%; border-left: 1px solid #E2E8F0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .cap {
+    position: absolute; bottom: 6px; left: 0; right: 0; text-align: center;
+    font-size: 12px; color: var(--warmgray); pointer-events: none; user-select: none;
+  }
+
+  #readout {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 22px;
+    padding: 6px 14px 7px; border-top: 1px solid #E2E8F0; background: #FAFBFC;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #readout .u { color: var(--crimson); font-weight: 700; }
+  #readout .c { color: var(--forest); font-weight: 700; }
+  #readout .note { color: var(--warmgray); font-size: 11.5px; font-style: italic;
+                   font-family: system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">leg</div>
+      <label><input type="radio" name="mode" value="thigh"> thigh only &rarr; hip angle</label>
+      <label><input type="radio" name="mode" value="leg" checked> thigh + shank &rarr; knee angle</label>
+      <div class="row"><a id="notes" href="../../../notes/01-kinematics-kinetics/ik-notes-leg.html" target="_blank">models &amp; algorithms, step by step &rarr;</a></div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">movement</div>
+      <label><span class="k">speed</span>
+        <input type="range" id="s_speed" min="0" max="2.5" step="0.05" value="1">
+        <span class="val" id="v_speed"></span><span class="unit">&times;</span></label>
+      <div class="row">
+        <button id="pause">pause</button><button id="reset">reset</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">measurement noise</div>
+      <label><span class="k">&sigma;</span>
+        <input type="range" id="s_noise" min="0" max="10" step="0.1" value="2">
+        <span class="val" id="v_noise"></span><span class="unit">mm</span></label>
+      <div class="row">Gaussian, per marker, per frame</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">skin: wobbling mass</div>
+      <label><span class="k">f<sub>along</sub></span>
+        <input type="range" id="s_fa" min="1" max="25" step="0.5" value="6">
+        <span class="val" id="v_fa"></span><span class="unit">Hz</span></label>
+      <label><span class="k">f<sub>across</sub></span>
+        <input type="range" id="s_fx" min="1" max="25" step="0.5" value="10">
+        <span class="val" id="v_fx"></span><span class="unit">Hz</span></label>
+      <label><span class="k">&zeta;</span>
+        <input type="range" id="s_zeta" min="0.05" max="1" step="0.05" value="0.3">
+        <span class="val" id="v_zeta"></span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">skin: slide with joint angle</div>
+      <label><span class="k">gain</span>
+        <input type="range" id="s_slide" min="0" max="2" step="0.05" value="0">
+        <span class="val" id="v_slide"></span><span class="unit">&times;</span></label>
+      <div class="row">1&times; &asymp; 0.15&ndash;0.45 mm per degree</div>
+      <div class="row">of joint flexion, marker by marker</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">unconstrained IK: frame from</div>
+      <label><input type="radio" name="meth" value="two" checked> m<sub>1</sub>, m<sub>2</sub> only (lecture)</label>
+      <label><input type="radio" name="meth" value="fit"> least-squares fit, all three</label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">show</div>
+      <label><input type="checkbox" id="c_true" checked><span class="sw" style="background:#A0AEC0"></span>true leg</label>
+      <label><input type="checkbox" id="c_uik" checked><span class="sw" style="background:var(--crimson)"></span>unconstrained IK</label>
+      <label><input type="checkbox" id="c_cik" checked><span class="sw" style="background:var(--forest)"></span>constrained IK</label>
+    </div>
+  </div>
+
+  <div id="panes">
+    <div class="pane" id="leg">
+      <canvas id="cl"></canvas>
+      <div class="cap">hip pinned &middot; dots are the <b>measured</b> markers</div>
+    </div>
+    <div class="pane" id="charts">
+      <canvas id="cc"></canvas>
+    </div>
+  </div>
+
+  <div id="readout">
+    <span><span id="r_what">knee angle</span> RMS error, last 8 s:&nbsp; unconstrained <span class="u" id="r_u">&ndash;</span>&deg;
+      &nbsp; constrained <span class="c" id="r_c">&ndash;</span>&deg;</span>
+    <span><span id="r_gapwhat">knee gap</span> in the unconstrained reconstruction: <span class="u" id="r_gap">&ndash;</span> mm</span>
+    <span id="r_hipwrap">hip RMS: <span class="u" id="r_uh">&ndash;</span>&deg; / <span class="c" id="r_ch">&ndash;</span>&deg; &nbsp; unconstrained hip off its pin by <span class="u" id="r_hipgap">&ndash;</span> mm</span>
+    <span class="note" id="note"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = { charcoal:"#2D3748", forest:"#2B6CB0", crimson:"#A51C30",
+            seagreen:"#2F855A", warmgray:"#718096", grid:"#CBD5E0" };
+
+  // ---- the leg: two links, hip pinned at the origin, y up --------------
+  //      theta1: hip flexion, thigh angle forward of vertical-down
+  //      theta2: knee flexion, 0 = straight, positive = shank folded back
+  var L1 = 0.42, L2 = 0.40;               // m
+  var W  = 0.05;                          // half-width of the drawn links
+  // marker positions in each link's own frame: x along the link from its
+  // proximal joint, y across. Three per link, not collinear.
+  var TL = [[0.12, 0.052], [0.26, -0.045], [0.33, 0.048]];
+  var SL = [[0.08, 0.045], [0.20, -0.040], [0.30, 0.042]];
+
+  // Skin slide with knee angle (the systematic part of soft-tissue artefact):
+  // each marker's rest point moves along its link by a_i * knee flexion.
+  // The slopes are per-marker, larger nearer the knee. They are ILLUSTRATIVE
+  // values chosen so that the effect is visible at gain 1 -- not fitted to
+  // any data.
+  // Thigh skin bunches toward the knee as it flexes (distal, +x), shank skin
+  // likewise toward the knee (proximal, -x). The sign is an assumption.
+  var TA = [0.15, 0.30, 0.45];            // mm per degree
+  var SA = [-0.25, -0.15, -0.10];
+
+  var P = { speed: 1, noise: 2, fa: 6, fx: 10, zeta: 0.3, slide: 0 };
+  var method = "two";
+  var mode = "leg";                        // "thigh": one link, hip angle; "leg": two links, knee angle
+  var show = { tru: true, uik: true, cik: true };
+
+  // ---- truth ---------------------------------------------------------------
+  //      smooth, aperiodic joint motion: a few sinusoids at incommensurate
+  //      frequencies, roughly a walking cadence at speed 1
+  var D2R = Math.PI/180;
+  function truth(t) {
+    var th1 = D2R*(22*Math.sin(2*Math.PI*0.9*t) + 7*Math.sin(2*Math.PI*0.37*t + 1.0));
+    var th2 = D2R*(28 + 26*Math.sin(2*Math.PI*0.9*t - 0.7) + 7*Math.sin(2*Math.PI*0.53*t));
+    if (th2 < 0) th2 = 0;
+    return [th1, th2];
+  }
+  function poses(q) {                     // link direction angles from +x, y up
+    var p1 = -Math.PI/2 + q[0], p2 = p1 - q[1];
+    return { p1: p1, p2: p2, knee: [L1*Math.cos(p1), L1*Math.sin(p1)] };
+  }
+  function rot(a, v) { var c = Math.cos(a), s = Math.sin(a); return [c*v[0]-s*v[1], s*v[0]+c*v[1]]; }
+
+  // where marker i of link k sits on the bone for the true pose q -- the
+  // forward kinematics of the template, r^A_{m_i}, with no artefact at all
+  function bonePoint(k, i, q) {
+    var ps = poses(q);
+    if (k === 0) return rot(ps.p1, TL[i]);
+    var r = rot(ps.p2, SL[i]);
+    return [ps.knee[0] + r[0], ps.knee[1] + r[1]];
+  }
+  // the rest point rho_i: the bone point, moved along the link by the skin
+  // slide. The slide follows the joint under study: knee flexion with the
+  // shank present, hip flexion for the thigh on its own.
+  function restPoint(k, i, q) {
+    var ps = poses(q), jt = mode === "leg" ? q[1] : q[0];
+    var slide = P.slide*(k === 0 ? TA[i] : SA[i])*(jt/D2R)*1e-3;
+    var ang = k === 0 ? ps.p1 : ps.p2, b = bonePoint(k, i, q);
+    return [b[0] + slide*Math.cos(ang), b[1] + slide*Math.sin(ang)];
+  }
+
+  // ---- the markers: wobbling masses on the skin -------------------------
+  //      Each marker is a unit mass tied to its rest point by a spring and
+  //      damper that are diagonal in the link frame, set by natural
+  //      frequencies along/across the link and one damping ratio.
+  var mk = [];                            // {k, i, p:[x,y], v:[x,y], r:[x,y]}
+  function initMarkers() {
+    mk = [];
+    var q = truth(0);
+    for (var k = 0; k < (mode === "leg" ? 2 : 1); k++) for (var i = 0; i < 3; i++) {
+      var r = restPoint(k, i, q);
+      mk.push({ k: k, i: i, p: r.slice(), v: [0,0], r: r.slice() });
+    }
+  }
+  function stepMarkers(t, dt) {
+    var q = truth(t), ps = poses(q);
+    var ka = Math.pow(2*Math.PI*P.fa, 2), kx = Math.pow(2*Math.PI*P.fx, 2);
+    var ca = 2*P.zeta*2*Math.PI*P.fa,     cx = 2*P.zeta*2*Math.PI*P.fx;
+    mk.forEach(function (m) {
+      var r = restPoint(m.k, m.i, q);
+      var rv = [(r[0]-m.r[0])/dt, (r[1]-m.r[1])/dt];     // rest-point velocity
+      m.r = r;
+      var ang = m.k === 0 ? ps.p1 : ps.p2;
+      var d = rot(-ang, [m.p[0]-r[0], m.p[1]-r[1]]);      // offset, link frame
+      var w = rot(-ang, [m.v[0]-rv[0], m.v[1]-rv[1]]);    // relative velocity
+      var f = rot(ang, [-ka*d[0] - ca*w[0], -kx*d[1] - cx*w[1]]);
+      m.v[0] += f[0]*dt; m.v[1] += f[1]*dt;               // semi-implicit Euler
+      m.p[0] += m.v[0]*dt; m.p[1] += m.v[1]*dt;
+    });
+  }
+  function gauss() {
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+  function measure() {                    // what the cameras report
+    var s = P.noise*1e-3;
+    return mk.map(function (m) { return [m.p[0] + s*gauss(), m.p[1] + s*gauss()]; });
+  }
+
+  // ---- unconstrained IK: each link from its own three markers ----------
+  function linkPose(meas, tmpl) {
+    var ang, o;
+    if (method === "two") {
+      // the lecture's construction: x along m1 -> m2, origin from m1
+      ang = Math.atan2(meas[1][1]-meas[0][1], meas[1][0]-meas[0][0])
+          - Math.atan2(tmpl[1][1]-tmpl[0][1], tmpl[1][0]-tmpl[0][0]);
+      var r0 = rot(ang, tmpl[0]);
+      o = [meas[0][0]-r0[0], meas[0][1]-r0[1]];
+    } else {
+      // least-squares rigid fit of all three (2-D Procrustes)
+      var cm = [0,0], ct = [0,0], i;
+      for (i = 0; i < 3; i++) { cm[0]+=meas[i][0]/3; cm[1]+=meas[i][1]/3; ct[0]+=tmpl[i][0]/3; ct[1]+=tmpl[i][1]/3; }
+      var sx = 0, sy = 0;
+      for (i = 0; i < 3; i++) {
+        var a = [tmpl[i][0]-ct[0], tmpl[i][1]-ct[1]], b = [meas[i][0]-cm[0], meas[i][1]-cm[1]];
+        sx += a[0]*b[0] + a[1]*b[1]; sy += a[0]*b[1] - a[1]*b[0];
+      }
+      ang = Math.atan2(sy, sx);
+      var rc = rot(ang, ct);
+      o = [cm[0]-rc[0], cm[1]-rc[1]];
+    }
+    return { ang: ang, o: o };
+  }
+  function wrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }   // to (-pi, pi]
+  function uik(meas) {
+    var T = linkPose(meas.slice(0,3), TL);
+    if (mode === "thigh") {
+      // the hip is pinned at the origin; where does the thigh's frame put it?
+      return { th1: wrap(T.ang + Math.PI/2), th2: NaN, T: T, S: null, gap: Math.hypot(T.o[0], T.o[1]) };
+    }
+    var S = linkPose(meas.slice(3,6), SL);
+    // atan2 angles can straddle +-pi (the shank points near -180 degrees at deep
+    // flexion), so the differences must be wrapped or a frame jumps by 360
+    var th1 = wrap(T.ang + Math.PI/2), th2 = wrap(T.ang - S.ang);
+    var kneeT = [T.o[0] + L1*Math.cos(T.ang), T.o[1] + L1*Math.sin(T.ang)];
+    var gap = Math.hypot(kneeT[0]-S.o[0], kneeT[1]-S.o[1]);
+    return { th1: th1, th2: th2, T: T, S: S, gap: gap };
+  }
+
+  // ---- constrained IK: the two-link model fitted to all six markers ----
+  //      q = (theta1, theta2); hip pinned; fixed lengths; hinge joints.
+  //      Gauss-Newton on sum |measured - model(q)|^2, warm-started.
+  var qc = [0, 0.3];
+  function modelMarkers(q) {
+    var ps = poses(q), out = [], J = [], i;
+    for (i = 0; i < 3; i++) {             // thigh: r = R(p1) l, p1 = th1 - pi/2
+      var r = rot(ps.p1, TL[i]), dr = rot(ps.p1 + Math.PI/2, TL[i]);
+      out.push(r); J.push([dr, [0,0]]);
+    }
+    for (i = 0; i < 3; i++) {             // shank: r = knee + R(p2) l, p2 = p1 - th2
+      var s = rot(ps.p2, SL[i]), dk = rot(ps.p1 + Math.PI/2, [L1, 0]), ds = rot(ps.p2 + Math.PI/2, SL[i]);
+      out.push([ps.knee[0]+s[0], ps.knee[1]+s[1]]);
+      J.push([[dk[0]+ds[0], dk[1]+ds[1]], [-ds[0], -ds[1]]]);
+    }
+    return { r: out, J: J };
+  }
+  function cik(meas) {
+    var q = qc.slice();
+    if (mode === "thigh") {
+      // one unknown, theta1: the thigh pivots on the pinned hip
+      for (var k = 0; k < 6; k++) {
+        var mt = modelMarkers(q), a = 0, g = 0;
+        for (var i = 0; i < 3; i++) {
+          var e = [meas[i][0]-mt.r[i][0], meas[i][1]-mt.r[i][1]], j = mt.J[i][0];
+          a += j[0]*j[0]+j[1]*j[1]; g += j[0]*e[0]+j[1]*e[1];
+        }
+        var d = g/a; q[0] += d; if (Math.abs(d) < 1e-7) break;
+      }
+      qc = q; return { th1: q[0], th2: NaN };
+    }
+    for (var it = 0; it < 6; it++) {
+      var mm = modelMarkers(q), A = [[0,0],[0,0]], b = [0,0];
+      for (var i = 0; i < 6; i++) {
+        var e = [meas[i][0]-mm.r[i][0], meas[i][1]-mm.r[i][1]], j1 = mm.J[i][0], j2 = mm.J[i][1];
+        A[0][0] += j1[0]*j1[0]+j1[1]*j1[1]; A[0][1] += j1[0]*j2[0]+j1[1]*j2[1];
+        A[1][1] += j2[0]*j2[0]+j2[1]*j2[1];
+        b[0] += j1[0]*e[0]+j1[1]*e[1];      b[1] += j2[0]*e[0]+j2[1]*e[1];
+      }
+      A[1][0] = A[0][1];
+      var det = A[0][0]*A[1][1] - A[0][1]*A[1][0]; if (Math.abs(det) < 1e-12) break;
+      var d1 = ( A[1][1]*b[0] - A[0][1]*b[1])/det, d2 = (-A[1][0]*b[0] + A[0][0]*b[1])/det;
+      q[0] += d1; q[1] += d2;
+      if (Math.abs(d1) + Math.abs(d2) < 1e-7) break;
+    }
+    qc = q;
+    return { th1: q[0], th2: q[1] };
+  }
+
+  // ---- simulation loop -----------------------------------------------------
+  var t = 0, paused = false, SUB = 10, FPS = 60;
+  var hist = [];                          // {t, tru:[th1,th2], u:[..], c:[..], gap}
+  var WIN = 8;                            // seconds shown
+  var last = null;
+
+  function tick() {
+    var dt = (1/FPS)*P.speed;
+    if (!paused && P.speed > 0) {
+      for (var s = 0; s < SUB; s++) { stepMarkers(t, dt/SUB); t += dt/SUB; }
+    }
+    var meas = measure(), q = truth(t), U = uik(meas), K = cik(meas);
+    last = { meas: meas, q: q, U: U, K: K };
+    if (!paused && P.speed > 0) {
+      hist.push({ t: t, tru: q, u: [U.th1, U.th2], c: [K.th1, K.th2], gap: U.gap, hip: Math.hypot(U.T.o[0], U.T.o[1]) });
+      while (hist.length && hist[0].t < t - WIN) hist.shift();
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- drawing: the leg -----------------------------------------------------
+  var legEl = document.getElementById("leg"), cl = document.getElementById("cl"), gl = cl.getContext("2d");
+  var SC = 380;                           // px per metre
+  function roundRect(g, x, y, w, h, r) {
+    g.beginPath(); g.moveTo(x+r, y); g.lineTo(x+w-r, y); g.arcTo(x+w, y, x+w, y+r, r);
+    g.lineTo(x+w, y+h-r); g.arcTo(x+w, y+h, x+w-r, y+h, r); g.lineTo(x+r, y+h);
+    g.arcTo(x, y+h, x, y+h-r, r); g.lineTo(x, y+r); g.arcTo(x, y, x+r, y, r); g.closePath();
+  }
+  // a link drawn in its own frame: origin at the proximal joint, x along it
+  function drawLink(g, o, ang, L, style) {
+    g.save(); g.translate(o[0], o[1]); g.rotate(-ang);   // canvas y is down
+    roundRect(g, -W*SC*0.6, -W*SC, L*SC + W*SC*0.6, 2*W*SC, W*SC*0.8);
+    if (style.fill) { g.fillStyle = style.fill; g.fill(); }
+    g.strokeStyle = style.stroke; g.lineWidth = style.width || 1.2;
+    g.setLineDash(style.dash || []); g.stroke();
+    g.restore();
+  }
+  function toPx(p, ox, oy) { return [ox + p[0]*SC, oy - p[1]*SC]; }
+
+  function drawLeg() {
+    var dpr = window.devicePixelRatio || 1, w = legEl.clientWidth, h = legEl.clientHeight;
+    cl.width = Math.round(w*dpr); cl.height = Math.round(h*dpr);
+    gl.setTransform(dpr,0,0,dpr,0,0); gl.clearRect(0,0,w,h);
+    if (!last) return;
+    var ox = w/2, oy = 60;
+    var ps = poses(last.q);
+
+    // the true leg
+    var two = mode === "leg";
+    if (show.tru) {
+      drawLink(gl, toPx([0,0], ox, oy), ps.p1, L1, { fill: "#EDF2F7", stroke: "#A0AEC0", width: 1 });
+      if (two) drawLink(gl, toPx(ps.knee, ox, oy), ps.p2, L2, { fill: "#EDF2F7", stroke: "#A0AEC0", width: 1 });
+      // where the markers would be with no artefact
+      mk.forEach(function (m) { var s = toPx(m.r, ox, oy);
+        gl.strokeStyle = "#A0AEC0"; gl.lineWidth = 0.8; gl.beginPath(); gl.arc(s[0], s[1], 4, 0, 2*Math.PI); gl.stroke(); });
+    }
+    // unconstrained: two separate links, where their markers say they are
+    if (show.uik) {
+      var U = last.U;
+      drawLink(gl, toPx(U.T.o, ox, oy), U.T.ang, L1, { stroke: C.crimson, width: 1.6 });
+      gl.fillStyle = C.crimson;
+      if (two) {
+        drawLink(gl, toPx(U.S.o, ox, oy), U.S.ang, L2, { stroke: C.crimson, width: 1.6 });
+        var kT = toPx([U.T.o[0]+L1*Math.cos(U.T.ang), U.T.o[1]+L1*Math.sin(U.T.ang)], ox, oy), kS = toPx(U.S.o, ox, oy);
+        gl.beginPath(); gl.arc(kT[0], kT[1], 3, 0, 2*Math.PI); gl.fill();
+        gl.beginPath(); gl.arc(kS[0], kS[1], 3, 0, 2*Math.PI); gl.fill();
+      }
+      // where the thigh's own frame puts the hip: nothing in the unconstrained
+      // method knows the hip is pinned, so this point wanders off the pin
+      var hU = toPx(U.T.o, ox, oy);
+      gl.beginPath(); gl.arc(hU[0], hU[1], 3.5, 0, 2*Math.PI); gl.fill();
+      gl.strokeStyle = C.crimson; gl.lineWidth = 0.8; gl.setLineDash([2,2]);
+      gl.beginPath(); gl.moveTo(ox, oy); gl.lineTo(hU[0], hU[1]); gl.stroke(); gl.setLineDash([]);
+    }
+    // constrained: one chain
+    if (show.cik) {
+      var pk = poses([last.K.th1, last.K.th2]);
+      drawLink(gl, toPx([0,0], ox, oy), pk.p1, L1, { stroke: C.forest, width: 1.6, dash: [5,3] });
+      if (two) {
+        drawLink(gl, toPx(pk.knee, ox, oy), pk.p2, L2, { stroke: C.forest, width: 1.6, dash: [5,3] });
+        var kc = toPx(pk.knee, ox, oy);         // its knee: one point, by construction
+        gl.fillStyle = C.forest; gl.beginPath(); gl.arc(kc[0], kc[1], 3, 0, 2*Math.PI); gl.fill();
+      }
+    }
+    // the measured markers, on top of everything
+    last.meas.forEach(function (p, i) {
+      var s = toPx(p, ox, oy);
+      gl.fillStyle = C.charcoal; gl.beginPath(); gl.arc(s[0], s[1], 4.2, 0, 2*Math.PI); gl.fill();
+      gl.fillStyle = "#fff"; gl.beginPath(); gl.arc(s[0]-1.2, s[1]-1.2, 1.3, 0, 2*Math.PI); gl.fill();
+      gl.fillStyle = C.charcoal; gl.font = "11px system-ui, sans-serif";
+      gl.fillText("m" + (i%3 + 1), s[0] + 7, s[1] + 4);
+    });
+    // the true knee joint, always -- it is what the reconstructions are judged against
+    var kt = toPx(ps.knee, ox, oy);
+    if (two) {
+    gl.fillStyle = "#fff"; gl.beginPath(); gl.arc(kt[0], kt[1], 5.5, 0, 2*Math.PI); gl.fill();
+    gl.strokeStyle = C.charcoal; gl.lineWidth = 1.6; gl.beginPath(); gl.arc(kt[0], kt[1], 5.5, 0, 2*Math.PI); gl.stroke();
+    gl.fillStyle = C.charcoal; gl.beginPath(); gl.arc(kt[0], kt[1], 1.8, 0, 2*Math.PI); gl.fill();
+    gl.font = "12px 'Linux Libertine O', Georgia, serif";
+    gl.fillText("knee", kt[0] + 10, kt[1] - 8);
+    }
+    // the hip
+    gl.fillStyle = C.charcoal; gl.beginPath(); gl.arc(ox, oy, 5, 0, 2*Math.PI); gl.fill();
+    gl.strokeStyle = C.charcoal; gl.lineWidth = 1.2;
+    gl.beginPath(); gl.moveTo(ox-14, oy-10); gl.lineTo(ox+14, oy-10); gl.stroke();
+    for (var i = -12; i <= 12; i += 6) { gl.beginPath(); gl.moveTo(ox+i, oy-10); gl.lineTo(ox+i-5, oy-16); gl.stroke(); }
+    gl.font = "12px 'Linux Libertine O', Georgia, serif"; gl.fillStyle = C.charcoal;
+    gl.fillText("hip", ox + 20, oy - 12);
+  }
+
+  // ---- drawing: the charts ----------------------------------------------
+  var chEl = document.getElementById("charts"), cc = document.getElementById("cc"), gc = cc.getContext("2d");
+  function strip(g, x, y, w, h, title, series, ymin, ymax, unit) {
+    g.save();
+    g.strokeStyle = "#E2E8F0"; g.lineWidth = 1; g.strokeRect(x, y, w, h);
+    g.fillStyle = C.warmgray; g.font = "11px system-ui, sans-serif"; g.fillText(title, x + 6, y + 13);
+    // y ticks
+    var ticks = 4, i;
+    for (i = 0; i <= ticks; i++) {
+      var yy = y + h - (i/ticks)*h, val = ymin + (i/ticks)*(ymax-ymin);
+      g.strokeStyle = "#EDF2F7"; g.beginPath(); g.moveTo(x, yy); g.lineTo(x+w, yy); g.stroke();
+      g.fillStyle = C.warmgray; g.font = "10px system-ui, sans-serif"; g.textAlign = "right";
+      g.fillText(val.toFixed(0) + unit, x - 4, yy + 3); g.textAlign = "left";
+    }
+    var t1 = hist.length ? hist[hist.length-1].t : 0, t0 = t1 - WIN;
+    series.forEach(function (s) {
+      g.strokeStyle = s.color; g.lineWidth = s.width || 1.2; g.setLineDash(s.dash || []);
+      g.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+      g.beginPath();
+      var first = true;
+      hist.forEach(function (hp) {
+        var v = s.f(hp); if (!isFinite(v)) return;
+        var px = x + (hp.t - t0)/WIN*w, py = y + h - (v - ymin)/(ymax - ymin)*h;
+        py = Math.max(y, Math.min(y+h, py));
+        if (first) { g.moveTo(px, py); first = false; } else g.lineTo(px, py);
+      });
+      g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
+    });
+    g.restore();
+  }
+  function drawCharts() {
+    var dpr = window.devicePixelRatio || 1, w = chEl.clientWidth, h = chEl.clientHeight;
+    cc.width = Math.round(w*dpr); cc.height = Math.round(h*dpr);
+    gc.setTransform(dpr,0,0,dpr,0,0); gc.clearRect(0,0,w,h);
+    var x = 44, cw = w - x - 14, gap = 14, ch = (h - 3*gap - 12)/3, y = 10;
+    var J = mode === "leg" ? 1 : 0, name = mode === "leg" ? "knee" : "hip";
+    var lo = mode === "leg" ? -10 : -40, hi = mode === "leg" ? 80 : 40;
+    strip(gc, x, y, cw, ch, name + " flexion", [
+      { f: function (p) { return p.tru[J]/D2R; }, color: "#A0AEC0", width: 2.2 },
+      { f: function (p) { return p.u[J]/D2R; },   color: C.crimson, alpha: show.uik ? 1 : 0 },
+      { f: function (p) { return p.c[J]/D2R; },   color: C.forest, dash: [4,3], alpha: show.cik ? 1 : 0 }
+    ], lo, hi, "°");
+    y += ch + gap;
+    strip(gc, x, y, cw, ch, name + " error (estimate − true)", [
+      { f: function () { return 0; }, color: "#A0AEC0", width: 1 },
+      { f: function (p) { return (p.u[J]-p.tru[J])/D2R; }, color: C.crimson, alpha: show.uik ? 1 : 0 },
+      { f: function (p) { return (p.c[J]-p.tru[J])/D2R; }, color: C.forest, dash: [4,3], alpha: show.cik ? 1 : 0 }
+    ], -15, 15, "°");
+    y += ch + gap;
+    strip(gc, x, y, cw, ch, (mode === "leg" ? "knee gap" : "hip position error") + " in the unconstrained reconstruction", [
+      { f: function (p) { return p.gap*1e3; }, color: C.crimson, alpha: show.uik ? 1 : 0 }
+    ], 0, 40, " mm");
+    // legend
+    gc.font = "11px system-ui, sans-serif";
+    var lx = x + cw - 300, ly = 24;
+    [["true", "#A0AEC0", []], ["unconstrained", C.crimson, []], ["constrained", C.forest, [4,3]]].forEach(function (L, i) {
+      gc.strokeStyle = L[1]; gc.lineWidth = 2; gc.setLineDash(L[2]);
+      gc.beginPath(); gc.moveTo(lx + i*105, ly); gc.lineTo(lx + i*105 + 18, ly); gc.stroke(); gc.setLineDash([]);
+      gc.fillStyle = C.charcoal; gc.fillText(L[0], lx + i*105 + 22, ly + 4);
+    });
+  }
+
+  function rms(f) {
+    if (!hist.length) return NaN;
+    var s = 0; hist.forEach(function (p) { var v = f(p); s += v*v; });
+    return Math.sqrt(s/hist.length);
+  }
+  function drawReadout() {
+    function fmt(v) { return isFinite(v) ? v.toFixed(2) : "–"; }
+    var J = mode === "leg" ? 1 : 0;
+    document.getElementById("r_what").textContent = mode === "leg" ? "knee angle" : "hip angle";
+    document.getElementById("r_gapwhat").textContent = mode === "leg" ? "knee gap" : "hip position error";
+    document.getElementById("r_hipwrap").style.display = mode === "leg" ? "" : "none";
+    document.getElementById("r_u").textContent  = fmt(rms(function (p) { return (p.u[J]-p.tru[J])/D2R; }));
+    document.getElementById("r_c").textContent  = fmt(rms(function (p) { return (p.c[J]-p.tru[J])/D2R; }));
+    document.getElementById("r_uh").textContent = fmt(rms(function (p) { return (p.u[0]-p.tru[0])/D2R; }));
+    document.getElementById("r_ch").textContent = fmt(rms(function (p) { return (p.c[0]-p.tru[0])/D2R; }));
+    var g = 0, hg = 0; hist.forEach(function (p) { g += p.gap; hg += p.hip; });
+    document.getElementById("r_gap").textContent = hist.length ? (g/hist.length*1e3).toFixed(1) : "–";
+    document.getElementById("r_hipgap").textContent = hist.length ? (hg/hist.length*1e3).toFixed(1) : "–";
+    var note = document.getElementById("note");
+    if (P.noise === 0 && P.slide === 0 && P.fa >= 25 && P.fx >= 25)
+      note.textContent = "no noise, no artefact: both methods are exact";
+    else if (P.slide > 0)
+      note.textContent = "skin slide is systematic — averaging over markers cannot remove it";
+    else
+      note.textContent = "noise and wobble are zero-mean — the constrained fit averages them over " + (mode === "leg" ? "six" : "three") + " markers";
+  }
+
+  function draw() { drawLeg(); drawCharts(); drawReadout(); }
+
+  // ---- controls -----------------------------------------------------------
+  var SL_ = { speed: [0, "speed"], noise: [1, "noise"], fa: [1, "fa"], fx: [1, "fx"], zeta: [2, "zeta"], slide: [2, "slide"] };
+  Object.keys(SL_).forEach(function (id) {
+    var el = document.getElementById("s_" + id), v = document.getElementById("v_" + id);
+    function sync() { v.textContent = P[id].toFixed(SL_[id][0]); }
+    el.addEventListener("input", function () { P[id] = parseFloat(this.value); sync(); });
+    sync();
+  });
+  function restart() { t = 0; hist = []; initMarkers(); qc = [0, 0.3]; }
+  function notesLink() { document.getElementById("notes").href = "../../../notes/01-kinematics-kinetics/ik-notes-" + mode + ".html"; }
+  Array.prototype.forEach.call(document.querySelectorAll("input[name=mode]"), function (r) {
+    r.addEventListener("change", function () { if (this.checked) { mode = this.value; restart(); notesLink(); } });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("input[name=meth]"), function (r) {
+    r.addEventListener("change", function () { if (this.checked) method = this.value; });
+  });
+  [["c_true", "tru"], ["c_uik", "uik"], ["c_cik", "cik"]].forEach(function (p) {
+    document.getElementById(p[0]).addEventListener("change", function () { show[p[1]] = this.checked; });
+  });
+  document.getElementById("pause").addEventListener("click", function () {
+    paused = !paused; this.textContent = paused ? "play" : "pause";
+  });
+  document.getElementById("reset").addEventListener("click", restart);
+
+  // ---- presets from the URL: ?mode=thigh&noise=0&slide=0&fa=25&fx=25&zeta=1&method=fit
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SL_).forEach(function (id) {
+      if (q.has(id) && isFinite(parseFloat(q.get(id)))) {
+        P[id] = parseFloat(q.get(id));
+        document.getElementById("s_" + id).value = P[id];
+        document.getElementById("v_" + id).textContent = P[id].toFixed(SL_[id][0]);
+      }
+    });
+    if (q.get("method") === "fit") { method = "fit"; document.querySelector("input[name=meth][value=fit]").checked = true; }
+    if (q.get("mode") === "thigh") { mode = "thigh"; document.querySelector("input[name=mode][value=thigh]").checked = true; }
+    notesLink();
+  })();
+
+  window.addEventListener("resize", draw);
+  initMarkers();
+  // ?batch=N : run N seconds synchronously, draw once, no animation -- for
+  // checking the numbers without depending on the browser's frame timing
+  var batch = parseFloat(new URLSearchParams(location.search).get("batch"));
+  if (isFinite(batch) && batch > 0) {
+    WIN = batch;
+    var dtb = 1/FPS;
+    for (var f = 0; f < batch*FPS; f++) {
+      for (var s = 0; s < SUB; s++) { stepMarkers(t, dtb/SUB); t += dtb/SUB; }
+      var meas = measure(), q = truth(t), U = uik(meas), K = cik(meas);
+      last = { meas: meas, q: q, U: U, K: K };
+      hist.push({ t: t, tru: q, u: [U.th1, U.th2], c: [K.th1, K.th2], gap: U.gap, hip: Math.hypot(U.T.o[0], U.T.o[1]) });
+    }
+    draw();
+  } else {
+    tick();
+  }
+})();
+</script>
+</body>
+</html>

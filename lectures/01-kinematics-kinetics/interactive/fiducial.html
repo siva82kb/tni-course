@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One tag, one camera, full pose</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748; --forest: #2B6CB0; --crimson: #A51C30;
+    --seagreen: #2F855A; --warmgray: #718096; --grid: #CBD5E0;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; background: #fff; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+  #panel {
+    flex: 0 0 auto; display: flex; align-items: flex-start;
+    background: #FAFBFC; border-bottom: 1px solid #E2E8F0;
+    padding: 5px 10px 6px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #panel .grp { padding: 0 10px; border-left: 1px solid #E2E8F0; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel label { display: block; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 84px; height: 10px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 10px; height: 10px;
+    margin-top: -3.5px; border-radius: 50%; border: none; background: var(--crimson); }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 10px; height: 10px; border: none; border-radius: 50%; background: var(--crimson); }
+  #panel .k { display: inline-block; width: 2.6em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .val { display: inline-block; width: 3.0em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--crimson); }
+  #panel .row { margin-top: 2px; font-size: 10px; color: var(--warmgray); }
+  #panel input[type=checkbox] { width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0; }
+  #panel button, #steps button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 1px 2px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+
+  #panes { display: flex; flex: 1 1 auto; min-height: 0; }
+  .pane { position: relative; height: 100%; min-width: 0; }
+  #image { flex: 0 0 31%; cursor: default; }
+  #image.placing { cursor: crosshair; }
+  #world { flex: 1 1 auto; cursor: grab; border-left: 1px solid #E2E8F0; }
+  #world.dragging { cursor: grabbing; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .cap {
+    position: absolute; bottom: 6px; left: 0; right: 0; text-align: center;
+    font-size: 12px; color: var(--warmgray); pointer-events: none; user-select: none;
+  }
+  .cap.top { top: 4px; bottom: auto; }
+  .cap a { pointer-events: auto; color: var(--forest); }
+
+  /* ---- the steps column ---- */
+  #steps {
+    flex: 0 0 31%; border-left: 1px solid #E2E8F0; background: #FAFBFC;
+    overflow-y: auto; padding: 6px 10px 8px;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 10.5px; line-height: 1.35;
+  }
+  #steps .step { padding: 5px 0 6px; border-bottom: 1px solid #E2E8F0; }
+  #steps .step:last-child { border-bottom: 0; }
+  #steps .t { font-weight: 600; color: var(--charcoal); }
+  #steps .t .n { color: var(--forest); margin-right: 5px; }
+  #steps .t label { font-weight: 400; color: var(--warmgray); float: right; cursor: pointer; }
+  #steps .t input[type=checkbox] { width: 11px; height: 11px; vertical-align: -1px; margin: 0 3px 0 0; }
+  #steps .off .t { color: var(--warmgray); }
+  #steps .body { margin-top: 3px; color: #4A5568; font-variant-numeric: tabular-nums; }
+  #steps .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9.5px; white-space: pre; line-height: 1.3; }
+  #steps .warn { color: var(--crimson); }
+  #steps .good { color: var(--seagreen); }
+  #steps .ref { color: var(--warmgray); font-size: 9.5px; }
+  #steps .bars { display: flex; align-items: flex-end; gap: 2px; height: 26px; margin: 3px 0 1px; }
+  #steps .bars div { width: 9px; background: var(--forest); min-height: 1px; }
+  #steps .bars div.z { background: var(--crimson); }
+  #steps table { border-collapse: collapse; margin: 2px 0; }
+  #steps td, #steps th { padding: 0 6px 0 0; text-align: right; font-weight: 400; }
+  #steps th { color: var(--warmgray); font-size: 9.5px; }
+
+  #readout {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 18px;
+    padding: 6px 14px 7px; border-top: 1px solid #E2E8F0; background: #FAFBFC;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    overflow-x: auto; white-space: nowrap;
+  }
+  #readout .r { color: var(--crimson); }
+  #readout .b { color: var(--forest); }
+  #readout .note { color: var(--warmgray); font-size: 11.5px; font-style: italic;
+                   font-family: system-ui, sans-serif; }
+  #readout .note b { color: var(--crimson); font-style: normal; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">tag centre, in the camera frame (m)</div>
+      <label><span class="k">x</span>
+        <input type="range" id="s_x" min="-0.6" max="0.6" step="0.01" value="0.10">
+        <span class="val" id="v_x"></span></label>
+      <label><span class="k">y</span>
+        <input type="range" id="s_y" min="-0.4" max="0.4" step="0.01" value="-0.05">
+        <span class="val" id="v_y"></span></label>
+      <label><span class="k">z</span>
+        <input type="range" id="s_z" min="0.3" max="4" step="0.01" value="0.80">
+        <span class="val" id="v_z"></span></label>
+      <label><span class="k">d</span>
+        <input type="range" id="s_d" min="0.02" max="0.3" step="0.005" value="0.1">
+        <span class="val" id="v_d"></span> m <span style="color:var(--warmgray)">true side</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">tag orientation</div>
+      <label><span class="k">pan</span>
+        <input type="range" id="s_yaw" min="-85" max="85" step="0.5" value="30">
+        <span class="val" id="v_yaw"></span>&deg; <span style="color:var(--warmgray)">about y</span></label>
+      <label><span class="k">tilt</span>
+        <input type="range" id="s_pitch" min="-85" max="85" step="0.5" value="-20">
+        <span class="val" id="v_pitch"></span>&deg; <span style="color:var(--warmgray)">about x</span></label>
+      <label><span class="k">roll</span>
+        <input type="range" id="s_roll" min="-180" max="180" step="0.5" value="10">
+        <span class="val" id="v_roll"></span>&deg; <span style="color:var(--warmgray)">about z</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the measurement</div>
+      <label><span class="k">noise</span>
+        <input type="range" id="s_noise" min="0" max="3" step="0.1" value="0">
+        <span class="val" id="v_noise"></span> px</label>
+      <label><span class="k">d&#770;</span>
+        <input type="range" id="s_dhat" min="0.02" max="0.3" step="0.005" value="0.1">
+        <span class="val" id="v_dhat"></span> m <span style="color:var(--warmgray)">side the solver assumes</span></label>
+      <div class="row">
+        <button id="redraw">redraw noise</button>
+        <label style="display:inline"><input type="checkbox" id="c_place">place the corners by clicking</label>
+        <button id="clear">clear</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">presets</div>
+      <div class="row">
+        <button class="preset" data-p="square">square-on</button>
+        <button class="preset" data-p="oblique">oblique</button>
+        <button class="preset" data-p="far">far</button>
+        <button class="preset" data-p="default">default</button>
+      </div>
+      <div class="row">
+        <label style="display:inline"><input type="checkbox" id="c_closed" checked>show closed-form</label>
+        <label style="display:inline"><input type="checkbox" id="c_refined" checked>show refined</label>
+      </div>
+      <div class="row"><button id="reset">reset view</button> drag 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
+    </div>
+  </div>
+
+  <div id="panes">
+    <div class="pane" id="image">
+      <canvas id="ci"></canvas>
+      <div class="cap top"><span style="color:var(--forest)">the image</span> &middot; <span id="imgcap">the four corners, in order</span></div>
+    </div>
+    <div class="pane" id="world">
+      <canvas id="cw"></canvas>
+      <div class="cap">camera at the origin &middot; <span style="color:var(--charcoal)">true tag</span> &middot;
+        <span style="color:var(--crimson)">closed form</span> &middot; <span style="color:var(--forest)">refined</span>
+        &middot; every step derived in the <a href="../../../notes/01-kinematics-kinetics/fiducial-notes.html" target="_blank">companion notes</a></div>
+    </div>
+    <div id="steps">
+      <div class="step" id="st1">
+        <div class="t"><span class="n">1</span>the corners <span class="ref">§3–4</span></div>
+        <div class="body" id="b1"></div>
+      </div>
+      <div class="step" id="st2">
+        <div class="t"><span class="n">2</span>build A, 8&times;9, and take its null vector <span class="ref">§5</span>
+          <label><input type="checkbox" id="k_lambda" checked>keep &lambda;</label></div>
+        <div class="body" id="b2"></div>
+      </div>
+      <div class="step" id="st3">
+        <div class="t"><span class="n">3</span>M = K<sub>f</sub><sup>&minus;1</sup>H: scale and sign <span class="ref">§6.1–2</span>
+          <label><input type="checkbox" id="k_sign" checked>fix the sign</label></div>
+        <div class="body" id="b3"></div>
+      </div>
+      <div class="step" id="st4">
+        <div class="t"><span class="n">4</span>r<sub>3</sub> = r<sub>1</sub>&times;r<sub>2</sub>, nearest rotation <span class="ref">§6.3–4</span>
+          <label><input type="checkbox" id="k_snap" checked>snap to a rotation</label></div>
+        <div class="body" id="b4"></div>
+      </div>
+      <div class="step" id="st5">
+        <div class="t"><span class="n">5</span>refine on the reprojection error <span class="ref">§7</span>
+          <label><input type="checkbox" id="k_refine" checked>refine</label></div>
+        <div class="body" id="b5"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="readout">
+    <span id="numbers"></span>
+    <span class="note" id="note"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = { charcoal:"#2D3748", forest:"#2B6CB0", crimson:"#A51C30",
+            seagreen:"#2F855A", warmgray:"#718096", grid:"#CBD5E0" };
+
+  // ---- small linear algebra ----------------------------------------------
+  function dot(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function add(a, b) { return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+  function sub(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function mul(a, s) { return [a[0]*s, a[1]*s, a[2]*s]; }
+  function len(a) { return Math.sqrt(dot(a, a)); }
+  function cross(a, b) {
+    return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function mv(M, v) { return [dot(M[0], v), dot(M[1], v), dot(M[2], v)]; }
+  function tr(M) { return [[M[0][0],M[1][0],M[2][0]],
+                           [M[0][1],M[1][1],M[2][1]],
+                           [M[0][2],M[1][2],M[2][2]]]; }
+  function mm(A, B) { var T = tr(B);
+    return [[dot(A[0],T[0]),dot(A[0],T[1]),dot(A[0],T[2])],
+            [dot(A[1],T[0]),dot(A[1],T[1]),dot(A[1],T[2])],
+            [dot(A[2],T[0]),dot(A[2],T[1]),dot(A[2],T[2])]]; }
+  function col(M, j) { return [M[0][j], M[1][j], M[2][j]]; }
+  function cols(a, b, c) { return [[a[0],b[0],c[0]],[a[1],b[1],c[1]],[a[2],b[2],c[2]]]; }
+  function det3(M) {
+    return M[0][0]*(M[1][1]*M[2][2]-M[1][2]*M[2][1]) - M[0][1]*(M[1][0]*M[2][2]-M[1][2]*M[2][0])
+         + M[0][2]*(M[1][0]*M[2][1]-M[1][1]*M[2][0]); }
+  function rotX(a) { var c=Math.cos(a), s=Math.sin(a); return [[1,0,0],[0,c,-s],[0,s,c]]; }
+  function rotY(a) { var c=Math.cos(a), s=Math.sin(a); return [[c,0,s],[0,1,0],[-s,0,c]]; }
+  function rotZ(a) { var c=Math.cos(a), s=Math.sin(a); return [[c,-s,0],[s,c,0],[0,0,1]]; }
+  var I3 = [[1,0,0],[0,1,0],[0,0,1]];
+  // rotation about a unit axis by an angle (Rodrigues)
+  function axisAngle(w) {
+    var th = len(w); if (th < 1e-12) return I3;
+    var k = mul(w, 1/th), c = Math.cos(th), s = Math.sin(th), v = 1 - c;
+    return [[c + k[0]*k[0]*v,       k[0]*k[1]*v - k[2]*s,  k[0]*k[2]*v + k[1]*s],
+            [k[1]*k[0]*v + k[2]*s,  c + k[1]*k[1]*v,       k[1]*k[2]*v - k[0]*s],
+            [k[2]*k[0]*v - k[1]*s,  k[2]*k[1]*v + k[0]*s,  c + k[2]*k[2]*v]];
+  }
+  function inv3(M) {
+    var d = det3(M), a = M;
+    return [[(a[1][1]*a[2][2]-a[1][2]*a[2][1])/d, (a[0][2]*a[2][1]-a[0][1]*a[2][2])/d, (a[0][1]*a[1][2]-a[0][2]*a[1][1])/d],
+            [(a[1][2]*a[2][0]-a[1][0]*a[2][2])/d, (a[0][0]*a[2][2]-a[0][2]*a[2][0])/d, (a[0][2]*a[1][0]-a[0][0]*a[1][2])/d],
+            [(a[1][0]*a[2][1]-a[1][1]*a[2][0])/d, (a[0][1]*a[2][0]-a[0][0]*a[2][1])/d, (a[0][0]*a[1][1]-a[0][1]*a[1][0])/d]];
+  }
+
+  // Eigen-decomposition of a symmetric matrix by cyclic Jacobi rotations.
+  // Returns { val: [...], vec: [[...], ...] } with vec[j] the eigenvector of val[j],
+  // sorted descending. Used for the null vector of A (via A^T A) and for the
+  // nearest rotation (via R'^T R').
+  function symEig(S) {
+    var n = S.length, A = S.map(function (r) { return r.slice(); });
+    var V = []; for (var i = 0; i < n; i++) { V.push([]); for (var j = 0; j < n; j++) V[i].push(i === j ? 1 : 0); }
+    for (var sweep = 0; sweep < 60; sweep++) {
+      var off = 0;
+      for (var p = 0; p < n; p++) for (var q = p+1; q < n; q++) off += A[p][q]*A[p][q];
+      if (off < 1e-30) break;
+      for (p = 0; p < n; p++) for (q = p+1; q < n; q++) {
+        if (Math.abs(A[p][q]) < 1e-300) continue;
+        var theta = (A[q][q] - A[p][p]) / (2*A[p][q]);
+        var t = (theta >= 0 ? 1 : -1) / (Math.abs(theta) + Math.sqrt(theta*theta + 1));
+        var c = 1/Math.sqrt(t*t + 1), s = t*c;
+        for (var k = 0; k < n; k++) {
+          var akp = A[k][p], akq = A[k][q];
+          A[k][p] = c*akp - s*akq; A[k][q] = s*akp + c*akq;
+        }
+        for (k = 0; k < n; k++) {
+          var apk = A[p][k], aqk = A[q][k];
+          A[p][k] = c*apk - s*aqk; A[q][k] = s*apk + c*aqk;
+        }
+        for (k = 0; k < n; k++) {
+          var vkp = V[k][p], vkq = V[k][q];
+          V[k][p] = c*vkp - s*vkq; V[k][q] = s*vkp + c*vkq;
+        }
+      }
+    }
+    var idx = []; for (i = 0; i < n; i++) idx.push(i);
+    idx.sort(function (a, b) { return A[b][b] - A[a][a]; });
+    return { val: idx.map(function (j) { return A[j][j]; }),
+             vec: idx.map(function (j) { return V.map(function (r) { return r[j]; }); }) };
+  }
+  // Solve the small square system M x = b by Gaussian elimination with pivoting.
+  function solve(M, b) {
+    var n = b.length, A = M.map(function (r, i) { return r.concat([b[i]]); });
+    for (var c = 0; c < n; c++) {
+      var p = c; for (var r = c+1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+      var tmp = A[c]; A[c] = A[p]; A[p] = tmp;
+      if (Math.abs(A[c][c]) < 1e-14) return null;
+      for (r = 0; r < n; r++) {
+        if (r === c) continue;
+        var f = A[r][c] / A[c][c];
+        for (var k = c; k <= n; k++) A[r][k] -= f * A[c][k];
+      }
+    }
+    return A.map(function (r, i) { return r[n] / r[i]; });
+  }
+
+  // ---- the camera and the tag ----------------------------------------------
+  var NU = 640, NV = 480;
+  var cam = { f: 800, u0: 320, v0: 240 };
+  function Kf() { return [[cam.f, 0, cam.u0], [0, cam.f, cam.v0], [0, 0, 1]]; }
+  var D = 0.10;                                   // the tag's true side, metres
+  var dhat = D;                                   // the side the solver is told
+  // tag36h11, id 0: the black cells of the 8x8 pattern (col, row), row 0 at the bottom
+  var BLACK = [[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[7,7],[0,6],[1,6],[2,6],[4,6],[5,6],[6,6],[7,6],
+               [0,5],[1,5],[4,5],[6,5],[7,5],[0,4],[1,4],[2,4],[3,4],[5,4],[7,4],[0,3],[1,3],[2,3],[3,3],
+               [6,3],[7,3],[0,2],[2,2],[6,2],[7,2],[0,1],[2,1],[4,1],[7,1],[0,0],[1,0],[2,0],[3,0],[4,0],
+               [5,0],[6,0],[7,0]];
+  // the corners in the tag frame, in the detector's order, as (a, b) with a, b = +-1
+  var CORN = [[-1,-1],[1,-1],[1,1],[-1,1]];
+
+  var DEFP = { x: 0.10, y: -0.05, z: 0.80, yaw: 30, pitch: -20, roll: 10 };
+  var pose = { x: DEFP.x, y: DEFP.y, z: DEFP.z, yaw: DEFP.yaw, pitch: DEFP.pitch, roll: DEFP.roll };
+  var noise = 0;
+  // the true pose: R's columns are the tag axes in the camera frame, o the centre.
+  // Facing the camera means x_W to the right, y_W down the image... no: y_W up on
+  // the paper, which is -y in the camera (y points down), and z_W towards the
+  // camera (-z). So R0 = diag(1, -1, -1) and the sliders turn the tag from there.
+  var R0 = [[1,0,0],[0,-1,0],[0,0,-1]];
+  function truePose() {
+    var d = Math.PI/180;
+    return { R: mm(mm(mm(rotY(pose.yaw*d), rotX(pose.pitch*d)), rotZ(pose.roll*d)), R0),
+             o: [pose.x, pose.y, pose.z] };
+  }
+  function tagPoint(P, a, b, side) {       // (a, b) in units of half the side -> camera frame
+    return add(P.o, add(mul(col(P.R, 0), a*side/2), mul(col(P.R, 1), b*side/2)));
+  }
+  function pix(X) {                        // the pinhole, with the division by depth
+    if (X[2] < 0.02) return null;
+    return [cam.f*X[0]/X[2] + cam.u0, cam.f*X[1]/X[2] + cam.v0, X[2]];
+  }
+
+  // ---- the measurement ----------------------------------------------------------
+  var NZ = [];                              // eight unit normals, scaled by the noise slider
+  function gauss() { var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2*Math.log(u)) * Math.cos(2*Math.PI*v); }
+  function redraw() { NZ = []; for (var i = 0; i < 8; i++) NZ.push(gauss()); }
+  redraw();
+  var placing = false, clicks = [];         // the student's own corners, in order
+
+  function measured() {
+    var T = truePose();
+    var exact = CORN.map(function (c) { return pix(tagPoint(T, c[0], c[1], D)); });
+    if (placing) {
+      if (clicks.length < 4) return { ok: false, exact: exact, pts: clicks.slice() };
+      return { ok: true, exact: exact, pts: clicks.slice(0, 4) };
+    }
+    if (exact.some(function (p) { return !p; })) return { ok: false, exact: exact, pts: [] };
+    return { ok: true, exact: exact,
+             pts: exact.map(function (p, i) { return [p[0] + noise*NZ[2*i], p[1] + noise*NZ[2*i+1]]; }) };
+  }
+
+  // ---- the solver, step by step ------------------------------------------------
+  var keep = { lambda: true, sign: true, snap: true, refine: true };
+
+  // Step 2: the 8x9 system and its null vector. Coordinates are first rescaled to
+  // order one (tag units +-1, pixels to +-1 about the image centre), which keeps
+  // A well conditioned; H is mapped back afterwards. With "keep lambda" off, the
+  // third row is dropped: x_i = h1.q_i, y_i = h2.q_i, an affine camera -- the
+  // slip the notes warn about -- solved in the least-squares sense (8 eq, 6 unk).
+  function solveH(pts) {
+    var Tq = [[2/dhat, 0, 0], [0, 2/dhat, 0], [0, 0, 1]];                  // metres -> +-1
+    var sp = 2/Math.max(NU, NV);
+    var Tp = [[sp, 0, -sp*NU/2], [0, sp, -sp*NV/2], [0, 0, 1]];              // pixels -> about +-1
+    var rows = [], q = [];
+    for (var i = 0; i < 4; i++) {
+      q.push([CORN[i][0], CORN[i][1], 1]);
+      var pp = mv(Tp, [pts[i][0], pts[i][1], 1]), x = pp[0], y = pp[1];
+      if (keep.lambda) {
+        rows.push([q[i][0], q[i][1], 1, 0, 0, 0, -x*q[i][0], -x*q[i][1], -x]);
+        rows.push([0, 0, 0, q[i][0], q[i][1], 1, -y*q[i][0], -y*q[i][1], -y]);
+      } else {
+        rows.push([q[i][0], q[i][1], 1, 0, 0, 0, x]);                        // last entry: rhs
+        rows.push([0, 0, 0, q[i][0], q[i][1], 1, y]);
+      }
+    }
+    var Hn, sv = [];
+    if (keep.lambda) {
+      var AtA = [];
+      for (var r = 0; r < 9; r++) { AtA.push([]); for (var c = 0; c < 9; c++) {
+        var s = 0; for (var k = 0; k < 8; k++) s += rows[k][r]*rows[k][c]; AtA[r].push(s); } }
+      var e = symEig(AtA);
+      sv = e.val.map(function (v) { return Math.sqrt(Math.max(v, 0)); });   // singular values of A
+      var h = e.vec[8];                                                      // the null vector
+      Hn = [[h[0],h[1],h[2]],[h[3],h[4],h[5]],[h[6],h[7],h[8]]];
+    } else {
+      var N = [], b = [];
+      for (r = 0; r < 6; r++) { N.push([]); b.push(0); for (c = 0; c < 6; c++) {
+        s = 0; for (k = 0; k < 8; k++) s += rows[k][r]*rows[k][c]; N[r].push(s); }
+        for (k = 0; k < 8; k++) b[r] += rows[k][r]*rows[k][6]; }
+      var g = solve(N, b) || [0,0,0,0,0,0];
+      Hn = [[g[0],g[1],g[2]],[g[3],g[4],g[5]],[0,0,1]];
+    }
+    // undo the rescaling: H = Tp^-1 Hn Tq
+    var H = mm(mm(inv3(Tp), Hn), Tq);
+    // normalise so the display is stable: unit Frobenius norm, h33 >= 0 sign-free
+    var nrm = 0; for (r = 0; r < 3; r++) for (c = 0; c < 3; c++) nrm += H[r][c]*H[r][c];
+    nrm = Math.sqrt(nrm); for (r = 0; r < 3; r++) for (c = 0; c < 3; c++) H[r][c] /= nrm;
+    var lam = q.map(function (qi, i) {       // lambda_i = h3 . q_i (in metres)
+      var qm = [qi[0]*dhat/2, qi[1]*dhat/2, 1]; return dot(H[2], qm); });
+    return { H: H, sv: sv, lam: lam };
+  }
+
+  // Step 3: M = K^-1 H, the scale from the two column norms, the sign from o_z > 0.
+  function scaleSign(H) {
+    var M = mm(inv3(Kf()), H);
+    var m1 = col(M, 0), m2 = col(M, 1), m3 = col(M, 2);
+    var n1 = len(m1), n2 = len(m2), c = (n1 + n2)/2;
+    var sgn = 1;
+    if (keep.sign) { if (m3[2]/c < 0) sgn = -1; }
+    else { if (m3[2]/c > 0) sgn = -1; }   // the OTHER root, to show the equations allow it
+    var r1 = mul(m1, sgn/c), r2 = mul(m2, sgn/c), o = mul(m3, sgn/c);
+    // the depth of each corner under this pose: lambda_i = z-component of x_W r1 + y_W r2 + o
+    var lam = CORN.map(function (q) { return q[0]*dhat/2*r1[2] + q[1]*dhat/2*r2[2] + o[2]; });
+    return { M: M, n1: n1, n2: n2, dotp: dot(m1, m2)/(n1*n2), c: c, r1: r1, r2: r2, o: o, lam: lam };
+  }
+
+  // Step 4: the third column, and the nearest rotation (polar decomposition:
+  // R = R' (R'^T R')^-1/2, with the sign of the smallest direction fixed).
+  function orthonormalise(r1, r2) {
+    var r3 = cross(r1, r2);
+    var Rp = cols(r1, r2, r3);
+    var G = mm(tr(Rp), Rp);
+    if (!keep.snap) return { Rp: Rp, G: G, R: Rp, snapped: false };
+    var e = symEig(G);
+    var V = cols(e.vec[0], e.vec[1], e.vec[2]);
+    var Si = [[1/Math.sqrt(Math.max(e.val[0],1e-18)),0,0],[0,1/Math.sqrt(Math.max(e.val[1],1e-18)),0],[0,0,1/Math.sqrt(Math.max(e.val[2],1e-18))]];
+    // R' = U S V^T with U = R' V S^-1; the nearest rotation is U diag(1,1,det UV^T) V^T
+    var U = mm(Rp, mm(V, Si));
+    var d = det3(mm(U, tr(V)));
+    var R = mm(U, mm([[1,0,0],[0,1,0],[0,0,d < 0 ? -1 : 1]], tr(V)));
+    return { Rp: Rp, G: G, R: R, snapped: true };
+  }
+  function mul3(M, s) { return M.map(function (r) { return mul(r, s); }); }
+
+  // Step 5: Gauss-Newton on the reprojection error, six parameters (a small
+  // rotation applied on the left, and a shift of o), finite-difference Jacobian.
+  function reproj(R, o, pts) {
+    var P = { R: R, o: o }, res = [], rms = 0;
+    for (var i = 0; i < 4; i++) {
+      var p = pix(tagPoint(P, CORN[i][0], CORN[i][1], dhat));
+      if (!p) return null;
+      res.push(p[0] - pts[i][0], p[1] - pts[i][1]);
+      rms += (p[0]-pts[i][0])*(p[0]-pts[i][0]) + (p[1]-pts[i][1])*(p[1]-pts[i][1]);
+    }
+    return { res: res, rms: Math.sqrt(rms/8) };
+  }
+  function refine(R, o, pts, iters) {
+    var eps = 1e-6, it;
+    for (it = 0; it < iters; it++) {
+      var r0 = reproj(R, o, pts); if (!r0) return { R: R, o: o, iters: it, ok: false };
+      var J = [];                                            // 8 x 6
+      for (var i = 0; i < 8; i++) J.push([0,0,0,0,0,0]);
+      for (var j = 0; j < 6; j++) {
+        var Rj = R, oj = o;
+        if (j < 3) { var w = [0,0,0]; w[j] = eps; Rj = mm(axisAngle(w), R); }
+        else { oj = o.slice(); oj[j-3] += eps; }
+        var rj = reproj(Rj, oj, pts); if (!rj) return { R: R, o: o, iters: it, ok: false };
+        for (i = 0; i < 8; i++) J[i][j] = (rj.res[i] - r0.res[i]) / eps;
+      }
+      var N = [], b = [];                                    // normal equations, 6 x 6
+      for (var p = 0; p < 6; p++) { N.push([]); b.push(0);
+        for (var q = 0; q < 6; q++) { var s = 0; for (i = 0; i < 8; i++) s += J[i][p]*J[i][q]; N[p].push(s); }
+        for (i = 0; i < 8; i++) b[p] -= J[i][p]*r0.res[i]; }
+      var step = solve(N, b); if (!step) break;
+      R = mm(axisAngle([step[0], step[1], step[2]]), R);
+      o = add(o, [step[3], step[4], step[5]]);
+      if (Math.hypot(step[0],step[1],step[2]) < 1e-9 && Math.hypot(step[3],step[4],step[5]) < 1e-9) { it++; break; }
+    }
+    return { R: R, o: o, iters: it, ok: true };
+  }
+
+  // The whole pipeline, run afresh on every frame.
+  function run() {
+    var m = measured(), st = { m: m };
+    if (!m.ok) return st;
+    st.h = solveH(m.pts);
+    st.s = scaleSign(st.h.H);
+    st.q = orthonormalise(st.s.r1, st.s.r2);
+    st.closed = { R: st.q.R, o: st.s.o };
+    st.closedRe = reproj(st.closed.R, st.closed.o, m.pts);
+    if (keep.refine && st.q.snapped) {
+      var rf = refine(st.closed.R, st.closed.o, m.pts, 12);
+      st.refined = { R: rf.R, o: rf.o, iters: rf.iters, ok: rf.ok };
+      st.refinedRe = reproj(rf.R, rf.o, m.pts);
+    }
+    var T = truePose();
+    st.T = T;
+    st.errClosed = poseError(T, st.closed);
+    if (st.refined) st.errRefined = poseError(T, st.refined);
+    return st;
+  }
+  function poseError(T, P) {
+    var RtR = mm(tr(T.R), P.R);
+    var ca = (RtR[0][0] + RtR[1][1] + RtR[2][2] - 1)/2;
+    var ang = Math.acos(Math.max(-1, Math.min(1, ca))) * 180/Math.PI;
+    if (det3(P.R) < 0.5 || Math.abs(dot(col(P.R,0), col(P.R,0)) - 1) > 1e-3) ang = NaN;   // not a rotation
+    return { ang: ang, pos: len(sub(P.o, T.o)) };
+  }
+
+  // ---- orbit view of the world (orthographic) ----------------------------
+  var DEF = { az: 0.75, el: 0.38, scale: 560, px: 0, py: 10 };
+  var CENTRE = [0.05, 0, 0.45];
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: DEF.px, py: DEF.py };
+  var W = 0, H = 0;
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    var d = [ce * sa, -se, -ce * ca];
+    var r = [ca, 0, sa];
+    return { right: r, up: cross(d, r), dir: d };
+  }
+  var Bs = basis();
+  // The view follows the tag's distance: the orbit centre sits between the
+  // camera and the tag, and the scale shrinks as the tag goes farther, so that
+  // camera, rays and tag stay in frame at any z. Scroll-zoom multiplies this.
+  function project(p) {
+    var centre = [CENTRE[0], CENTRE[1], 0.55*pose.z];
+    var sc = view.scale * Math.min(1, 0.8/pose.z);
+    var q = sub(p, centre);
+    return { x: W/2 + view.px + dot(Bs.right, q) * sc,
+             y: H/2 + view.py - dot(Bs.up, q) * sc };
+  }
+  var world = document.getElementById("world");
+  var cw = document.getElementById("cw"), gw = cw.getContext("2d");
+  function line3(g, a, b, colour, width, dash, alpha) {
+    var A = project(a), Bp = project(b);
+    g.save(); g.strokeStyle = colour; g.lineWidth = width || 1;
+    g.setLineDash(dash || []); g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(Bp.x, Bp.y); g.stroke(); g.restore();
+  }
+  function arrow3(g, a, b, colour, width, head) {
+    line3(g, a, b, colour, width);
+    var A = project(a), Bp = project(b);
+    var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = head || 7, w = 0.42;
+    g.save(); g.fillStyle = colour; g.beginPath();
+    g.moveTo(Bp.x, Bp.y);
+    g.lineTo(Bp.x - L*Math.cos(ang - w), Bp.y - L*Math.sin(ang - w));
+    g.lineTo(Bp.x - L*Math.cos(ang + w), Bp.y - L*Math.sin(ang + w));
+    g.closePath(); g.fill(); g.restore();
+  }
+  function disc3(g, p, colour, r, alpha) {
+    var s = project(p);
+    g.save(); g.globalAlpha = alpha === undefined ? 1 : alpha;
+    g.fillStyle = colour; g.beginPath(); g.arc(s.x, s.y, r, 0, 2*Math.PI); g.fill(); g.restore();
+  }
+  function poly3(g, pts, colour, alpha, stroke, width, dash) {
+    g.save(); g.beginPath();
+    pts.forEach(function (q, i) { var s = project(q); i ? g.lineTo(s.x, s.y) : g.moveTo(s.x, s.y); });
+    g.closePath();
+    if (colour) { g.fillStyle = colour; g.globalAlpha = alpha; g.fill(); }
+    if (stroke) { g.globalAlpha = 1; g.strokeStyle = stroke; g.lineWidth = width || 1; g.setLineDash(dash || []); g.stroke(); }
+    g.restore();
+  }
+
+  function drawTag3(P, side, pattern, stroke, width, dash, axes) {
+    var c = CORN.map(function (q) { return tagPoint(P, q[0], q[1], side); });
+    if (pattern) {
+      poly3(gw, c, "#fff", 1);
+      BLACK.forEach(function (cell) {
+        var a0 = -1 + cell[0]/4, a1 = a0 + 0.25, b0 = -1 + cell[1]/4, b1 = b0 + 0.25;
+        poly3(gw, [tagPoint(P,a0,b0,side), tagPoint(P,a1,b0,side), tagPoint(P,a1,b1,side), tagPoint(P,a0,b1,side)], "#000", 1, "#000", 0.4);
+      });
+    }
+    poly3(gw, c, null, 0, stroke, width, dash);
+    if (axes) {
+      var L = side*0.9;
+      arrow3(gw, P.o, add(P.o, mul(col(P.R,0), L)), axes, 1.6);
+      arrow3(gw, P.o, add(P.o, mul(col(P.R,1), L)), axes, 1.6);
+      arrow3(gw, P.o, add(P.o, mul(col(P.R,2), L)), axes, 1.6);
+      disc3(gw, P.o, axes, 3);
+    }
+  }
+  function drawCamera3() {
+    var o = [0,0,0], PZ = 0.25;
+    arrow3(gw, o, [0.18,0,0], C.forest, 1.8); arrow3(gw, o, [0,0.18,0], C.forest, 1.8); arrow3(gw, o, [0,0,0.18], C.forest, 1.8);
+    var corners = [[0,0],[NU,0],[NU,NV],[0,NV]].map(function (q) {
+      return [(q[0]-cam.u0)/cam.f*PZ, (q[1]-cam.v0)/cam.f*PZ, PZ]; });
+    poly3(gw, corners, C.forest, .08, C.forest, 1, []);
+    corners.forEach(function (c) { line3(gw, o, c, C.forest, .6, [], .35); });
+    disc3(gw, o, C.forest, 4);
+    gw.save(); gw.fillStyle = C.forest; gw.font = "italic 12px Georgia, serif";
+    var s = project([0.19,0,0]); gw.fillText("x", s.x+3, s.y+4);
+    s = project([0,0.19,0]); gw.fillText("y", s.x+3, s.y+4);
+    s = project([0,0,0.19]); gw.fillText("z", s.x+3, s.y+4);
+    s = project(o); gw.fillText("C", s.x-14, s.y+14);
+    gw.restore();
+  }
+  function drawWorld(st) {
+    Bs = basis();
+    var dpr = window.devicePixelRatio || 1;
+    W = world.clientWidth; H = world.clientHeight;
+    cw.width = Math.round(W*dpr); cw.height = Math.round(H*dpr);
+    gw.setTransform(dpr,0,0,dpr,0,0); gw.clearRect(0,0,W,H);
+    // a floor at y = +0.45 (y points down), 0.25 m grid
+    var FL = 0.45, X0 = -1, X1 = 1, Z0 = -0.25, Z1 = 4.25;
+    poly3(gw, [[X0,FL,Z0],[X1,FL,Z0],[X1,FL,Z1],[X0,FL,Z1]], "#000", .03);
+    for (var gx = X0; gx <= X1 + 1e-9; gx += 0.25) line3(gw, [gx,FL,Z0], [gx,FL,Z1], C.grid, .6, [], .5);
+    for (var gz = Z0; gz <= Z1 + 1e-9; gz += 0.25) line3(gw, [X0,FL,gz], [X1,FL,gz], C.grid, .6, [], .5);
+    drawCamera3();
+    var T = truePose();
+    // rays from the camera to the true corners
+    CORN.forEach(function (q) { line3(gw, [0,0,0], tagPoint(T, q[0], q[1], D), C.warmgray, .5, [3,3], .6); });
+    drawTag3(T, D, true, C.charcoal, 1, [], C.charcoal);
+    if (st.closed && show.closed) drawTag3(st.closed, dhat, false, C.crimson, 1.6, [], C.crimson);
+    if (st.refined && show.refined) drawTag3(st.refined, dhat, false, C.forest, 1.6, [5,3], C.forest);
+  }
+
+  // ---- the image pane -----------------------------------------------------------
+  var imgEl = document.getElementById("image"), ci = document.getElementById("ci"), gi = ci.getContext("2d");
+  var geo = {};
+  function drawImage(st) {
+    var dpr = window.devicePixelRatio || 1;
+    var w = imgEl.clientWidth, h = imgEl.clientHeight;
+    ci.width = Math.round(w*dpr); ci.height = Math.round(h*dpr);
+    gi.setTransform(dpr,0,0,dpr,0,0); gi.clearRect(0,0,w,h);
+    var s = Math.min((w-16)/NU, (h-30)/NV);
+    var ox = (w - NU*s)/2, oy = 22 + (h - 26 - NV*s)/2;
+    geo = { k: s, ox: ox, oy: oy };
+    function X(u) { return ox + u*s; } function Y(v) { return oy + v*s; }
+    gi.save();
+    gi.fillStyle = "#F7FAFC"; gi.fillRect(ox, oy, NU*s, NV*s);
+    gi.strokeStyle = C.grid; gi.globalAlpha = .7; gi.lineWidth = .5;
+    for (var i = 0; i <= NU; i += 40) { gi.beginPath(); gi.moveTo(X(i), oy); gi.lineTo(X(i), oy+NV*s); gi.stroke(); }
+    for (var j = 0; j <= NV; j += 40) { gi.beginPath(); gi.moveTo(ox, Y(j)); gi.lineTo(ox+NU*s, Y(j)); gi.stroke(); }
+    gi.restore();
+    gi.save(); gi.beginPath(); gi.rect(ox, oy, NU*s, NV*s); gi.clip();
+    // the tag as the camera sees it: every cell projected through the pinhole
+    var T = truePose();
+    function quad(pts, fill, stroke, width, dash) {
+      var pp = pts.map(pix); if (pp.some(function (p) { return !p; })) return;
+      gi.beginPath(); pp.forEach(function (p, i) { i ? gi.lineTo(X(p[0]), Y(p[1])) : gi.moveTo(X(p[0]), Y(p[1])); }); gi.closePath();
+      if (fill) { gi.fillStyle = fill; gi.fill(); }
+      if (stroke) { gi.strokeStyle = stroke; gi.lineWidth = width || 1; gi.setLineDash(dash || []); gi.stroke(); gi.setLineDash([]); }
+    }
+    quad(CORN.map(function (q) { return tagPoint(T, q[0], q[1], D); }), "#fff");
+    BLACK.forEach(function (cell) {
+      var a0 = -1 + cell[0]/4, a1 = a0 + 0.25, b0 = -1 + cell[1]/4, b1 = b0 + 0.25;
+      quad([tagPoint(T,a0,b0,D), tagPoint(T,a1,b0,D), tagPoint(T,a1,b1,D), tagPoint(T,a0,b1,D)], "#000", "#000", 0.4);
+    });
+    // where the closed-form and refined poses put the corners
+    function reproQuad(P, colour, dash) {
+      var pts = CORN.map(function (q) { return tagPoint(P, q[0], q[1], dhat); });
+      quad(pts, null, colour, 1.4, dash);
+      pts.forEach(function (p3) { var p = pix(p3); if (!p) return;
+        gi.strokeStyle = colour; gi.lineWidth = 1.4; gi.beginPath(); gi.arc(X(p[0]), Y(p[1]), 5, 0, 2*Math.PI); gi.stroke(); });
+    }
+    if (st.closed && show.closed) reproQuad(st.closed, C.crimson, []);
+    if (st.refined && show.refined) reproQuad(st.refined, C.forest, [5,3]);
+    // the measured corners, numbered
+    var pts = st.m.pts;
+    gi.font = "bold 10px system-ui, sans-serif";
+    pts.forEach(function (p, i) {
+      gi.fillStyle = C.crimson; gi.beginPath(); gi.arc(X(p[0]), Y(p[1]), 3.2, 0, 2*Math.PI); gi.fill();
+      gi.fillText(String(i), X(p[0]) + 6, Y(p[1]) - 5);
+    });
+    if (placing && hover) {
+      gi.strokeStyle = C.crimson; gi.lineWidth = 1.2; gi.beginPath(); gi.arc(X(hover[0]), Y(hover[1]), 6, 0, 2*Math.PI); gi.stroke();
+    }
+    gi.restore();
+    gi.strokeStyle = "#A0AEC0"; gi.lineWidth = 1; gi.strokeRect(ox, oy, NU*s, NV*s);
+  }
+  var hover = null;
+  function toPixel(e) {
+    var r = imgEl.getBoundingClientRect();
+    var u = (e.clientX - r.left - geo.ox) / geo.k, v = (e.clientY - r.top - geo.oy) / geo.k;
+    return (u < 0 || u > NU || v < 0 || v > NV) ? null : [u, v];
+  }
+  imgEl.addEventListener("click", function (e) {
+    if (!placing) return;
+    var p = toPixel(e); if (!p) return;
+    if (clicks.length >= 4) clicks = [];
+    clicks.push(p); draw();
+  });
+  imgEl.addEventListener("pointermove", function (e) {
+    if (!placing) return; hover = toPixel(e); draw(); });
+  imgEl.addEventListener("pointerleave", function () { if (hover) { hover = null; draw(); } });
+
+  // ---- the steps column ----------------------------------------------------
+  function f(x, d) { return (Math.abs(x) < 0.5*Math.pow(10, -d) ? 0 : x).toFixed(d); }
+  function pad(x, d, w) { var s = f(x, d); while (s.length < w) s = " " + s; return s; }
+  function mat(M, d, w) { return M.map(function (r) { return "[" + r.map(function (x) { return pad(x, d, w); }).join(" ") + " ]"; }).join("\n"); }
+  function vec(v, d) { return "(" + v.map(function (x) { return f(x, d); }).join(", ") + ")"; }
+  function setBody(id, html) { document.getElementById("b" + id).innerHTML = html; }
+
+  function drawSteps(st) {
+    ["lambda","sign","snap","refine"].forEach(function (k, i) {
+      document.getElementById("st" + (i+2)).classList.toggle("off", !keep[k]); });
+    if (!st.m.ok) {
+      setBody(1, placing ? "<span class='warn'>click the four corners of the tag in the image, in the order 0, 1, 2, 3 (" + st.m.pts.length + " of 4 placed)</span>"
+                         : "<span class='warn'>a corner is off the sensor or behind the camera</span>");
+      [2,3,4,5].forEach(function (i) { setBody(i, ""); });
+      return;
+    }
+    // 1
+    var s = "<table><tr><th>i</th><th>(x<sub>W</sub>, y<sub>W</sub>)</th><th>x<sub>i</sub>, y<sub>i</sub> (px)</th><th>&lambda;<sub>i</sub> (m)</th></tr>";
+    for (var i = 0; i < 4; i++)
+      s += "<tr><td>" + i + "</td><td>(" + f(CORN[i][0]*dhat/2, 3) + ", " + f(CORN[i][1]*dhat/2, 3) + ")</td><td>" +
+           f(st.m.pts[i][0], 1) + ", " + f(st.m.pts[i][1], 1) + "</td><td>" +
+           (keep.lambda ? f(st.s.lam[i], 3) : "<span class='warn'>dropped</span>") + "</td></tr>";
+    s += "</table>";
+    s += "<span class='ref'>q<sub>i</sub> uses the assumed side d&#770; = " + f(dhat, 3) + " m" + (placing ? " &middot; corners are your clicks" : (noise > 0 ? " &middot; corners carry " + f(noise, 1) + " px of noise" : " &middot; corners are exact")) + "</span>";
+    setBody(1, s);
+    // 2
+    s = "";
+    if (keep.lambda) {
+      var mx = Math.max.apply(null, st.h.sv);
+      s += "singular values of A (rescaled coordinates)<div class='bars'>";
+      st.h.sv.forEach(function (v) { s += "<div style='height:" + Math.max(1, 24*v/mx) + "px'></div>"; });
+      s += "<div class='z' style='height:1px'></div></div>";
+      s += "<span class='ref'>eight nonzero, the ninth (red) is zero: A h = 0 has exactly one direction of solution</span>";
+    } else {
+      s += "<span class='warn'>&lambda; dropped: x<sub>i</sub> = h&#771;<sub>1</sub>&middot;q<sub>i</sub>, y<sub>i</sub> = h&#771;<sub>2</sub>&middot;q<sub>i</sub>, an affine camera. 8 equations, 6 unknowns, least squares; the third row is set to (0, 0, 1).</span>";
+    }
+    s += "<div class='mono'>H = \n" + mat(st.h.H, 4, 8) + "</div><span class='ref'>unit Frobenius norm; the scale is free (§5)</span>";
+    setBody(2, s);
+    // 3
+    var S = st.s;
+    s = "<div class='mono'>K<sub>f</sub><sup>-1</sup>H = \n" + mat(S.M, 4, 8) + "</div>";
+    var gap = Math.abs(S.n1 - S.n2)/S.c;
+    s += "&#8214;m<sub>1</sub>&#8214; = " + f(S.n1, 4) + " &nbsp; &#8214;m<sub>2</sub>&#8214; = " + f(S.n2, 4) +
+         " &nbsp; <span class='" + (gap < 0.01 ? "good" : "warn") + "'>differ by " + f(100*gap, 1) + "%</span><br>" +
+         "m<sub>1</sub>&middot;m<sub>2</sub> / (&#8214;m<sub>1</sub>&#8214;&#8214;m<sub>2</sub>&#8214;) = <span class='" + (Math.abs(S.dotp) < 0.01 ? "good" : "warn") + "'>" + f(S.dotp, 4) + "</span> &nbsp; <span class='ref'>(0 for a rigid square)</span><br>" +
+         "c = " + f(S.c, 5) + " &nbsp;&rarr;&nbsp; o<sub>W</sub><sup>C</sup> = " + vec(S.o, 3) + " m";
+    if (keep.sign) s += " <span class='good'>o<sub>z</sub> &gt; 0, in front</span>";
+    else s += " <span class='warn'>the other root: o<sub>z</sub> &lt; 0, the mirror tag behind the camera also satisfies A h = 0</span>";
+    setBody(3, s);
+    // 4
+    var Q = st.q;
+    s = "<div class='mono'>R'<sup>T</sup>R' (before) = \n" + mat(Q.G, 4, 8) + "</div>";
+    if (Q.snapped) s += "<div class='mono'>R<sub>W</sub><sup>C</sup> (nearest rotation) = \n" + mat(Q.R, 4, 8) + "</div>";
+    else s += "<span class='warn'>not snapped: the frame drawn in red is [r<sub>1</sub> r<sub>2</sub> r<sub>1</sub>&times;r<sub>2</sub>] as it came, not a rotation</span>";
+    var ec = st.errClosed, cr = st.closedRe;
+    s += "<br>closed form vs truth: <span class='" + (isNaN(ec.ang) ? "warn" : "") + "'>" + (isNaN(ec.ang) ? "not a rotation" : f(ec.ang, 2) + "&deg;") + "</span>, " +
+         f(1000*ec.pos, 1) + " mm &nbsp;&middot;&nbsp; reprojection " + (cr ? f(cr.rms, 2) + " px RMS" : "&mdash;");
+    setBody(4, s);
+    // 5
+    if (!keep.refine) s = "<span class='warn'>not refined: the closed form is the final answer</span>";
+    else if (!Q.snapped) s = "<span class='warn'>refinement needs a rotation to start from: snap first</span>";
+    else {
+      var er = st.errRefined, rr = st.refinedRe;
+      s = "Gauss&ndash;Newton, " + st.refined.iters + " iterations" + (st.refined.ok ? "" : " <span class='warn'>(stopped: a corner left the image)</span>") +
+          "<div class='mono'>R<sub>W</sub><sup>C</sup> = \n" + mat(st.refined.R, 4, 8) + "</div>" +
+          "o<sub>W</sub><sup>C</sup> = " + vec(st.refined.o, 3) + " m<br>" +
+          "refined vs truth: " + f(er.ang, 2) + "&deg;, " + f(1000*er.pos, 1) + " mm &nbsp;&middot;&nbsp; reprojection " + (rr ? f(rr.rms, 2) + " px RMS" : "&mdash;");
+    }
+    setBody(5, s);
+  }
+
+  function drawReadout(st) {
+    var el = document.getElementById("numbers"), note = document.getElementById("note");
+    if (!st.m.ok) { el.innerHTML = ""; note.innerHTML = placing ? "place four corners to run the pipeline" : "move the tag back into view"; return; }
+    var T = st.T;
+    var s = "true: " + f(pose.yaw, 0) + "&deg;, " + f(pose.pitch, 0) + "&deg;, " + f(pose.roll, 0) + "&deg; at " + vec(T.o, 2) + " m";
+    var ec = st.errClosed;
+    s += " &nbsp; <span class='r'>closed form off by " + (isNaN(ec.ang) ? "?" : f(ec.ang, 2) + "&deg;") + ", " + f(1000*ec.pos, 1) + " mm</span>";
+    if (st.refined) { var er = st.errRefined; s += " &nbsp; <span class='b'>refined off by " + f(er.ang, 2) + "&deg;, " + f(1000*er.pos, 1) + " mm</span>"; }
+    el.innerHTML = s;
+    var msg = "";
+    if (!keep.lambda) msg = "<b>no depth division</b> &mdash; the affine camera cannot see foreshortening, so tilt and distance are guessed";
+    else if (!keep.sign) msg = "<b>wrong root</b> &mdash; the pixels are the same for a mirrored tag behind the camera; the equations cannot tell";
+    else if (!keep.snap) msg = "<b>not a rotation</b> &mdash; the red frame is sheared and scaled by whatever the noise did";
+    else if (Math.abs(dhat - D) > 1e-6) msg = "<b>wrong size assumed</b> &mdash; the pose slides along the rays: a " + (dhat > D ? "bigger" : "smaller") + " tag must be " + (dhat > D ? "farther" : "nearer") + " to look the same";
+    else if (!st.m.ok) msg = "";
+    else if (placing) msg = "your clicks are the measurement; the pose error is yours";
+    else if (noise === 0) msg = "exact corners: the closed form is exact and refinement has nothing to do";
+    else if (!keep.refine) msg = "with noise, the closed form fits the corners exactly but with the wrong kind of H; snapping then loses the fit";
+    else msg = "closed form, then refined on the reprojection error";
+    note.innerHTML = msg;
+  }
+
+  var show = { closed: true, refined: true };
+  function draw() {
+    var st = run();
+    imgEl.classList.toggle("placing", placing);
+    document.getElementById("imgcap").innerHTML = placing ? "click the four corners in order 0, 1, 2, 3" : "the four corners, in order";
+    drawImage(st); drawWorld(st); drawSteps(st); drawReadout(st);
+  }
+
+  // ---- orbiting ----------------------------------------------------------
+  var drag = null;
+  world.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  world.addEventListener("pointerdown", function (e) {
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el, px: view.px, py: view.py, pan: pan };
+    world.classList.add("dragging"); world.setPointerCapture(e.pointerId);
+  });
+  world.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) { view.px = drag.px + (e.clientX - drag.x); view.py = drag.py + (e.clientY - drag.y); }
+    else { view.az = drag.az - (e.clientX - drag.x) * 0.008;
+           view.el = Math.max(-1.45, Math.min(1.45, drag.el + (e.clientY - drag.y) * 0.008)); }
+    draw();
+  });
+  function endDrag(e) { if (!drag) return; drag = null; world.classList.remove("dragging");
+    if (e && e.pointerId !== undefined) { try { world.releasePointerCapture(e.pointerId); } catch (err) {} } }
+  world.addEventListener("pointerup", endDrag); world.addEventListener("pointercancel", endDrag);
+  world.addEventListener("wheel", function (e) { e.preventDefault();
+    view.scale = Math.max(60, Math.min(1500, view.scale * (e.deltaY < 0 ? 1.08 : 1/1.08))); draw(); }, { passive: false });
+
+  // ---- controls --------------------------------------------------------------
+  var SL = {
+    x:     { get: function () { return pose.x; },     set: function (v) { pose.x = v; },     dp: 2 },
+    y:     { get: function () { return pose.y; },     set: function (v) { pose.y = v; },     dp: 2 },
+    z:     { get: function () { return pose.z; },     set: function (v) { pose.z = v; },     dp: 2 },
+    yaw:   { get: function () { return pose.yaw; },   set: function (v) { pose.yaw = v; },   dp: 1 },
+    pitch: { get: function () { return pose.pitch; }, set: function (v) { pose.pitch = v; }, dp: 1 },
+    roll:  { get: function () { return pose.roll; },  set: function (v) { pose.roll = v; },  dp: 1 },
+    noise: { get: function () { return noise; },      set: function (v) { noise = v; },      dp: 1 },
+    dhat:  { get: function () { return dhat; },       set: function (v) { dhat = v; },       dp: 3 },
+    d:     { get: function () { return D; },          set: function (v) { D = v; },          dp: 3 }
+  };
+  function syncSlider(id) { var d = SL[id], x = d.get();
+    document.getElementById("s_" + id).value = x; document.getElementById("v_" + id).textContent = x.toFixed(d.dp); }
+  Object.keys(SL).forEach(function (id) {
+    document.getElementById("s_" + id).addEventListener("input", function () {
+      SL[id].set(parseFloat(this.value)); syncSlider(id); draw(); });
+  });
+  ["lambda","sign","snap","refine"].forEach(function (k) {
+    document.getElementById("k_" + k).addEventListener("change", function () { keep[k] = this.checked; draw(); }); });
+  ["closed","refined"].forEach(function (k) {
+    document.getElementById("c_" + k).addEventListener("change", function () { show[k] = this.checked; draw(); }); });
+  document.getElementById("c_place").addEventListener("change", function () { placing = this.checked; clicks = []; draw(); });
+  document.getElementById("clear").addEventListener("click", function () { clicks = []; draw(); });
+  document.getElementById("redraw").addEventListener("click", function () { redraw(); draw(); });
+  document.getElementById("reset").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale; view.px = DEF.px; view.py = DEF.py; draw(); });
+  var PRESETS = {
+    "default": DEFP,
+    square:  { x: 0.0,  y: 0.0,   z: 0.8, yaw: 0,  pitch: 0,   roll: 0 },
+    oblique: { x: 0.1,  y: -0.05, z: 0.8, yaw: 65, pitch: -10, roll: 10 },
+    far:     { x: 0.1,  y: -0.05, z: 3.0, yaw: 30, pitch: -20, roll: 10 }
+  };
+  Array.prototype.forEach.call(document.querySelectorAll(".preset"), function (b) {
+    b.addEventListener("click", function () {
+      var p = PRESETS[this.getAttribute("data-p")];
+      Object.keys(p).forEach(function (k) { pose[k] = p[k]; });
+      Object.keys(SL).forEach(syncSlider); draw();
+    });
+  });
+
+  // presets from the URL: ?z=3&noise=0.5&lambda=0&sign=0&snap=0&refine=0&dhat=0.15
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SL).forEach(function (id) {
+      if (q.has(id) && isFinite(parseFloat(q.get(id)))) SL[id].set(parseFloat(q.get(id))); });
+    ["lambda","sign","snap","refine"].forEach(function (k) {
+      if (q.has(k)) { keep[k] = q.get(k) !== "0"; document.getElementById("k_" + k).checked = keep[k]; } });
+  })();
+  Object.keys(SL).forEach(syncSlider);
+  window.addEventListener("resize", draw);
+  draw();
+})();
+</script>
+</body>
+</html>
