@@ -1533,7 +1533,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <p><span class="red">So one tag is a complete marker cluster</span>: position <em>and</em> orientation of the segment it is stuck to, from one camera, with no triangulation and no correspondence problem — the tag tells you its own ID.</p>
 </div>
 <div style="margin-top: -0.25em;">
-<p><span class="cite">Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. <em>Proc. IEEE ICRA</em>, 3400–3407. Every step above, with a worked numerical example: <a href="../../notes/01-kinematics-kinetics/fiducial-notes.html">companion notes</a>.</span></p>
+<p><span class="cite">Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. <em>Proc. IEEE ICRA</em>, 3400–3407.</span></p>
 </div>
 </div>
 </section>
@@ -1588,19 +1588,20 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — I. Distance</span></p>
 <p><span class="highlight">Effect of marker distance on pose estimation</span></p>
-<div style="font-size: 0.75em; margin-top: -1.00em;">
-<p>Everything a tag can tell the camera is carried by its <span class="highlight">size in the image</span>, <span class="math inline">\(s = f d / z\)</span> pixels, and the corner error <span class="math inline">\(\sigma\)</span> in pixels. <span class="deemph">Here the tag is <span class="math inline">\(d = 0.10\)</span> m across and the camera has <span class="math inline">\(f = 800\)</span> px, so <span class="math inline">\(s = 80/z\)</span>: 100 px at 0.8 m, 40 px at 2 m. Every corner coordinate carries <span class="math inline">\(\sigma = 0.5\)</span> px of noise.</span></p>
+<div style="font-size: 0.85em; margin-top: -1.00em;">
+<p>Tag size in image <span class="math inline">\(s = f d / z\)</span> pixels with pixel error <span class="math inline">\(\sigma\)</span> pixels.</p>
+<p><span class="highlight">Example:</span> <span class="deemph"><span class="math inline">\(d = 0.10\)</span> m, <span class="math inline">\(f = 800\)</span> px <span class="math inline">\(\implies s = 80/z\)</span>: 100 px @ 0.8 m, 40 px @ 2 m. <span class="math inline">\(\implies\)</span> Tag’s <span class="math inline">\(\text{SNR} \propto \frac{1}{z}\)</span></span></p>
 <div class="columns" style="align-items:center; margin-top: -0.5em;">
 <div class="column" style="width:60%;">
 <p><img data-src="figures/limit-distance-depth.svg" style="width:100%; max-height:none; display:block;"></p>
 </div><div class="column" style="width:40%;">
 <div class="fragment">
-<p><span class="highlight">Depth comes from apparent size</span> <span class="math display">\[z = \frac{f d}{s} \;\Rightarrow\; \delta z = -\frac{f d}{s^2}\,\delta s = -\frac{z^2}{f d}\,\delta s\]</span> <span class="math display">\[|\delta z| \approx \frac{\sigma\, z^2}{f d}\]</span></p>
-<p><span class="red">Double the distance, four times the depth error.</span></p>
+<p><span class="highlight">Depth is computed from the tag’s image size</span> <span class="math display">\[z = \frac{f d}{s} \;\Rightarrow\; \delta z = -\frac{f d}{s^2}\,\delta s = -\frac{z^2}{f d}\,\delta s\]</span> <span class="math display">\[|\delta z| \approx \frac{\sigma\, z^2}{f d}\]</span></p>
+<p>Double the distance, four times the depth error.</p>
 </div>
 </div></div>
 <div style="margin-top: -0.5em; font-size: 1.0em;">
-<p><span class="cite">Projected corners with 0.5 px of Gaussian noise, pose by the closed form and refinement of the notes, median and interquartile range of 500 runs: <a href="../../notes/01-kinematics-kinetics/make_limit_data.py">make_limit_data.py</a>.</span></p>
+<p><span class="cite">Projected corners with 0.5 px of Gaussian noise, pose by the closed form and refinement, median and interquartile range of 500 runs.</span></p>
 </div>
 </div>
 </section>
@@ -1608,16 +1609,16 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — I. Distance</span></p>
 <p><span class="highlight">How a tilt shows up in the image</span></p>
-<div style="font-size: 0.70em; margin-top: -1.00em;">
-<p>A length seen at an angle looks shorter: that is <span class="highlight">foreshortening</span>. Tilt the tag by <span class="math inline">\(\theta\)</span> about its horizontal axis and look at what the camera gets.</p>
+<div style="font-size: 0.80em; margin-top: -1.00em;">
+<p><span class="highlight">Foreshortening:</span> a length seen at an angle looks shorter.</p>
 <div style="margin-top: -0.5em;">
 <p><img data-src="figures/foreshortening.svg" style="width:100%; max-height:none; display:block;"></p>
 </div>
 <div class="fragment" style="margin-top: -0.5em;">
 <ul>
-<li><span class="red">Across the line of sight</span> the tag spans <span class="math inline">\(d\cos\theta\)</span> instead of <span class="math inline">\(d\)</span>, so its height in the image is <span class="math inline">\(h = s\cos\theta\)</span>. Its width through the centre is still <span class="math inline">\(s = fd/z\)</span>.</li>
+<li>Tag’s height <span class="math inline">\(d\)</span> becomes <span class="math inline">\(d\cos\theta\)</span> and its width at the centre is still <span class="math inline">\(s = fd/z\)</span>.</li>
 <li>The <span class="red">tilt</span> is read from the ratio of two pixel lengths, <span class="math inline">\(h/s = \cos\theta\)</span>.</li>
-<li>The two ends sit at depths <span class="math inline">\(z \mp \tfrac{d}{2}\sin\theta\)</span>, so the near edge is <span class="red">longer</span> and the far edge <span class="red">shorter</span>, by about <span class="math inline">\(s\,(d/z)\sin\theta\)</span> between them. That difference is what says <em>which way</em> the tag leans.</li>
+<li>The top and bottom edges sit at depths <span class="math inline">\(z \mp \tfrac{d}{2}\sin\theta\)</span>. The difference between the near and far edges is <span class="math inline">\(\approx s\,(d/z)\sin\theta\)</span>.</li>
 </ul>
 </div>
 </div>
@@ -1626,7 +1627,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — I. Distance</span></p>
 <p><span class="highlight">Effect of marker distance on pose estimation</span></p>
-<div style="font-size: 0.75em; margin-top: -1.00em;">
+<div style="font-size: 0.85em; margin-top: -1.00em;">
 <p>Same tag, same camera, same noise: <span class="math inline">\(s = 80/z\)</span> px and <span class="math inline">\(\sigma = 0.5\)</span> px.</p>
 <div class="columns" style="align-items:center; margin-top: -0.5em;">
 <div class="column" style="width:60%;">
@@ -1638,7 +1639,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 ::: -->
 </div></div>
 <div style="margin-top: -0.5em; font-size: 0.8em;">
-<p><span class="cite">Projected corners with 0.5 px of Gaussian noise, pose by the closed form and refinement of the notes, median and interquartile range of 500 runs: <a href="../../notes/01-kinematics-kinetics/make_limit_data.py">make_limit_data.py</a>.</span></p>
+<p><span class="cite">Projected corners with 0.5 px of Gaussian noise, pose by the closed form and refinement, median and interquartile range of 500 runs.</span></p>
 </div>
 </div>
 </section>
@@ -1646,16 +1647,16 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — II. Face-on</span></p>
 <p><span class="highlight">Change the tilt by 5°. How much does the picture change?</span></p>
-<div style="font-size: 0.65em; margin-top: -1.00em;">
+<div style="font-size: 0.85em; margin-top: -1.00em;">
 <p>The same 100 px tag, drawn from the camera model at six tilts about its horizontal axis.</p>
-<div style="margin-top: -0.5em;">
+<div style="margin-top: -1.0em;">
 <p><img data-src="figures/faceon-images.svg" style="width:100%; max-height:none; display:block;"></p>
 </div>
-<div class="fragment" style="margin-top: -0.5em;">
+<div class="fragment" style="margin-top: -1.0em;">
 <ul>
-<li>Near face-on the three pictures are <span class="red">the same picture</span>: 0°, 5° and 10° differ by less than a pixel, and the corners are only known to half a pixel.</li>
-<li><span class="highlight">Run the solver backwards.</span> It measures the height <span class="math inline">\(h\)</span> and asks which tilt gives it: <span class="math inline">\(\cos\theta = h/s\)</span>. Tag face-on, true height 100 px, measured 99.5 px because of the noise: <span class="math inline">\(\cos\theta = 0.995\)</span>, <span class="red"><span class="math inline">\(\theta = 5.7°\)</span></span>. Half a pixel has become six degrees. At 40°, true height 76.7 px, measured 76.2 px: <span class="math inline">\(\theta = 40.4°\)</span>. The same half pixel is now <span class="red">0.4°</span>.</li>
-<li><span class="highlight">This is Module 1’s rule.</span> A sensor gives <span class="math inline">\(y = \mathcal{F}(x_m) + e_n\)</span> and the noise referred back to the measurand is <span class="math inline">\(e_n \big/ \frac{\partial \mathcal{F}}{\partial x_m}\)</span>. Here the output is the height <span class="math inline">\(h = s\cos\theta\)</span>, the measurand is <span class="math inline">\(\theta\)</span>, the sensitivity is <span class="math inline">\(\partial h/\partial\theta = -s\sin\theta\)</span> and the noise is <span class="math inline">\(\sigma\)</span>, so <span class="math inline">\(\delta\theta \approx \sigma/(s\sin\theta)\)</span>. <span class="red">A face-on tag is a sensor operated where its sensitivity is zero.</span> <span class="deemph">Position and depth are unaffected; only the tilt is lost.</span></li>
+<li><p><span class="highlight">At tag face-on:</span> <span class="math inline">\(\cos\theta = h/s\)</span>. Tag’s true height 100 px, measured 99.5 px because of the noise. <span class="math inline">\(\cos\theta = 0.995 \implies \theta = 5.7°\)</span>.</p></li>
+<li><p><span class="highlight">At an oblique angle:</span>: At 40°, true height 76.7 px, measured 76.2 px: <span class="math inline">\(\theta = 40.4°\)</span>.</p></li>
+<li><p><span class="highlight">This is Module 1’s rule.</span> A sensor gives <span class="math inline">\(y = \mathcal{F}(x_m) + e_n\)</span> and the noise referred back to the measurand is <span class="math inline">\(e_n \big/ \frac{\partial \mathcal{F}}{\partial x_m}\)</span>. Tag height <span class="math inline">\(h = s\cos\theta\)</span>, the measurand is <span class="math inline">\(\theta\)</span>, the sensitivity is <span class="math inline">\(\partial h/\partial\theta = -s\sin\theta\)</span> and the noise is <span class="math inline">\(\sigma\)</span>, so <span class="math inline">\(\delta\theta \approx \sigma/(s\sin\theta)\)</span> <span class="red">A face-on tag has zero sensitivity.</span></p></li>
 </ul>
 </div>
 </div>
@@ -1663,34 +1664,32 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <section id="camera-based-movement-tracking-41" class="slide level2">
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — II. Face-on</span></p>
-<div class="columns" style="align-items:center; margin-top:-0.5em;">
-<div class="column" style="width:52%;">
+<div class="columns" style="align-items:center; margin-top:-1.0em;">
+<div class="column" style="width:60%;">
 <p><img data-src="figures/limit-headon.svg" style="width:100%; max-height:none; display:block;"></p>
-</div><div class="column" style="width:48%; font-size: 0.7em;">
+</div><div class="column" style="width:40%; font-size: 0.85em;">
 <p><span class="highlight">The simulation agrees.</span> Orientation error against tilt for the same tag, with the same corner noise as before.</p>
 <div class="fragment">
-<p>Error <span class="math inline">\(\approx\)</span> noise <span class="math inline">\(\div\)</span> sensitivity: <span class="math display">\[\delta\theta \;\approx\; \frac{\sigma}{s\,\sin\theta}\]</span> <span class="deemph">The dashed line is this law; it fits from about 8° out. At face-on it says infinity, and the solver returns about 6°, whatever tilt the noise happens to suggest.</span></p>
-</div>
-<div class="fragment">
-<p><span class="highlight">Position and depth are unaffected</span>: only orientation about the two in-plane axes is lost. <span class="red">Mount tags tilted, never square to the camera.</span></p>
+<p>Error <span class="math inline">\(\approx\)</span> noise <span class="math inline">\(\div\)</span> sensitivity: <span class="math display">\[\delta\theta \;\approx\; \frac{\sigma}{s\,\sin\theta}\]</span></p>
+<p><span class="deemph">The dashed line is this law; it tells us to expect the error to go up as the tag becomes more face-on.</span></p>
 </div>
 </div></div>
 <div style="margin-top: -0.5em; font-size: 0.8em;">
-<p><span class="cite">Same model as the distance slides, tag fixed at 0.8 m: <a href="../../notes/01-kinematics-kinetics/make_limit_data.py">make_limit_data.py</a>.</span></p>
+<p><span class="cite">Same model as the distance slides, tag fixed at 0.8 m.</span></p>
 </div>
 </section>
 <section id="camera-based-movement-tracking-42" class="slide level2">
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — III. Edge-on</span></p>
 <p><span class="highlight">Turn the tag towards edge-on. What happens to the cells?</span></p>
-<div style="font-size: 0.65em; margin-top: -1.00em;">
+<div style="font-size: 0.85em; margin-top: -1.00em;">
 <p>The real tag pattern, projected through the camera model at five tilts, with the grid of 1 px squares drawn over it. A small tag, 4 px per cell face-on, so that the pixels can be seen.</p>
 <div style="margin-top: -0.5em;">
 <p><img data-src="figures/edgeon-images.svg" style="width:100%; max-height:none; display:block;"></p>
 </div>
 <div class="fragment" style="margin-top: -0.5em;">
 <ul>
-<li><span class="highlight">Both directions change, but not alike.</span> The columns converge, because the far edge is farther away than the near one: a few percent here, 4 px to 3.9 px. The rows collapse by <span class="math inline">\(\cos\theta\)</span>: 4 px, 3 px, 2 px, 1 px, 0.3 px.</li>
+<li><span class="highlight">Both directions change, but not alike.</span> The columns converge by a small amount 4 px to 3.9 px. The rows collapse by <span class="math inline">\(\cos\theta\)</span>: 4 px, 3 px, 2 px, 1 px, 0.3 px.</li>
 </ul>
 </div>
 <!-- row-height derivation, held back until verified in the notes
@@ -1705,7 +1704,7 @@ $$h_{\mathrm{row}} = \frac{f \cdot \tfrac{d}{8}\cos\theta}{z + \tfrac{d}{2}\sin\
 -->
 <div class="fragment" style="margin-top: -0.5em;">
 <ul>
-<li><span class="red">Reading a bit means landing a sample inside its cell.</span> Once a row is about a pixel high, any lens blur averages a black row with its white neighbour to grey: the border is still found, the code is not read, the tag is dropped. <span class="deemph">How far that lets the tag turn is the next slide.</span></li>
+<li>Once a row squeezed to very few pixels, any lens blur averages neighbouring black and white cells to grey, impacting payload detection.</li>
 </ul>
 </div>
 </div>
@@ -1713,44 +1712,41 @@ $$h_{\mathrm{row}} = \frac{f \cdot \tfrac{d}{8}\cos\theta}{z + \tfrac{d}{2}\sin\
 <section id="camera-based-movement-tracking-43" class="slide level2">
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — III. Edge-on</span></p>
-<p><span class="highlight">Turn the tag towards edge-on: what gives out first?</span></p>
-<div style="font-size: 0.65em; margin-top: -1.00em;">
-<p>Not the geometry. The tilt estimate keeps <span class="highlight">improving</span> as <span class="math inline">\(\theta\)</span> grows, as the face-on plot showed. What gives out is <span class="red">reading the bits</span>.</p>
+<div style="font-size: 0.85em; margin-top: -1.00em;">
+<p>With increasing tilt, <span class="red">reading of the payload bits</span> worsens.</p>
 <div class="columns" style="align-items:center; margin-top: -0.5em;">
-<div class="column" style="width:50%;">
+<div class="column" style="width:60%;">
 <p><img data-src="figures/limit-oblique.svg" style="width:100%; max-height:none; display:block;"></p>
-</div><div class="column" style="width:50%;">
-<p><span class="highlight">The height of the far row</span>, for three sizes of tag in the image. <!-- row-height formula, held back until verified in the notes
+</div><div class="column" style="width:40%;">
+<p><span class="highlight">The height of the far row</span>, for three sizes of tag in the image (tags are at different distances). <!-- row-height formula, held back until verified in the notes
 $$h_{\mathrm{row}} = \frac{s}{8}\cos\theta \cdot \frac{z}{z + \tfrac{d}{2}\sin\theta}\ \text{px.}$$
 --></p>
+<!-- ::: {.fragment}
+A sample must land inside each cell in both directions. Once a row is thinner than [about 2 px]{.red}, the lens blur mixes it with its neighbours, the bits cannot be read and the tag is dropped, however well its border was found.
+::: -->
 <div class="fragment">
-<p>A sample must land inside each cell in both directions. Once a row is thinner than <span class="red">about 2 px</span>, the lens blur mixes it with its neighbours, the bits cannot be read and the tag is dropped, however well its border was found.</p>
-</div>
-<div class="fragment">
-<p>So the usable tilt depends on the tag’s size in the image: <span class="red">about 80° for 100 px, 70° for 50 px, 50° for 25 px.</span> <span class="deemph">Olson’s 70° is this number for his camera and tag.</span></p>
-</div>
-<div class="fragment">
-<p>Together with face-on: <span class="red">tags work from roughly 15° to 70°</span>, and farther away the window closes from the top.</p>
+<p>Usable tilt depends on the tag’s image size: <span class="red">about 80° for 100 px, 70° for 50 px, 50° for 25 px.</span> <span class="deemph">Olson’s 70° is this number for his camera and tag.</span></p>
 </div>
 </div></div>
+</div>
 <div style="margin-top: -0.5em; font-size: 0.8em;">
 <p><span class="cite">Geometry only; the 2 px threshold is roughly twice a typical lens blur. Figure source: <a href="tikz/limit-oblique.tex">limit-oblique.tex</a>.</span></p>
-</div>
 </div>
 </section>
 <section id="camera-based-movement-tracking-44" class="slide level2">
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">What limits tag tracking — IV. Motion blur</span></p>
 <p><span class="highlight">Move the tag during the exposure. What happens to the cells?</span></p>
-<div style="font-size: 0.65em; margin-top: -1.00em;">
+<div style="font-size: 0.85em; margin-top: -1.00em;">
 <p>The same tag as before, tilted 30°, sliding sideways while the shutter is open. Each pixel records the average of everything that passed over it.</p>
-<div style="margin-top: -0.5em;">
+<div style="margin-top: -1.0em;">
 <p><img data-src="figures/blur-images.svg" style="width:100%; max-height:none; display:block;"></p>
 </div>
-<div class="fragment" style="margin-top: -0.5em;">
+<div class="fragment" style="margin-top: -1.0em;">
 <ul>
-<li>During an exposure <span class="math inline">\(T_{\mathrm{exp}}\)</span> a tag moving at <span class="math inline">\(v\)</span> across the view travels <span class="math inline">\(v\,T_{\mathrm{exp}}\)</span> metres, which is <span class="red"><span class="math inline">\(b = v\,T_{\mathrm{exp}}\,f/z\)</span> pixels</span> in the image. Every edge becomes a ramp <span class="math inline">\(b\)</span> pixels long. <!-- - [A bit is read by sampling the brightness at the centre of its cell.]{.highlight} The smear turns every black--white boundary into a ramp $b$ px long, eating $b/2$ px into the cell from each side; the rest of the cell is untouched. --> <!-- - [Half a cell]{.red} ($b = 2$ px): the ramps take the outer pixel of each 4 px cell, the centre is still pure black or white, every bit reads. [One cell]{.red} ($b = 4$ px): the ramps meet at the centre; an isolated black cell keeps full black only in a sliver, and any extra blur tips it. [Two cells]{.red} ($b = 8$ px): the window is wider than the cell, the centre of a black cell averages as much white neighbour as black, and black and white cells give the same grey. --></li>
-<li>The border’s long edges keep a well-defined middle, so the corners are still found and a pose could be fitted; but without the code the detector cannot say it is a tag, which tag, or which way up, and drops it.</li>
+<li><p>With exposure <span class="math inline">\(T_{\mathrm{exp}}\)</span> a tag moving at <span class="math inline">\(v\)</span> across the view travels <span class="math inline">\(v\,T_{\mathrm{exp}}\)</span> metres, which is <span class="red"><span class="math inline">\(b = v\,T_{\mathrm{exp}}\,f/z\)</span> pixels</span> in the image. Every edge becomes a ramp <span class="math inline">\(b\)</span> pixels long. <!-- - [A bit is read by sampling the brightness at the centre of its cell.]{.highlight} The smear turns every black--white boundary into a ramp $b$ px long, eating $b/2$ px into the cell from each side; the rest of the cell is untouched. --> <!-- - [Half a cell]{.red} ($b = 2$ px): the ramps take the outer pixel of each 4 px cell, the centre is still pure black or white, every bit reads. [One cell]{.red} ($b = 4$ px): the ramps meet at the centre; an isolated black cell keeps full black only in a sliver, and any extra blur tips it. [Two cells]{.red} ($b = 8$ px): the window is wider than the cell, the centre of a black cell averages as much white neighbour as black, and black and white cells give the same grey. --></p></li>
+<li><p>Tag corners may still be found, but will introduce pose estimation errors due to errors in corner detection.</p></li>
+<li><p>Payload detection errors occur because the payload cells get averaged out.</p></li>
 </ul>
 </div>
 </div>
@@ -1772,30 +1768,334 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 :::
 
 ::: {style="margin-top: -0.5em; font-size: 0.8em;"}
-[Pixel values computed by [make_blur_pixels.py](../../notes/01-kinematics-kinetics/make_blur_pixels.py); figure source [blur-images.tex](tikz/blur-images.tex).]{.cite}
+[Figure source [blur-images.tex](tikz/blur-images.tex).]{.cite}
 :::
+:::
+
+
+::: {.fragment style="font-size: 0.85em; margin-top: -0.5em;"}
+[For movement tracking]{.highlight}: [cheap, a single camera suffices, every segment self-identifies --- but depth from one camera is a stereo pair with a 10 cm baseline, orientation needs the tag off square, and the tag sits on skin like any other marker. This is the regime where the chain constraint earns its keep.]{.deemph}
+:::
+
+::: {style="margin-top: -0.25em; font-size: 0.85em;"}
+[Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. *Proc. IEEE ICRA*, 3400--3407.]{.cite}
+[Wang, J. & Olson, E. (2016). AprilTag 2: Efficient and robust fiducial detection. *Proc. IEEE/RSJ IROS*.]{.cite}
 :::
 -->
 </section>
-<section id="camera-based-movement-tracking-45" class="slide level2">
-<h2>Camera-based movement tracking</h2>
-<p><span class="framesub">What limits tag tracking — in one place</span></p>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
-<p>Every limit is a statement about <span class="highlight"><span class="math inline">\(s = f d / z\)</span></span>, the tag’s size in pixels, and the corner error <span class="highlight"><span class="math inline">\(\sigma\)</span></span>:</p>
+<section id="inertial-measurement-units" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">What an IMU is</span></p>
+<div style="font-size: 0.95em; margin-top: -0.5em;">
+<p>An <span class="highlight">inertial measurement unit</span> is a chip carrying <span class="red">three accelerometers</span> and <span class="red">three gyroscopes</span>, one of each along every axis of the chip’s own frame <span class="math inline">\(S\)</span>. Most also carry a three-axis magnetometer.</p>
+<div class="fragment" style="margin-top: -0.25em;">
+<p>It reports six numbers, typically a few hundred times a second:</p>
 <ul>
-<li><span class="red">Distance</span>: depth error <span class="math inline">\(\sigma z^2/(f d)\)</span>, orientation error <span class="math inline">\(\sigma z/(f d)\)</span>. A tag is a stereo rig with baseline <span class="math inline">\(d\)</span>.</li>
-<li><span class="red">Face-on</span>: orientation error <span class="math inline">\(\sigma/(s\sin\theta)\)</span>, unbounded at <span class="math inline">\(\theta = 0\)</span>, and the sign of the tilt can flip. Mount tags tilted.</li>
-<li><span class="red">Edge-on</span>: detection fails when the far cells fall below the lens blur, <span class="math inline">\(\cos\theta_{\max} \approx 16/s\)</span>. About 80° for a 100 px tag.</li>
-<li><span class="red">Motion blur</span>: the decode fails at one cell of smear, <span class="math inline">\(v_{\max} \approx d/(8T_{\mathrm{exp}})\)</span>, whatever the camera.</li>
-<li><span class="red">Lighting</span>: the adaptive threshold tolerates gradients, not glare; a highlight across the border removes the quad.</li>
+<li><span class="math inline">\(\v{a}_S^S(t)\)</span>: what the accelerometers feel, in the sensor frame.</li>
+<li><span class="math inline">\(\boldsymbol{\omega}_S^S(t)\)</span>: the chip’s angular velocity, in the sensor frame.</li>
 </ul>
 </div>
-<div class="fragment" style="font-size: 0.85em; margin-top: -0.5em;">
-<p><span class="highlight">For movement tracking</span>: <span class="deemph">cheap, a single camera suffices, every segment self-identifies — but depth from one camera is a stereo pair with a 10 cm baseline, orientation needs the tag off square, and the tag sits on skin like any other marker. This is the regime where the chain constraint earns its keep.</span></p>
+<div class="fragment" style="margin-top: -0.25em;">
+<p><span class="highlight">No reference outside the chip.</span> <span class="deemph">A camera measures a marker against the camera; an encoder measures a shaft against its housing. An IMU measures its own motion against inertial space. That is its whole appeal, and the source of every one of its limitations.</span></p>
 </div>
-<div style="margin-top: -0.25em; font-size: 0.85em;">
-<p><span class="cite">Olson, E. (2011). AprilTag: A robust and flexible visual fiducial system. <em>Proc. IEEE ICRA</em>, 3400–3407.</span> <span class="cite">Wang, J. &amp; Olson, E. (2016). AprilTag 2: Efficient and robust fiducial detection. <em>Proc. IEEE/RSJ IROS</em>.</span></p>
+<div class="fragment" style="margin-top: -0.25em;">
+<p>Built as <span class="highlight">MEMS</span>: micro-machined silicon, a few millimetres across, costing a few hundred rupees. In every phone, watch, drone, and most wearable movement sensors.</p>
 </div>
+<div class="fragment" style="margin-top: 0.25em;">
+<p>We take the two sensors in turn, then ask what the pair can and cannot tell us about a limb.</p>
+</div>
+</div>
+</section>
+<section id="inertial-measurement-units-1" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Accelerometer — the mechanism</span></p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/accel-model.svg" style="width:78%; max-height:none; display:block; margin:0 auto;"></p>
+</div>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>Newton on the mass, with the spring and damper pulling it towards the case: <span class="math display">\[M \ddot{x}_M = K\,(x_S - x_M) + B\,(\dot{x}_S - \dot{x}_M)\]</span></p>
+</div>
+<div class="fragment" style="font-size: 0.85em; margin-top: -0.75em;">
+<p>Written for the gap <span class="math inline">\(y = x_S - x_M\)</span>, the thing the plates measure, with <span class="math inline">\(a_S = \ddot{x}_S\)</span> the acceleration of the case: <span class="math display">\[M\ddot{y} + B\dot{y} + K y = M\,a_S \qquad\Longrightarrow\qquad \frac{Y(s)}{A_S(s)} = \frac{M}{Ms^2 + Bs + K}\]</span> <span class="deemph">The gap is a second-order, low-pass response to the case’s acceleration. That is the entire accelerometer.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-2" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Accelerometer — what the model says</span></p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:56%;">
+<p><img data-src="figures/accel-response.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:42%; font-size: 0.85em;">
+<p>Two numbers fall out of <span class="math inline">\(Y/A_S = M/(Ms^2 + Bs + K)\)</span>:</p>
+<ul>
+<li><span class="highlight">Static sensitivity</span> <span class="math inline">\(= M/K\)</span>. <span class="deemph">Gap per unit of steady acceleration.</span></li>
+<li><span class="highlight">Natural frequency</span> <span class="math inline">\(\omega_n = \sqrt{K/M}\)</span>. <span class="deemph">Above it, the mass cannot follow and the reading collapses.</span></li>
+</ul>
+<div class="fragment">
+<p><span class="red">They pull in opposite directions.</span> A soft spring gives a large, easy-to-read gap and a low bandwidth; a stiff spring gives bandwidth and a gap too small to see.</p>
+</div>
+<div class="fragment">
+<p>MEMS parts choose stiffness: <span class="math inline">\(\omega_n\)</span> in the kilohertz, so the sensor is flat over anything a limb does, and a gap of nanometres, which is why it is read as a capacitance difference and not as a position.</p>
+</div>
+<div class="fragment">
+<p><span class="highlight">Module 1 again:</span> <span class="deemph">this is the dynamic characteristic of the sensor. Everything above <span class="math inline">\(\omega_n\)</span> is not measured, and near <span class="math inline">\(\omega_n\)</span> it is exaggerated.</span></p>
+</div>
+</div></div>
+</section>
+<section id="inertial-measurement-units-3" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Accelerometer — gravity is in the signal</span></p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/accel-frames.svg" style="width:72%; max-height:none; display:block; margin:0 auto;"></p>
+</div>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p>The spring cannot tell the difference between the case accelerating upward and the case sitting still while gravity pulls the mass down. So the accelerometer reports, in its own frame, <span class="math display">\[\v{a}_S^S(t) = \v{R}_E^S(t)\left(\v{a}_S^E(t) - \v{g}^E\right)\]</span></p>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.5em;">
+<p>Two consequences, both easy to forget:</p>
+<ol type="1">
+<li><span class="red">At rest it does not read zero.</span> It reads <span class="math inline">\(+1\,g\)</span> pointing up, along whichever of its axes happens to be up.</li>
+<li><span class="red">The reading depends on the orientation</span> <span class="math inline">\(\v{R}_E^S\)</span> of the chip, which the chip does not know.</li>
+</ol>
+</div>
+<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
+<p><span class="deemph">The quantity <span class="math inline">\(\v{a} - \v{g}\)</span> is called the <span class="highlight">specific force</span>. An accelerometer is a specific-force sensor; “accelerometer” is a slight misnomer that causes real mistakes.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-4" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Accelerometer — what does each one read?</span></p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/accel-twoaxis.svg" style="width:92%; max-height:none; display:block; margin:0 auto;"></p>
+</div>
+<div class="columns" style="font-size: 0.9em; margin-top: -0.25em;">
+<div class="column" style="width:33%;">
+<div class="fragment">
+<p><span class="highlight">Sensor 1</span>: <span class="math inline">\(\v{R}_E^S = \v{I}\)</span> <span class="math display">\[\v{a}_S^S = -\v{g}^E = \m{0 \\ 9.81}\]</span></p>
+</div>
+</div><div class="column" style="width:33%;">
+<div class="fragment">
+<p><span class="highlight">Sensor 2</span>: <span class="math inline">\(y_S\)</span> points down <span class="math display">\[\v{a}_S^S = \m{0 \\ -9.81}\]</span></p>
+</div>
+</div><div class="column" style="width:33%;">
+<div class="fragment">
+<p><span class="highlight">Sensor 3</span>: turned by <span class="math inline">\(\theta\)</span> <span class="math display">\[\v{a}_S^S = 9.81\m{\sin\theta \\ \cos\theta}\]</span></p>
+</div>
+</div></div>
+<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
+<p><span class="deemph">Sensor 3 is the interesting one: the reading contains <span class="math inline">\(\theta\)</span>. Turn it around and a still accelerometer is a tilt sensor.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-5" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Accelerometer — tilt from a still sensor</span></p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/accel-tilt.svg" style="width:96%; max-height:none; display:block; margin:0 auto;"></p>
+</div>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>Invert the reading of Sensor 3. Two ways:</p>
+<ul>
+<li><span class="highlight">One axis:</span> <span class="math inline">\(\theta = \arcsin(a_x / g)\)</span>. Sensitivity <span class="math inline">\(\partial a_x/\partial\theta = g\cos\theta\)</span>, which goes to zero as the axis approaches vertical. <span class="deemph">The same slope problem as the face-on tag: near <span class="math inline">\(90^\circ\)</span> a small error in <span class="math inline">\(a_x\)</span> is a large error in <span class="math inline">\(\theta\)</span>.</span></li>
+<li><span class="highlight">Both axes:</span> <span class="math inline">\(\theta = \operatorname{atan2}(a_x, a_y)\)</span>. Sensitivity <span class="math inline">\(g\)</span> everywhere, and <span class="math inline">\(g\)</span> itself drops out of the ratio. <span class="red">Always do this.</span></li>
+</ul>
+</div>
+<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
+<p>This is how a phone knows which way is up, how a goniometer app measures a joint’s range of motion, and what the range-of-motion lab does: <span class="highlight">one accelerometer per segment, the subject holds still, read the angle</span>. Holding still is the condition. The next slide is what happens when it is broken.</p>
+</div>
+</section>
+<section id="inertial-measurement-units-6" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Accelerometer — a moving sensor</span></p>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p><span class="math display">\[\v{a}_S^S = \v{R}_E^S\left(\v{a}_S^E - \v{g}^E\right)\]</span></p>
+<p>Three numbers measured. Unknown: the orientation <span class="math inline">\(\v{R}_E^S\)</span> <span class="red">and</span> the motion <span class="math inline">\(\v{a}_S^E\)</span>. <span class="red">One equation, two unknowns, and no algebra separates them.</span></p>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p>A reading of <span class="math inline">\(\m{0 &amp; 9.81 &amp; 0}^\top\)</span> is a chip sitting level, <span class="red">or</span> a chip tilted <span class="math inline">\(90^\circ\)</span> and accelerating sideways at <span class="math inline">\(1\,g\)</span>, <span class="red">or</span> anything in between.</p>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p><span class="highlight">The usual escape</span> is to assume the motion averages to zero over a second or so and low-pass filter the reading, keeping gravity and discarding movement. <span class="deemph">It works for slow postural tasks. It fails exactly when movement is of interest: during a reach, a step, a heel strike, the “tilt” from a filtered accelerometer swings by tens of degrees that never happened.</span></p>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p><span class="highlight">What the accelerometer cannot give, the gyroscope can: orientation</span> <span class="deemph">that does not care whether the segment is moving. At a price, which comes next.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-7" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Gyroscope — the mechanism</span></p>
+<div style="margin-top: -0.5em;">
+<p><img data-src="figures/gyro-coriolis.svg" style="width:84%; max-height:none; display:block; margin:0 auto;"></p>
+</div>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>A mass is driven back and forth at a known velocity <span class="math inline">\(\v{v}\)</span>. If the chip turns at <span class="math inline">\(\boldsymbol{\omega}\)</span>, the mass feels the Coriolis force <span class="math inline">\(\v{f} = 2m\,\v{v}\times\boldsymbol{\omega}\)</span>, at right angles to both. Plates on either side read the deflection it causes, exactly as in the accelerometer.</p>
+</div>
+<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
+<p>Three such structures, one per axis, give <span class="math inline">\(\boldsymbol{\omega}_S^S(t) = \v{R}_E^S(t)\,\boldsymbol{\omega}_S^E(t)\)</span>: <span class="highlight">the angular velocity of the chip, in the chip’s own frame</span>. Gravity does not enter. Motion does not confound it. What it measures is a <span class="red">rate</span>, not an angle.</p>
+</div>
+</section>
+<section id="inertial-measurement-units-8" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Gyroscope — from rate to angle</span></p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:56%;">
+<p><img data-src="figures/imu-drift-gyro.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:42%; font-size: 0.85em;">
+<p>To get an angle, integrate: for one axis, <span class="math display">\[\theta(t) = \theta(0) + \int_0^t \omega(\tau)\,\mathrm{d}\tau\]</span></p>
+<div class="fragment">
+<p>The integral keeps everything, including the errors. A <span class="red">bias</span> <span class="math inline">\(b\)</span> in the rate becomes an angle error <span class="math inline">\(b\,t\)</span> that grows without limit. <span class="red">Noise</span> becomes a random walk, growing as <span class="math inline">\(\sqrt{t}\)</span>.</p>
+</div>
+<div class="fragment">
+<p><span class="highlight">The plot</span>: a gyro lying still on the bench, integrated. A residual bias of <span class="math inline">\(0.05^\circ\)</span>/s, small by consumer standards, is <span class="math inline">\(3^\circ\)</span> a minute. In an hour the angle is meaningless.</p>
+</div>
+<div class="fragment">
+<p><span class="highlight">Two things follow.</span> <span class="deemph">Calibrate the bias before every session, with the sensor still. And never trust an integrated gyro angle on its own for longer than the task needs.</span></p>
+</div>
+</div></div>
+<div style="margin-top: -0.25em;">
+<p><span class="cite">Residual bias and noise as stated above the plot, 500 runs: <a href="data/make_imu_drift.py">make_imu_drift.py</a>; figure source <a href="tikz/imu-drift-gyro.tex">imu-drift-gyro.tex</a>.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-9" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Can an IMU measure position?</span></p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:56%;">
+<p><img data-src="figures/imu-drift-accel.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:42%; font-size: 0.85em;">
+<p>Position needs the acceleration integrated <span class="red">twice</span>, after gravity has been subtracted using an orientation that itself came from integrating the gyro.</p>
+<div class="fragment">
+<p>A bias <span class="math inline">\(b\)</span> in the acceleration becomes a position error <span class="math inline">\(\tfrac{1}{2} b\,t^2\)</span>. <span class="highlight">The plot</span>: a still accelerometer with <span class="math inline">\(10\)</span> mg of residual bias, about <span class="math inline">\(0.1\ \mathrm{m\,s^{-2}}\)</span>, is <span class="math inline">\(5\)</span> cm out after one second and metres out after ten.</p>
+</div>
+<div class="fragment">
+<p><span class="red">So, no.</span> Not for more than a second or two, and not without something else to reset it: a camera, a foot known to be flat on the floor at each step, a known start and end point.</p>
+</div>
+<div class="fragment">
+<p><span class="deemph">What an IMU is good at is orientation. Its position is a by-product nobody should use.</span></p>
+</div>
+</div></div>
+<div style="margin-top: -0.25em;">
+<p><span class="cite">Residual bias and noise as stated above the plot, 500 runs: <a href="data/make_imu_drift.py">make_imu_drift.py</a>; figure source <a href="tikz/imu-drift-accel.tex">imu-drift-accel.tex</a>.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-10" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Putting the two together</span></p>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p>The two sensors fail in opposite ways:</p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th></th>
+<th>Accelerometer tilt</th>
+<th>Integrated gyro angle</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Short term</td>
+<td>wrong whenever the segment moves</td>
+<td>right</td>
+</tr>
+<tr class="even">
+<td>Long term</td>
+<td>right, as soon as the segment is still</td>
+<td>drifts away</td>
+</tr>
+<tr class="odd">
+<td>Reference</td>
+<td>gravity, absolute</td>
+<td>the starting angle, relative</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p><span class="highlight">Sensor fusion</span> is any rule that takes the gyro for the fast part and the accelerometer for the slow part. The simplest one, the <span class="highlight">complementary filter</span>, in one line per sample: <span class="math display">\[\hat\theta_k = \alpha\left(\hat\theta_{k-1} + \omega_k\,\Delta t\right) + (1 - \alpha)\,\theta^{\text{acc}}_k, \qquad \alpha \approx 0.98\]</span> <span class="deemph">Mostly the gyro, pulled gently back towards gravity. A Kalman filter is the same idea with the weights chosen from the noise levels instead of by hand.</span></p>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p><span class="red">Gravity fixes two of the three angles.</span> Rotation about the vertical, the heading, leaves gravity unchanged and is invisible to the accelerometer. For that the chip’s <span class="highlight">magnetometer</span> plays the part of gravity, with the Earth’s field as the reference. <span class="deemph">Indoors, near steel, motors and wiring, that reference bends by tens of degrees, and so does the heading.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-11" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">A joint angle from two IMUs</span></p>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p>Fuse each IMU to get its orientation in the earth frame, <span class="math inline">\(\v{R}_{S_1}^E\)</span> on the thigh and <span class="math inline">\(\v{R}_{S_2}^E\)</span> on the shank. The orientation of one chip relative to the other is <span class="math display">\[\v{R}_{S_2}^{S_1} = \left(\v{R}_{S_1}^E\right)^\top \v{R}_{S_2}^E\]</span> and the knee angle is read from it, exactly as it was read from the two marker-defined segment frames earlier in this module.</p>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p><span class="highlight">Two things this quietly assumes.</span></p>
+<ul>
+<li>The chip’s axes are the segment’s axes. <span class="deemph">They are not: the chip is stuck on wherever the strap holds, at some unknown angle to the bone. This is the <span class="red">sensor-to-segment alignment</span> problem, solved by a calibration pose or movement, and it is the largest error in IMU joint angles in practice.</span></li>
+<li>Both headings share a reference. <span class="deemph">They do only if both magnetometers see the same, undisturbed field. Flexion and extension, about a horizontal axis, survive a bad heading; rotation and abduction do not.</span></li>
+</ul>
+</div>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p><span class="red">And the strap is skin.</span> <span class="deemph">Soft-tissue artefact applies to an IMU as it does to a marker, with the added twist that the IMU feels the strap’s own vibration as acceleration.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-12" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Calibration, and what to read on the datasheet</span></p>
+<div class="columns" style="font-size: 0.85em; margin-top: -0.5em;">
+<div class="column" style="width:49%;">
+<p><span class="highlight">Calibration you do yourself</span></p>
+<ul>
+<li><span class="red">Gyro bias:</span> leave the sensor still for ten seconds, average each axis, subtract. Before every session; it changes with temperature.</li>
+<li><span class="red">Accelerometer bias and scale:</span> the six-position test. Lay the sensor on each of its six faces; each axis should read <span class="math inline">\(+g\)</span>, <span class="math inline">\(-g\)</span> and four zeros. Fit offset and gain per axis.</li>
+<li><span class="red">Check, don’t assume:</span> after calibrating, the magnitude <span class="math inline">\(\|\v{a}_S^S\|\)</span> at rest should be <span class="math inline">\(g\)</span> in every orientation. If it is not, the axes are not orthogonal or the scales are off.</li>
+</ul>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:49%;">
+<p><span class="highlight">Numbers to find on the datasheet</span></p>
+<ul>
+<li><span class="red">Range:</span> <span class="math inline">\(\pm 2\,g\)</span> or <span class="math inline">\(\pm 16\,g\)</span>; <span class="math inline">\(\pm 250\)</span> or <span class="math inline">\(\pm 2000\ ^\circ\)</span>/s. Heel strike can exceed <span class="math inline">\(\pm 2\,g\)</span>; the reading clips and the integral is wrong forever.</li>
+<li><span class="red">Noise density:</span> <span class="math inline">\(\mu g/\sqrt{\mathrm{Hz}}\)</span> and <span class="math inline">\(^\circ/\mathrm{s}/\sqrt{\mathrm{Hz}}\)</span>. Multiply by <span class="math inline">\(\sqrt{\text{bandwidth}}\)</span> for the noise you will see.</li>
+<li><span class="red">Zero-rate and zero-<span class="math inline">\(g\)</span> offset</span>, and their drift with temperature: the bias you will be subtracting, and how fast it moves.</li>
+<li><span class="red">Bandwidth and output rate:</span> the sensor’s own low-pass, and the sampling theorem from Module 1.</li>
+</ul>
+<p><span class="deemph">Values for the lab’s IMU: to be filled in from its datasheet in the lab handout.</span></p>
+</div></div>
+<div class="fragment" style="font-size: 0.85em; margin-top: 0.25em;">
+<p><span class="deemph">The lab does both calibrations on the kit’s IMU, then uses it for joint range of motion. Keep the calibrated numbers: the drift plots on the previous slides are what the uncalibrated sensor does.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-13" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">IMUs — in one place</span></p>
+<div class="columns" style="font-size: 0.85em; margin-top: -0.5em;">
+<div class="column" style="width:49%;">
+<p><span class="highlight">What they measure</span></p>
+<ul>
+<li>Specific force <span class="math inline">\(\v{a} - \v{g}\)</span> and angular velocity, in the chip’s own frame, with no external reference.</li>
+<li>A still accelerometer is a tilt sensor; use both axes.</li>
+<li>A gyro is a rate sensor; its angle is an integral and drifts.</li>
+<li>Fused, they give orientation: two angles against gravity, the third against the magnetic field.</li>
+</ul>
+<p><span class="highlight">What they do not</span></p>
+<ul>
+<li>Position, beyond a second or two.</li>
+<li>The segment’s frame: only the chip’s.</li>
+<li>Heading, indoors, reliably.</li>
+</ul>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:49%;">
+<p><span class="highlight">Against cameras</span></p>
+<ul>
+<li><span class="red">No line of sight, no lab, no capture volume.</span> Works in a clinic corridor, at home, for a day.</li>
+<li><span class="red">No position, so no segment lengths, no step length without a model, no absolute location.</span></li>
+<li><span class="red">Calibration is yours</span>: bias before every session; sensor-to-segment alignment before every placement.</li>
+</ul>
+<p><span class="highlight">The measurement question to ask</span></p>
+<p><span class="deemph">Is it an orientation I need, about a horizontal axis, over minutes? Then an IMU is the right instrument. Is it a position, a heading, or an hour of unsupervised recording? Then it is not, on its own.</span></p>
+</div></div>
 
 </section></section>
     </div>

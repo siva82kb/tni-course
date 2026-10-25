@@ -92,7 +92,6 @@
       <div class="hd">leg</div>
       <label><input type="radio" name="mode" value="thigh"> thigh only &rarr; hip angle</label>
       <label><input type="radio" name="mode" value="leg" checked> thigh + shank &rarr; knee angle</label>
-      <div class="row"><a id="notes" href="../../../notes/01-kinematics-kinetics/ik-notes-leg.html" target="_blank">models &amp; algorithms, step by step &rarr;</a></div>
     </div>
 
     <div class="grp">
@@ -572,9 +571,8 @@
     sync();
   });
   function restart() { t = 0; hist = []; initMarkers(); qc = [0, 0.3]; }
-  function notesLink() { document.getElementById("notes").href = "../../../notes/01-kinematics-kinetics/ik-notes-" + mode + ".html"; }
   Array.prototype.forEach.call(document.querySelectorAll("input[name=mode]"), function (r) {
-    r.addEventListener("change", function () { if (this.checked) { mode = this.value; restart(); notesLink(); } });
+    r.addEventListener("change", function () { if (this.checked) { mode = this.value; restart(); } });
   });
   Array.prototype.forEach.call(document.querySelectorAll("input[name=meth]"), function (r) {
     r.addEventListener("change", function () { if (this.checked) method = this.value; });
@@ -599,7 +597,6 @@
     });
     if (q.get("method") === "fit") { method = "fit"; document.querySelector("input[name=meth][value=fit]").checked = true; }
     if (q.get("mode") === "thigh") { mode = "thigh"; document.querySelector("input[name=mode][value=thigh]").checked = true; }
-    notesLink();
   })();
 
   window.addEventListener("resize", draw);
