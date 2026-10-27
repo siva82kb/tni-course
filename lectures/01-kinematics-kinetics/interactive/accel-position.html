@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Position from a two-axis accelerometer</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Compact by design: this sits on a slide. */
+  #panel {
+    position: absolute; top: 8px; left: 8px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel { width: 250px; }          /* fixed, so the drawing gets the rest */
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 110px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 5.6em; font-family: "Linux Libertine O", Georgia, serif;
+              font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 3.8em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums;
+            white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.t td { color: var(--charcoal); }
+  #tab tr.e td { color: var(--crimson); }
+  sub { font-size: 0.7em; }
+
+  #legend {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 18px; font-size: 12.5px; white-space: nowrap;
+  }
+  #legend span::before {
+    content: ""; display: inline-block; width: 18px; height: 0; vertical-align: middle;
+    margin-right: 5px; border-top: 2.4px solid currentColor;
+  }
+  #legend .t { color: var(--charcoal); }
+  #legend .e { color: var(--crimson); }
+  #legend .s { color: var(--forest); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the movement</div>
+      <label class="sl"><span class="k">duration <i>T</i></span>
+        <input type="range" id="sT" min="1" max="5" step="0.5" value="2">
+        <span class="val" id="vT">2.0 s</span></label>
+      <button id="pstraight">new straight path</button><button id="pcurved">new curved path</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the sensor's errors</div>
+      <label class="sl"><span class="k">bias <i>b<sub>x</sub></i></span>
+        <input type="range" id="sbx" min="-50" max="50" step="1" value="0">
+        <span class="val" id="vbx">0 mg</span></label>
+      <label class="sl"><span class="k">bias <i>b<sub>y</sub></i></span>
+        <input type="range" id="sby" min="-50" max="50" step="1" value="0">
+        <span class="val" id="vby">0 mg</span></label>
+      <label class="sl"><span class="k">mounting <i>&delta;</i></span>
+        <input type="range" id="sdel" min="-5" max="5" step="0.1" value="0">
+        <span class="val" id="vdel">0.0&deg;</span></label>
+      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+        <input type="range" id="ssg" min="0" max="50" step="1" value="5">
+        <span class="val" id="vsg">5 mg</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">double integration,<br>orientation known exactly</div>
+      <table id="tab">
+        <tr class="t"><td class="lab">time</td><td class="n" id="tt">0.00 s</td><td></td></tr>
+        <tr class="e"><td class="lab">error now</td><td class="n" id="en">0.000</td><td>m</td></tr>
+        <tr class="e"><td class="lab">error at <i>T</i></td><td class="n" id="eT">0.000</td><td>m</td></tr>
+      </table>
+      <label style="margin-top:3px; display:flex; align-items:flex-start;"><input type="checkbox" id="ccal" style="width:11px;height:11px;flex:none;margin:2px 4px 0 0"><span>static calibration: 1 s still at A,<br>then subtract the offset</span></label>
+      <button id="replay">replay</button><button id="pause">pause</button><button id="ideal">ideal sensor</button>
+    </div>
+  </div>
+
+  <div id="legend">
+    <span class="t">true path</span>
+    <span class="e">double-integrated</span>
+    <span class="s">sensor axes</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { path: "#CBD5E0", done: "#2D3748", est: "#A51C30", body: "#E2E8F0", bodyEdge: "#718096",
+              axis: "#2B6CB0", g: "#D69E2E", grid: "#EDF2F7", text: "#718096" };
+  var G = 9.81, D = Math.PI / 180;
+  var FS = 200;                                    // samples per second, internal
+  var M  = 50;                                     // noise realisations per run
+
+  // ---- the movement: a reach in the vertical plane ----------------------
+  // From rest at A to rest at B along an arc bowed upwards, with a minimum-
+  // jerk time profile. The sensor is held so that its y axis points along
+  // the direction of travel, so it turns with the path. x is horizontal,
+  // y is up, in metres.
+  var A = [0, 0], B = [0.50, 0.22], BOW = 0.14, nrm = [0, 1];
+  function setNormal() {
+    var dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy);
+    nrm = [-dy / L, dx / L];
+  }
+  setNormal();
+  // A fresh random path from A: a reach of 35 to 55 cm at a heading between
+  // -15 and 40 degrees above horizontal; curved paths bow 8 to 15 cm to one
+  // side or the other, straight paths do not bow at all. On a straight path
+  // the sensor never turns, which is the case where a one-position static
+  // calibration does remove the misalignment.
+  function newPath(curved) {
+    var len = 0.35 + 0.20 * Math.random();
+    var ang = (-15 + 55 * Math.random()) * D;
+    B = [A[0] + len * Math.cos(ang), A[1] + len * Math.sin(ang)];
+    BOW = curved ? (0.08 + 0.07 * Math.random()) * (Math.random() < 0.5 ? -1 : 1) : 0;
+    setNormal();
+  }
+  function pos(s) {
+    var w = Math.sin(Math.PI * s) * BOW;
+    return [A[0] + (B[0] - A[0]) * s + nrm[0] * w, A[1] + (B[1] - A[1]) * s + nrm[1] * w];
+  }
+  function tangentAngle(s) {
+    var dw = Math.PI * Math.cos(Math.PI * s) * BOW;
+    var tx = (B[0] - A[0]) + nrm[0] * dw, ty = (B[1] - A[1]) + nrm[1] * dw;
+    return Math.atan2(ty, tx) - Math.PI / 2;      // y_S along the tangent
+  }
+  function minjerk(tau) { return 10 * tau * tau * tau - 15 * tau * tau * tau * tau + 6 * tau * tau * tau * tau * tau; }
+
+  // ---- state ---------------------------------------------------------
+  var P = { T: 2, bx: 0, by: 0, delta: 0, sigma: 5, cal: false };
+  var PRE = 1;                                     // seconds held still for the calibration
+  var run = null;                                  // precomputed arrays for one run
+  var playing = true, t0 = 0, pauseAt = 0;
+
+  function gauss() {
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function fmt(v, n) { if (Math.abs(v) < 5e-4) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+
+  // ---- one run: simulate the sensor, then reconstruct ------------------
+  // Acceleration is the second difference of the true path on the sample
+  // grid. The reconstruction integrates with the matching second-difference
+  // step from known p(0) and v(0) = 0, so an ideal sensor returns the true
+  // path exactly and every deviation is the sensor's.
+  function compute() {
+    var N = Math.round(P.T * FS), dt = 1 / FS;
+    var p = new Array(N + 1), th = new Array(N + 1);
+    for (var k = 0; k <= N; k++) {
+      var s = minjerk(k / N);
+      p[k] = pos(s); th[k] = tangentAngle(s);
+    }
+    var a = new Array(N + 1);
+    for (k = 1; k < N; k++) {
+      a[k] = [(p[k + 1][0] - 2 * p[k][0] + p[k - 1][0]) / (dt * dt),
+              (p[k + 1][1] - 2 * p[k][1] + p[k - 1][1]) / (dt * dt)];
+    }
+    a[0] = [0, 0]; a[N] = [0, 0];
+
+    // what the chip reports: f = R(-delta) R(-theta) (a - g) + b + e, with
+    // g = (0, -G); the real axes are turned by delta from the body's. The
+    // deterministic part is the same for every run; only the noise differs.
+    var sN = P.sigma / 1000 * G, bx = P.bx / 1000 * G, by = P.by / 1000 * G;
+    var cd = Math.cos(P.delta * D), sd = Math.sin(P.delta * D);
+    var f0 = new Array(N + 1);
+    for (k = 0; k <= N; k++) {
+      var c = Math.cos(th[k]), si = Math.sin(th[k]);
+      var ux = a[k][0], uy = a[k][1] + G;                 // a - g in E
+      var bxv =  c * ux + si * uy, byv = -si * ux + c * uy;   // in the body frame
+      var fx =  cd * bxv + sd * byv, fy = -sd * bxv + cd * byv; // in the real sensor axes
+      f0[k] = [fx + bx, fy + by];
+    }
+
+    // the reconstruction believes the sensor axes are the body axes and
+    // knows theta exactly: a_hat = R(theta) f + g, then integrate twice.
+    // Done M times with independent noise; run 0 is the one followed in
+    // the readout, the rest are drawn as thin lines.
+    function integrate() {
+      var q = new Array(N + 1), err = new Array(N + 1), ah = new Array(N + 1);
+      q[0] = p[0].slice(); q[1] = p[0].slice();            // p(0) known, v(0) = 0
+      err[0] = 0; err[1] = Math.hypot(q[1][0] - p[1][0], q[1][1] - p[1][1]);
+      ah[0] = [0, 0]; ah[N] = [0, 0];
+
+      // Static calibration: PRE seconds still at A, in the start orientation.
+      // Average the noisy readings, subtract what an ideal sensor would read
+      // there, and call the difference "the bias". It contains the true bias
+      // AND the misalignment's gravity leak at this one orientation. The
+      // second part is wrong everywhere the sensor turns to afterwards.
+      var cx = 0, cy = 0;
+      if (P.cal) {
+        var nCal = Math.round(PRE * FS), sx = 0, sy = 0;
+        for (var i = 0; i < nCal; i++) { sx += f0[0][0] + sN * gauss(); sy += f0[0][1] + sN * gauss(); }
+        cx = sx / nCal - Math.sin(th[0]) * G;                // ideal at rest: R(-theta0) (0, G)
+        cy = sy / nCal - Math.cos(th[0]) * G;
+      }
+
+      for (var k = 1; k < N; k++) {
+        var fx = f0[k][0] + sN * gauss() - cx, fy = f0[k][1] + sN * gauss() - cy;
+        var c = Math.cos(th[k]), si = Math.sin(th[k]);
+        var ahx = c * fx - si * fy;
+        var ahy = si * fx + c * fy - G;
+        ah[k] = [ahx, ahy];                                  // the estimated acceleration in E
+        q[k + 1] = [2 * q[k][0] - q[k - 1][0] + ahx * dt * dt,
+                    2 * q[k][1] - q[k - 1][1] + ahy * dt * dt];
+        err[k + 1] = Math.hypot(q[k + 1][0] - p[k + 1][0], q[k + 1][1] - p[k + 1][1]);
+      }
+      return { q: q, err: err, ah: ah, cal: [cx, cy] };
+    }
+    var runs = [], emax = 0, amax = 0;
+    for (var m = 0; m < M; m++) {
+      var r = integrate();
+      runs.push(r);
+      for (k = 0; k <= N; k++) if (r.err[k] > emax) emax = r.err[k];
+    }
+    // axis limits for the time plots: accelerations symmetric about zero,
+    // positions spanning the true path and every run, with a little margin
+    var pmin = [Infinity, Infinity], pmax = [-Infinity, -Infinity];
+    for (k = 0; k <= N; k++) {
+      amax = Math.max(amax, Math.abs(a[k][0]), Math.abs(a[k][1]),
+                      Math.abs(runs[0].ah[k][0]), Math.abs(runs[0].ah[k][1]));
+      for (var d = 0; d < 2; d++) {
+        pmin[d] = Math.min(pmin[d], p[k][d]); pmax[d] = Math.max(pmax[d], p[k][d]);
+        for (m = 0; m < M; m++) {
+          pmin[d] = Math.min(pmin[d], runs[m].q[k][d]); pmax[d] = Math.max(pmax[d], runs[m].q[k][d]);
+        }
+      }
+    }
+    for (d = 0; d < 2; d++) {
+      var span = Math.max(0.1, pmax[d] - pmin[d]);
+      pmin[d] -= 0.08 * span; pmax[d] += 0.08 * span;
+    }
+    run = { N: N, dt: dt, p: p, th: th, a: a, q: runs[0].q, err: runs[0].err, ah: runs[0].ah,
+            runs: runs, emax: emax, amax: amax, pmin: pmin, pmax: pmax };
+    document.getElementById("eT").textContent = fmt(runs[0].err[N], 3);
+  }
+  function restart() { compute(); t0 = performance.now(); pauseAt = 0; }
+
+  // ---- drawing helpers -------------------------------------------------
+  function arrow(x0, y0, x1, y1, color, width, dash) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), L = 8, w = 0.42;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - L * Math.cos(ang - w), y1 - L * Math.sin(ang - w));
+    ctx.lineTo(x1 - L * Math.cos(ang + w), y1 - L * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+  function polyline(pts, upto, color, width, dash) {
+    if (upto < 1) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash || []);
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    for (var k = 0; k <= upto; k++) {
+      var s = pts[k];
+      if (k === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- draw -----------------------------------------------------------
+  // World window in metres, fixed: the true path fills it; a reconstruction
+  // that drifts out of it has drifted out of it.
+  var WIN = { x0: -0.08, x1: 0.62, y0: -0.28, y1: 0.40 };
+
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!run) return;
+
+    var panel  = document.getElementById("panel");
+    var panelW = panel.offsetWidth + 16, panelB = panel.offsetTop + panel.offsetHeight;
+    // the row of time plots sits along the bottom; it spans the full width
+    // if the control panel ends above it, otherwise it starts beside the panel
+    var RH = Math.max(110, Math.min(140, H * 0.25));
+    var rowTop = H - 30 - RH;
+    var rowX0 = (panelB + 8 > rowTop) ? panelW : 12, rowX1 = W - 8;
+    var ax0 = panelW, ax1 = W - 10, ay0 = 10, ay1 = rowTop - 8;
+    var sc = Math.min((ax1 - ax0) / (WIN.x1 - WIN.x0), (ay1 - ay0) / (WIN.y1 - WIN.y0));
+    var ox = ax0 + ((ax1 - ax0) - sc * (WIN.x1 - WIN.x0)) / 2 - WIN.x0 * sc;
+    var oy = ay0 + ((ay1 - ay0) - sc * (WIN.y1 - WIN.y0)) / 2 + WIN.y1 * sc;
+    function toPx(w) { return { x: ox + w[0] * sc, y: oy - w[1] * sc }; }
+
+    // where we are in the replay
+    var tNow = playing ? (performance.now() - t0) / 1000 : pauseAt;
+    var pre = P.cal ? PRE : 0;                       // the still second, if calibrating
+    var LOOP = pre + P.T + 1.2;
+    if (tNow > LOOP) { if (playing) { restart(); tNow = 0; } }
+    var calibrating = tNow < pre;
+    var tClamp = Math.max(0, Math.min(tNow - pre, P.T));
+    var k = Math.min(run.N, Math.round(tClamp * FS));
+
+    // a 10 cm grid, faint
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    // over the whole drawing area, not just the nominal window: when the
+    // area is wider or taller than the window the grid still has to fill it
+    var wx0 = (ax0 - ox) / sc, wx1 = (ax1 - ox) / sc;
+    var wy0 = (oy - ay1) / sc, wy1 = (oy - ay0) / sc;
+    for (var gx = Math.ceil(wx0 * 10) / 10; gx <= wx1; gx += 0.1) {
+      var X = toPx([gx, 0]).x; ctx.beginPath(); ctx.moveTo(X, ay0); ctx.lineTo(X, ay1); ctx.stroke();
+    }
+    for (var gy = Math.ceil(wy0 * 10) / 10; gy <= wy1; gy += 0.1) {
+      var Y = toPx([0, gy]).y; ctx.beginPath(); ctx.moveTo(ax0, Y); ctx.lineTo(ax1, Y); ctx.stroke();
+    }
+    ctx.restore();
+    text("10 cm grid", ax1 - 4, ay1 - 8, COL.text, 11, "right");
+    // gravity, for orientation
+    arrow(ax0 + 18, ay0 + 14, ax0 + 18, ay0 + 44, COL.g, 2);
+    text("g", ax0 + 26, ay0 + 30, COL.g, 12, "left", true);
+
+    // paths: the ensemble as thin lines first, then the true path, then
+    // the followed run on top
+    var ptrue = run.p.map(toPx), pest = run.q.map(toPx);
+    polyline(ptrue, run.N, COL.path, 2.2);
+    ctx.save(); ctx.globalAlpha = 0.22;
+    for (var m = 1; m < run.runs.length; m++) polyline(run.runs[m].q.map(toPx), k, COL.est, 0.8);
+    ctx.restore();
+    polyline(ptrue, k, COL.done, 2.2);
+    polyline(pest, k, COL.est, 1.8);
+    // start and end marks
+    var pa = toPx(A), pb = toPx(B);
+    ctx.save(); ctx.fillStyle = COL.bodyEdge;
+    ctx.beginPath(); ctx.arc(pa.x, pa.y, 3, 0, 2 * Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(pb.x, pb.y, 3, 0, 2 * Math.PI); ctx.fill();
+    ctx.restore();
+    text("A", pa.x - 10, pa.y + 10, COL.text, 12, "center", true);
+    if (calibrating) {
+      text("static calibration, holding still…", pa.x + 18, pa.y + 22, COL.est, 12, "left", true);
+    } else if (P.cal) {
+      text("subtracted as bias: " + fmt(run.runs[0].cal[0] / G * 1000, 0) + ", " +
+           fmt(run.runs[0].cal[1] / G * 1000, 0) + " mg", pa.x + 18, pa.y + 22, COL.text, 11, "left");
+    }
+    text("B", pb.x + 10, pb.y - 10, COL.text, 12, "center", true);
+
+    // the body with the sensor on it, at the true position, and the
+    // reconstructed point
+    var c = toPx(run.p[k]), th = run.th[k];
+    var bw = 0.055 * sc, bh = 0.035 * sc;
+    ctx.save();
+    ctx.translate(c.x, c.y); ctx.rotate(-th);
+    ctx.fillStyle = COL.body; ctx.strokeStyle = COL.bodyEdge; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.rect(-bw / 2, -bh / 2, bw, bh); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    var AL = 0.09 * sc, tx = th + P.delta * D;
+    arrow(c.x, c.y, c.x + AL * Math.cos(tx), c.y - AL * Math.sin(tx), COL.axis, 1.8);
+    arrow(c.x, c.y, c.x - AL * Math.sin(tx), c.y - AL * Math.cos(tx), COL.axis, 1.8);
+    text("x", c.x + (AL + 9) * Math.cos(tx), c.y - (AL + 9) * Math.sin(tx), COL.axis, 11, "center", true);
+    text("y", c.x - (AL + 9) * Math.sin(tx), c.y - (AL + 9) * Math.cos(tx), COL.axis, 11, "center", true);
+    var e = pest[k];
+    ctx.save(); ctx.fillStyle = COL.est;
+    ctx.beginPath(); ctx.arc(e.x, e.y, 3.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.restore();
+    // if the reconstruction has left the window, say which way it went
+    if (e.x < ax0 || e.x > ax1 || e.y < ay0 || e.y > ay1) {
+      var ex = Math.max(ax0 + 8, Math.min(ax1 - 8, e.x)), ey = Math.max(ay0 + 8, Math.min(ay1 - 8, e.y));
+      arrow(ex - 14 * Math.sign(e.x - ex || 0.0001) , ey - 14 * Math.sign(e.y - ey || 0.0001), ex, ey, COL.est, 1.6);
+      text("off the chart", ex + (e.x < ax0 ? 12 : -12), ey + (e.y < ay0 ? 14 : -14), COL.est, 11, e.x < ax0 ? "left" : "right", true);
+    }
+
+    // ---- bottom row: a_x, a_y, p_x, p_y, position error against time -----
+    // Each plot draws a set of series up to the current sample k. Five
+    // plots share the row; each has a left margin for its y labels.
+    var NP = 5, LM = 34, gapX = 10;
+    var pw = (rowX1 - rowX0 - NP * LM - (NP - 1) * gapX) / NP;
+    var top = rowTop, y0 = top + 14, y1 = top + RH - 14, h = y1 - y0;
+    function plot(i, title, series, ymin, ymax, fmtY) {
+      var px0 = rowX0 + i * (LM + pw + gapX) + LM, px1 = px0 + pw, w = pw;
+      function Y(v) { return y1 - (v - ymin) / (ymax - ymin) * h; }
+      ctx.save();
+      ctx.strokeStyle = COL.bodyEdge; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(px0, y0); ctx.lineTo(px0, y1); ctx.lineTo(px1, y1); ctx.stroke();
+      if (ymin < 0 && ymax > 0) {                       // zero line
+        ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(px0, Y(0)); ctx.lineTo(px1, Y(0)); ctx.stroke();
+      }
+      series.forEach(function (s) {
+        ctx.strokeStyle = s.color; ctx.lineWidth = s.lw; ctx.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+        ctx.beginPath();
+        for (var j = 0; j <= k; j++) {
+          var xx = px0 + (j / run.N) * w, yy = Y(s.get(j));
+          if (j === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+      });
+      ctx.restore();
+      text(title, px0, top + 2, COL.text, 10.5, "left");
+      text(fmtY(ymax), px0 - 3, y0 + 2, COL.text, 10, "right");
+      if (ymin < 0) text(fmtY(ymin), px0 - 3, y1 - 2, COL.text, 10, "right");
+      else text("0", px0 - 3, y1, COL.text, 10, "right");
+      text("0", px0, y1 + 9, COL.text, 10, "center");
+      text(fmt(P.T, 1) + " s", px1, y1 + 9, COL.text, 10, "center");
+    }
+    // every plot: the 49 other runs faintly, the true curve thin and dark,
+    // the followed run thick and red on top
+    function ensemble(pick) {
+      var s = run.runs.slice(1).map(function (r) {
+        return { get: function (j) { return pick(r, j); }, color: COL.est, lw: 0.7, alpha: 0.2 };
+      });
+      return s;
+    }
+    // order: the ensemble underneath, the followed run in red, the truth in
+    // thick black on top so it is never hidden
+    function trio(pickRun, pickTrue) {
+      var s = ensemble(pickRun);
+      s.push({ get: function (j) { return pickRun(run.runs[0], j); }, color: COL.est, lw: 1.6 });
+      if (pickTrue) s.push({ get: pickTrue, color: "#000000", lw: 1.8 });
+      return s;
+    }
+    var fa = function (v) { return fmt(v, 1); };
+    var fp = function (v) { return fmt(v, 2); };
+    var aLim = Math.max(0.5, Math.ceil(run.amax * 2) / 2);
+    plot(0, "acceleration x (m/s²)",
+         trio(function (r, j) { return r.ah[j][0]; }, function (j) { return run.a[j][0]; }), -aLim, aLim, fa);
+    plot(1, "acceleration y (m/s²)",
+         trio(function (r, j) { return r.ah[j][1]; }, function (j) { return run.a[j][1]; }), -aLim, aLim, fa);
+    plot(2, "position x (m)",
+         trio(function (r, j) { return r.q[j][0]; }, function (j) { return run.p[j][0]; }), run.pmin[0], run.pmax[0], fp);
+    plot(3, "position y (m)",
+         trio(function (r, j) { return r.q[j][1]; }, function (j) { return run.p[j][1]; }), run.pmin[1], run.pmax[1], fp);
+    plot(4, "position error (m)",
+         trio(function (r, j) { return r.err[j]; }, null), 0, Math.max(0.01, run.emax),
+         function (v) { return fmt(v, v < 0.1 ? 3 : 2); });
+
+    // numbers
+    document.getElementById("tt").textContent = calibrating ? "calibrating" : fmt(tClamp) + " s";
+    document.getElementById("en").textContent = fmt(run.err[k], 3);
+  }
+
+  // ---- animation ------------------------------------------------------
+  function tick() { draw(); requestAnimationFrame(tick); }
+
+  // ---- controls -------------------------------------------------------
+  function bind(id, valId, key, unit, dp) {
+    var s = document.getElementById(id);
+    s.addEventListener("input", function () {
+      P[key] = parseFloat(s.value);
+      document.getElementById(valId).innerHTML = fmt(P[key], dp) + unit;
+      restart();
+    });
+  }
+  bind("sT",   "vT",   "T",     " s", 1);
+  bind("sbx",  "vbx",  "bx",    " mg", 0);
+  bind("sby",  "vby",  "by",    " mg", 0);
+  bind("sdel", "vdel", "delta", "°", 1);
+  bind("ssg",  "vsg",  "sigma", " mg", 0);
+
+  document.getElementById("replay").addEventListener("click", function () {
+    playing = true; document.getElementById("pause").textContent = "pause"; restart();
+  });
+  document.getElementById("pstraight").addEventListener("click", function () {
+    newPath(false); playing = true; document.getElementById("pause").textContent = "pause"; restart();
+  });
+  document.getElementById("pcurved").addEventListener("click", function () {
+    newPath(true); playing = true; document.getElementById("pause").textContent = "pause"; restart();
+  });
+  document.getElementById("pause").addEventListener("click", function () {
+    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, P.T); playing = false; this.textContent = "run"; }
+    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "pause"; }
+  });
+  document.getElementById("ideal").addEventListener("click", function () {
+    var zero = { sbx: ["vbx", "bx", " mg", 0], sby: ["vby", "by", " mg", 0],
+                 sdel: ["vdel", "delta", "°", 1], ssg: ["vsg", "sigma", " mg", 0] };
+    Object.keys(zero).forEach(function (id) {
+      var z = zero[id];
+      P[z[1]] = 0;
+      document.getElementById(id).value = 0;
+      document.getElementById(z[0]).innerHTML = fmt(0, z[3]) + z[2];
+    });
+    restart();
+  });
+
+  // ---- presets from the URL: ?T=2&bx=10&by=0&delta=0.5&sigma=5 -----------
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var spec = { T: ["sT", "vT", " s", 1], bx: ["sbx", "vbx", " mg", 0], by: ["sby", "vby", " mg", 0],
+                 delta: ["sdel", "vdel", "°", 1], sigma: ["ssg", "vsg", " mg", 0] };
+    Object.keys(spec).forEach(function (k) {
+      if (!q.has(k)) return;
+      var v = parseFloat(q.get(k));
+      if (!isFinite(v)) return;
+      var el = document.getElementById(spec[k][0]);
+      v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[k] = v; el.value = v;
+      document.getElementById(spec[k][1]).innerHTML = fmt(v, spec[k][3]) + spec[k][2];
+    });
+    if (q.has("cal")) { P.cal = q.get("cal") !== "0"; document.getElementById("ccal").checked = P.cal; }
+  })();
+  document.getElementById("ccal").addEventListener("change", function () {
+    P.cal = this.checked; restart();
+  });
+
+  // ---- sizing ---------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  restart();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

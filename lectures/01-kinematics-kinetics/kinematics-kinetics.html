@@ -1633,7 +1633,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <div class="column" style="width:60%;">
 <p><img data-src="figures/limit-distance-rot.svg" style="width:100%; max-height:none; display:block;"></p>
 </div><div class="column" style="width:40%;">
-<p><span class="highlight">Orientation comes from foreshortening</span>: the tilt is read from the ratio <span class="math inline">\(h/s = \cos\theta\)</span> of two pixel lengths, each off by about <span class="math inline">\(\sigma\)</span>: <span class="math display">\[\delta(\cos\theta) \approx \frac{\sigma}{s} \;\Rightarrow\; \delta\theta \approx \frac{\sigma}{s\,\sin\theta} \;\propto\; \frac{\sigma\, z}{f d}\]</span> <span class="red">Double the distance, twice the orientation error</span> — gentler than depth, because a ratio needs no scale. <span class="deemph">At <span class="math inline">\(30^\circ\)</span> and 100 px: <span class="math inline">\(2 \times 0.5/100\)</span> rad <span class="math inline">\(\approx 0.6^\circ\)</span>; the simulation gives <span class="math inline">\(0.85^\circ\)</span>.</span></p>
+<p><span class="highlight">Orientation comes from foreshortening</span>: the tilt is read from the ratio <span class="math inline">\(h/s = \cos\theta\)</span> of two pixel lengths, each off by about <span class="math inline">\(\sigma\)</span>: <span class="math display">\[\delta(\cos\theta) \approx \frac{\sigma}{s} \;\Rightarrow\; \delta\theta \approx \frac{\sigma}{s\,\sin\theta} \;\propto\; \frac{\sigma\, z}{f d}\]</span> <span class="red">Double the distance, twice the orientation error</span> — gentler than depth. <span class="deemph">At <span class="math inline">\(30^\circ\)</span> and 100 px: <span class="math inline">\(2 \times 0.5/100\)</span> rad <span class="math inline">\(\approx 0.6^\circ\)</span>; the simulation gives <span class="math inline">\(0.85^\circ\)</span>.</span></p>
 <!-- ::: {.fragment}
 [The same triangle as stereo.]{.highlight} Two cameras a baseline $B$ apart see one point along two rays that meet at an angle of about $B/z$, and the depth error is $\sigma z^2/(fB)$. One camera sees the tag's two corners, $d$ apart, along two rays that meet at an angle of about $d/z$: the same triangle, turned round. [So a tag measures depth like a stereo pair whose baseline is $d$]{.red} --- and $d = 0.1$ m against a baseline of 1 m is ten times the error.
 ::: -->
@@ -1704,7 +1704,7 @@ $$h_{\mathrm{row}} = \frac{f \cdot \tfrac{d}{8}\cos\theta}{z + \tfrac{d}{2}\sin\
 -->
 <div class="fragment" style="margin-top: -0.5em;">
 <ul>
-<li>Once a row squeezed to very few pixels, any lens blur averages neighbouring black and white cells to grey, impacting payload detection.</li>
+<li>Once a row is squeezed to very few pixels, lens blur will average neighbouring black and white cells to grey, impacting payload detection.</li>
 </ul>
 </div>
 </div>
@@ -1786,23 +1786,28 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <section id="inertial-measurement-units" class="slide level2">
 <h2>Inertial measurement units</h2>
 <p><span class="framesub">What an IMU is</span></p>
-<div style="font-size: 0.95em; margin-top: -0.5em;">
-<p>An <span class="highlight">inertial measurement unit</span> is a chip carrying <span class="red">three accelerometers</span> and <span class="red">three gyroscopes</span>, one of each along every axis of the chip’s own frame <span class="math inline">\(S\)</span>. Most also carry a three-axis magnetometer.</p>
-<div class="fragment" style="margin-top: -0.25em;">
-<p>It reports six numbers, typically a few hundred times a second:</p>
+<div class="columns" style="align-items:center; margin-top: -1.0em;">
+<div class="column" style="width:60%; font-size: 0.9em;">
+<p>An <span class="highlight">inertial measurement unit (IMU)</span> is a chip carrying <span class="red">three-axis accelerometers</span> and <span class="red">three-axis gyroscopes</span>, one of each along every axis of the chip’s own frame <span class="math inline">\(S\)</span> <span class="math inline">\(\longrightarrow\)</span> a 6DOf sensor!</p>
+<p>Most sensors also carry a three-axis magnetometer <span class="math inline">\(\longrightarrow\)</span> a 9 DOF sensor! Its often referred to as a <span class="red">MARG (magnetic, angular rate and gravity)</span> sensor.</p>
+<div class="fragment" style="margin-top: -0.5em;">
+<p>Reports six numbers, typically a few hundred times a second:</p>
 <ul>
-<li><span class="math inline">\(\v{a}_S^S(t)\)</span>: what the accelerometers feel, in the sensor frame.</li>
-<li><span class="math inline">\(\boldsymbol{\omega}_S^S(t)\)</span>: the chip’s angular velocity, in the sensor frame.</li>
+<li><span class="math inline">\(\v{a}_S^S(t)\)</span>: accelerometers output in the sensor frame.</li>
+<li><span class="math inline">\(\boldsymbol{\omega}_S^S(t)\)</span>: gyroscope’s output in the sensor frame.</li>
 </ul>
 </div>
-<div class="fragment" style="margin-top: -0.25em;">
-<p><span class="highlight">No reference outside the chip.</span> <span class="deemph">A camera measures a marker against the camera; an encoder measures a shaft against its housing. An IMU measures its own motion against inertial space. That is its whole appeal, and the source of every one of its limitations.</span></p>
-</div>
-<div class="fragment" style="margin-top: -0.25em;">
-<p>Built as <span class="highlight">MEMS</span>: micro-machined silicon, a few millimetres across, costing a few hundred rupees. In every phone, watch, drone, and most wearable movement sensors.</p>
-</div>
-<div class="fragment" style="margin-top: 0.25em;">
-<p>We take the two sensors in turn, then ask what the pair can and cannot tell us about a limb.</p>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:38%;">
+<p><img data-src="figures/imu-frames.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="fragment" style="margin-top: -0.5em; font-size: 0.9em">
+<p><span class="highlight">No reference outside the chip.</span></p>
+<ul>
+<li>A camera measures a marker against its fixed camera frame.</li>
+<li>An encoder measures a shaft against its housing.</li>
+<li>An IMU measures a proof mass against its own case, and expresses it in the case’s own axes.</li>
+</ul>
 </div>
 </div>
 </section>
@@ -1812,65 +1817,99 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <div style="margin-top: -0.5em;">
 <p><img data-src="figures/accel-model.svg" style="width:78%; max-height:none; display:block; margin:0 auto;"></p>
 </div>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
-<p>Newton on the mass, with the spring and damper pulling it towards the case: <span class="math display">\[M \ddot{x}_M = K\,(x_S - x_M) + B\,(\dot{x}_S - \dot{x}_M)\]</span></p>
-</div>
-<div class="fragment" style="font-size: 0.85em; margin-top: -0.75em;">
-<p>Written for the gap <span class="math inline">\(y = x_S - x_M\)</span>, the thing the plates measure, with <span class="math inline">\(a_S = \ddot{x}_S\)</span> the acceleration of the case: <span class="math display">\[M\ddot{y} + B\dot{y} + K y = M\,a_S \qquad\Longrightarrow\qquad \frac{Y(s)}{A_S(s)} = \frac{M}{Ms^2 + Bs + K}\]</span> <span class="deemph">The gap is a second-order, low-pass response to the case’s acceleration. That is the entire accelerometer.</span></p>
+<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
+<p>The sensor output is <span class="math inline">\(y = x_S - x_M\)</span>, the thing the plates measure, with <span class="math inline">\(a_S = \ddot{x}_S\)</span> the acceleration of the case: <span class="math display">\[M\ddot{y} + B\dot{y} + K y = M\,a_S \qquad\Longrightarrow\qquad \frac{Y(s)}{A_S(s)} = \frac{M}{Ms^2 + Bs + K}\]</span></p>
 </div>
 </section>
 <section id="inertial-measurement-units-2" class="slide level2">
 <h2>Inertial measurement units</h2>
 <p><span class="framesub">Accelerometer — what the model says</span></p>
-<div class="columns" style="align-items:center; margin-top: -0.5em;">
-<div class="column" style="width:56%;">
-<p><img data-src="figures/accel-response.svg" style="width:100%; max-height:none; display:block;"></p>
-</div><div class="column" style="width:2%;">
-
-</div><div class="column" style="width:42%; font-size: 0.85em;">
-<p>Two numbers fall out of <span class="math inline">\(Y/A_S = M/(Ms^2 + Bs + K)\)</span>:</p>
+<div class="columns" style="align-items:center; margin-top: -1.5em; font-size: 0.8em;">
+<div class="column" style="width:50%;">
+<p><img data-src="figures/accel-response.svg" style="width:80%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:50%;">
+<p>Two useful numbers from the transfer function: <span class="math display">\[\frac{Y(s)}{A_S(s)} = \frac{M}{Ms^2 + Bs + K}\]</span></p>
 <ul>
-<li><span class="highlight">Static sensitivity</span> <span class="math inline">\(= M/K\)</span>. <span class="deemph">Gap per unit of steady acceleration.</span></li>
-<li><span class="highlight">Natural frequency</span> <span class="math inline">\(\omega_n = \sqrt{K/M}\)</span>. <span class="deemph">Above it, the mass cannot follow and the reading collapses.</span></li>
+<li><span class="highlight">Static sensitivity</span> <span class="math inline">\(= M/K\)</span>.</li>
+<li><span class="highlight">Natural frequency</span> <span class="math inline">\(\omega_n = \sqrt{K/M}\)</span>.</li>
 </ul>
-<div class="fragment">
-<p><span class="red">They pull in opposite directions.</span> A soft spring gives a large, easy-to-read gap and a low bandwidth; a stiff spring gives bandwidth and a gap too small to see.</p>
+<div style="margin-top:-1.0em;">
+<p>We ideally want both to be high, which we cannot because the two are one number!</p>
 </div>
-<div class="fragment">
-<p>MEMS parts choose stiffness: <span class="math inline">\(\omega_n\)</span> in the kilohertz, so the sensor is flat over anything a limb does, and a gap of nanometres, which is why it is read as a capacitance difference and not as a position.</p>
+</div><div class="fragment">
+<div style="margin-top:-1.0em;">
+<p><span class="red">Sensitivity and bandwidth are not a trade-off, they are an identity.</span> Static sensitivity is <span class="math inline">\(M/K\)</span> and <span class="math inline">\(\omega_n^2 = K/M\)</span>, so</p>
 </div>
-<div class="fragment">
-<p><span class="highlight">Module 1 again:</span> <span class="deemph">this is the dynamic characteristic of the sensor. Everything above <span class="math inline">\(\omega_n\)</span> is not measured, and near <span class="math inline">\(\omega_n\)</span> it is exaggerated.</span></p>
+<div style="margin-top:-1.0em;">
+<p><span class="math display">\[\text{sensitivity} = \frac{1}{\omega_n^2}\]</span></p>
 </div>
-</div></div>
+<div style="margin-top:-1.0em;">
+<p>for any mass and any spring. Choosing the bandwidth fixes the gap, and no choice of <span class="math inline">\(M\)</span> escapes it.</p>
+</div>
+</div><div class="fragment">
+<div style="margin-top:-0.75em;">
+<p>MEMS parts choose bandwidth: <span class="math inline">\(\omega_n\)</span> of a few kilohertz, flat over anything a limb does, and therefore a displacement of tens of nanometres per <span class="math inline">\(g\)</span>.</p>
+</div>
+</div><div class="fragment">
+<div style="margin-top:-0.75em;">
+<p><span class="highlight">Module 1 again:</span> <span class="deemph">we only need to do static calibration to find out the static sensitivity; the sensor’s dynamics can be ignored for human movements.</span></p>
+</div>
+</div>
+</div>
 </section>
 <section id="inertial-measurement-units-3" class="slide level2">
 <h2>Inertial measurement units</h2>
 <p><span class="framesub">Accelerometer — gravity is in the signal</span></p>
-<div style="margin-top: -0.5em;">
-<p><img data-src="figures/accel-frames.svg" style="width:72%; max-height:none; display:block; margin:0 auto;"></p>
-</div>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
+<div style="font-size: 0.85em;">
 <p>The spring cannot tell the difference between the case accelerating upward and the case sitting still while gravity pulls the mass down. So the accelerometer reports, in its own frame, <span class="math display">\[\v{a}_S^S(t) = \v{R}_E^S(t)\left(\v{a}_S^E(t) - \v{g}^E\right)\]</span></p>
 </div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.5em;">
-<p>Two consequences, both easy to forget:</p>
+<div class="columns" style="align-items:center; margin-top: -1.0em;">
+<div class="column" style="width:50%;">
+<p><img data-src="figures/accel-frames.svg" style="width:100%; max-height:none; display:block;"></p>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:48%; font-size: 0.9em;">
+<p>Two consequences:</p>
 <ol type="1">
 <li><span class="red">At rest it does not read zero.</span> It reads <span class="math inline">\(+1\,g\)</span> pointing up, along whichever of its axes happens to be up.</li>
 <li><span class="red">The reading depends on the orientation</span> <span class="math inline">\(\v{R}_E^S\)</span> of the chip, which the chip does not know.</li>
 </ol>
+<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
+<p>Both problems are addressed if <span class="math inline">\(\v{R}_E^S(t)\)</span> is known. <span class="math display">\[ \v{a}_{S}^{E}(t) = \left(\v{R}_{E}^{S}(t)\right)^\top \v{a}_{S}^{S}(t) + \v{g}_{}^{E}\]</span></p>
+<p>Undo the rotation, remove the effect of gravity to obtain the linear acceleration.</p>
 </div>
-<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
-<p><span class="deemph">The quantity <span class="math inline">\(\v{a} - \v{g}\)</span> is called the <span class="highlight">specific force</span>. An accelerometer is a specific-force sensor; “accelerometer” is a slight misnomer that causes real mistakes.</span></p>
-</div>
+</div></div>
 </section>
 <section id="inertial-measurement-units-4" class="slide level2">
 <h2>Inertial measurement units</h2>
-<p><span class="framesub">Accelerometer — what does each one read?</span></p>
-<div style="margin-top: -0.5em;">
-<p><img data-src="figures/accel-twoaxis.svg" style="width:92%; max-height:none; display:block; margin:0 auto;"></p>
+<p><span class="framesub">Accelerometer — using gravity to estimate orientation</span></p>
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:60%;">
+<iframe src="interactive/acceltilt.html?rot=30,0,0" style="width:100%; height:520px; border:0; display:block;" title="A still accelerometer as a tilt sensor">
+</iframe>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:38%; font-size: 0.85em;">
+<p><span class="highlight">Accelerometer as a tilt-sensor</span></p>
+<p><span class="math display">\[\v{a}_S^S(t) = \v{R}_E^S(t)\left(\v{a}_S^E(t) - \v{g}^E\right)\]</span></p>
+<p>When there is no or little linear acceleration, <span class="math inline">\(\Vert \v{a}_{S}^{E}(t) \Vert_2 \approx 0\)</span>, so</p>
+<p><span class="math display">\[\v{a}_S^S(t) = - \v{R}_E^S(t)\, \v{g}^E\]</span></p>
+<ul>
+<li>Three equations, but only two are independent: <span class="math inline">\(\Vert \v{a}_S^S \Vert_2 = \Vert \v{g}^E \Vert_2\)</span>.</li>
+<li><span class="math inline">\(\v{R}_E^S(t)\)</span> is characterized by three angles, only two can be determined: <span class="highlight">pitch</span> and <span class="highlight">roll</span>; <span class="red">yaw</span> cannot be determined.</li>
+</ul>
+</div></div>
+</section>
+<section id="inertial-measurement-units-5" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">Accelerometer — using gravity to estimate orientation</span></p>
+<div style="margin-top: -1.0em;">
+<p><span class="highlight">Orientation estimation with 2-axis Accelerometer</span></p>
 </div>
-<div class="columns" style="font-size: 0.9em; margin-top: -0.25em;">
+<div style="margin-top: -1.0em;">
+<p><img data-src="figures/accel-twoaxis.svg" style="width:75%; max-height:none; display:block; margin:0 auto;"></p>
+</div>
+<div class="columns" style="font-size: 0.8em; margin-top: -0.25em;">
 <div class="column" style="width:33%;">
 <div class="fragment">
 <p><span class="highlight">Sensor 1</span>: <span class="math inline">\(\v{R}_E^S = \v{I}\)</span> <span class="math display">\[\v{a}_S^S = -\v{g}^E = \m{0 \\ 9.81}\]</span></p>
@@ -1888,214 +1927,290 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <p><span class="deemph">Sensor 3 is the interesting one: the reading contains <span class="math inline">\(\theta\)</span>. Turn it around and a still accelerometer is a tilt sensor.</span></p>
 </div>
 </section>
-<section id="inertial-measurement-units-5" class="slide level2">
+<section id="inertial-measurement-units-6" class="slide level2">
 <h2>Inertial measurement units</h2>
 <p><span class="framesub">Accelerometer — tilt from a still sensor</span></p>
-<div style="margin-top: -0.5em;">
-<p><img data-src="figures/accel-tilt.svg" style="width:96%; max-height:none; display:block; margin:0 auto;"></p>
-</div>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
+<div class="columns" style="align-items:center; margin-top: -0.5em;">
+<div class="column" style="width:58%; font-size: 0.75em;">
+<p><img data-src="figures/accel-tilt.svg" style="width:100%; max-height:none; display:block;"></p>
 <p>Invert the reading of Sensor 3. Two ways:</p>
 <ul>
 <li><span class="highlight">One axis:</span> <span class="math inline">\(\theta = \arcsin(a_x / g)\)</span>. Sensitivity <span class="math inline">\(\partial a_x/\partial\theta = g\cos\theta\)</span>, which goes to zero as the axis approaches vertical. <span class="deemph">The same slope problem as the face-on tag: near <span class="math inline">\(90^\circ\)</span> a small error in <span class="math inline">\(a_x\)</span> is a large error in <span class="math inline">\(\theta\)</span>.</span></li>
 <li><span class="highlight">Both axes:</span> <span class="math inline">\(\theta = \operatorname{atan2}(a_x, a_y)\)</span>. Sensitivity <span class="math inline">\(g\)</span> everywhere, and <span class="math inline">\(g\)</span> itself drops out of the ratio. <span class="red">Always do this.</span></li>
 </ul>
-</div>
-<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
-<p>This is how a phone knows which way is up, how a goniometer app measures a joint’s range of motion, and what the range-of-motion lab does: <span class="highlight">one accelerometer per segment, the subject holds still, read the angle</span>. Holding still is the condition. The next slide is what happens when it is broken.</p>
-</div>
-</section>
-<section id="inertial-measurement-units-6" class="slide level2">
-<h2>Inertial measurement units</h2>
-<p><span class="framesub">Accelerometer — a moving sensor</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p><span class="math display">\[\v{a}_S^S = \v{R}_E^S\left(\v{a}_S^E - \v{g}^E\right)\]</span></p>
-<p>Three numbers measured. Unknown: the orientation <span class="math inline">\(\v{R}_E^S\)</span> <span class="red">and</span> the motion <span class="math inline">\(\v{a}_S^E\)</span>. <span class="red">One equation, two unknowns, and no algebra separates them.</span></p>
-</div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
-<p>A reading of <span class="math inline">\(\m{0 &amp; 9.81 &amp; 0}^\top\)</span> is a chip sitting level, <span class="red">or</span> a chip tilted <span class="math inline">\(90^\circ\)</span> and accelerating sideways at <span class="math inline">\(1\,g\)</span>, <span class="red">or</span> anything in between.</p>
-</div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
-<p><span class="highlight">The usual escape</span> is to assume the motion averages to zero over a second or so and low-pass filter the reading, keeping gravity and discarding movement. <span class="deemph">It works for slow postural tasks. It fails exactly when movement is of interest: during a reach, a step, a heel strike, the “tilt” from a filtered accelerometer swings by tens of degrees that never happened.</span></p>
-</div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
-<p><span class="highlight">What the accelerometer cannot give, the gyroscope can: orientation</span> <span class="deemph">that does not care whether the segment is moving. At a price, which comes next.</span></p>
-</div>
+</div><div class="column" style="width:2%;">
+
+</div><div class="column" style="width:40%;">
+<iframe src="interactive/tilt2d.html?theta=30&amp;sigma=1" style="width:100%; height:520px; border:0; display:block;" title="Tilt from a two-axis accelerometer, with noise">
+</iframe>
+</div></div>
 </section>
 <section id="inertial-measurement-units-7" class="slide level2">
 <h2>Inertial measurement units</h2>
-<p><span class="framesub">Gyroscope — the mechanism</span></p>
-<div style="margin-top: -0.5em;">
-<p><img data-src="figures/gyro-coriolis.svg" style="width:84%; max-height:none; display:block; margin:0 auto;"></p>
-</div>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
-<p>A mass is driven back and forth at a known velocity <span class="math inline">\(\v{v}\)</span>. If the chip turns at <span class="math inline">\(\boldsymbol{\omega}\)</span>, the mass feels the Coriolis force <span class="math inline">\(\v{f} = 2m\,\v{v}\times\boldsymbol{\omega}\)</span>, at right angles to both. Plates on either side read the deflection it causes, exactly as in the accelerometer.</p>
-</div>
-<div class="fragment" style="font-size: 0.85em; margin-top: -0.25em;">
-<p>Three such structures, one per axis, give <span class="math inline">\(\boldsymbol{\omega}_S^S(t) = \v{R}_E^S(t)\,\boldsymbol{\omega}_S^E(t)\)</span>: <span class="highlight">the angular velocity of the chip, in the chip’s own frame</span>. Gravity does not enter. Motion does not confound it. What it measures is a <span class="red">rate</span>, not an angle.</p>
+<p><span class="framesub">Accelerometer — kinematic tracking</span></p>
+<p><span class="highlight">How do we use the accelerometer to track movement kinematics?</span></p>
+<div style="font-size: 0.9em;">
+<p>Accelerometers do not provide position kinematics directly. After correct for the sensor’s orientation, we still only get the linear acceleration - the second derivative of position.</p>
+<p><span class="math display">\[\v{a}_S^S(t) = \v{R}_E^S(t)\left(\v{a}_S^E(t) - \v{g}^E\right)\]</span></p>
+<p>Assuming we have perfect knowledge of the sensor’s orientation <span class="math inline">\(\v{R}_{E}^{S}(t)\)</span>, we have</p>
+<p><span class="math display">\[ \v{a}_{S}^{E}(t) = \left(\v{R}_{E}^{S}(t)\right)^\top \v{a}_{S}^{S}(t) + \v{g}_{}^{E} = \v{\ddot{r}}_{S}^{E}(t)\]</span></p>
+<p>To obtain the position kinematics we simply need to double integrate the acceleration, with the initial position and velocity at some initial time <span class="math inline">\(t_0\)</span>.</p>
+<p><span class="math display">\[ \begin{split}
+\v{\dot{r}}_{S}^{E}(t) &amp;= \int_{t_0}^{t} \v{a}_{S}^{E}(t) dt + \v{\dot{r}}_{S}^{E}(t_0) \\
+\v{r}_{S}^{E}(t) &amp;= \int_{t_0}^{t} \v{\dot{r}}_{S}^{E}(t) dt + \v{r}_{S}^{E}(t_0) \\
+\end{split} \]</span></p>
 </div>
 </section>
 <section id="inertial-measurement-units-8" class="slide level2">
 <h2>Inertial measurement units</h2>
-<p><span class="framesub">Gyroscope — from rate to angle</span></p>
-<div class="columns" style="align-items:center; margin-top: -0.5em;">
-<div class="column" style="width:56%;">
-<p><img data-src="figures/imu-drift-gyro.svg" style="width:100%; max-height:none; display:block;"></p>
-</div><div class="column" style="width:2%;">
-
-</div><div class="column" style="width:42%; font-size: 0.85em;">
-<p>To get an angle, integrate: for one axis, <span class="math display">\[\theta(t) = \theta(0) + \int_0^t \omega(\tau)\,\mathrm{d}\tau\]</span></p>
-<div class="fragment">
-<p>The integral keeps everything, including the errors. A <span class="red">bias</span> <span class="math inline">\(b\)</span> in the rate becomes an angle error <span class="math inline">\(b\,t\)</span> that grows without limit. <span class="red">Noise</span> becomes a random walk, growing as <span class="math inline">\(\sqrt{t}\)</span>.</p>
+<p><span class="framesub">Accelerometer — true signal model</span></p>
+<p><span class="highlight">Model of an actual accelerometer</span></p>
+<div style="font-size:0.9em;">
+<div style="margin-top: -1.0em;">
+<p>A real accelerometer reports the specific force with a bias, a noise term, and an error in the axes:</p>
 </div>
-<div class="fragment">
-<p><span class="highlight">The plot</span>: a gyro lying still on the bench, integrated. A residual bias of <span class="math inline">\(0.05^\circ\)</span>/s, small by consumer standards, is <span class="math inline">\(3^\circ\)</span> a minute. In an hour the angle is meaningless.</p>
+<div style="margin-top: -0.75em;">
+<p><span class="math display">\[\tilde{\v{a}}_{S}^{S}(t) = \v{T}\,\v{R}_{E}^{S}(t) \left(\v{a}_{S}^{E}(t) - \v{g}^{E}\right) + \v{b}_{a} + \v{e}_{a}\]</span></p>
 </div>
-<div class="fragment">
-<p><span class="highlight">Two things follow.</span> <span class="deemph">Calibrate the bias before every session, with the sensor still. And never trust an integrated gyro angle on its own for longer than the task needs.</span></p>
+<div style="font-size: 0.9em; margin-top: -0.75em;">
+<p><span class="highlight">Bias <span class="math inline">\(\v{b}_{a}\)</span></span>, in m<span class="math inline">\(g\)</span>: added after everything, so <span class="red">the same three numbers in every orientation</span>.</p>
+<ul>
+<li>Asymmetry in the proof mass and plates, and package stress from soldering and mounting (tens to about <span class="math inline">\(100\)</span> m<span class="math inline">\(g\)</span> out of the box). This is <span class="highlight">fixed per device</span>.</li>
+<li>Turn-on repeatability, a few m<span class="math inline">\(g\)</span> between power cycles. This is <span class="highlight">fixed per run</span>.</li>
+<li>Temperature sensitivity <span class="math inline">\(\approx 1\)</span> m<span class="math inline">\(g\)</span> per <span class="math inline">\(^\circ\)</span>C and in-run instability, <span class="math inline">\(1/f\)</span> noise of a few hundred <span class="math inline">\(\mu g\)</span>. These are <span class="highlight">slowly varying components</span>.</li>
+</ul>
+<div style="margin-top: -0.75em;">
+<p><span class="highlight">Misalignment and non-orthogonality <span class="math inline">\(\v{T}\)</span></span>: the sensing axes are not quite at right angles to each other or to the package (about <span class="math inline">\(1^\circ\)</span>), and the package is not quite aligned with the segment it is fixed to (can be <span class="math inline">\(10^\circ\)</span> or more). In any one orientation this adds a constant to the reading, so it cannot be distinguished from a bias. Turn the sensor and the contribution of misalignment changes; a bias would not.</p>
 </div>
-</div></div>
-<div style="margin-top: -0.25em;">
-<p><span class="cite">Residual bias and noise as stated above the plot, 500 runs: <a href="data/make_imu_drift.py">make_imu_drift.py</a>; figure source <a href="tikz/imu-drift-gyro.tex">imu-drift-gyro.tex</a>.</span></p>
+<div style="margin-top: -0.75em;">
+<p><span class="highlight">Noise <span class="math inline">\(\v{e}_{a}\)</span></span>: white, quoted on the datasheet as a density per <span class="math inline">\(\sqrt{\mathrm{Hz}}\)</span>.</p>
+</div>
+<div style="margin-top: -0.75em;">
+<p>Static calibration at the start of a session removes the fixed and turn-on parts; a settled chip removes most of the temperature part. <span class="red">What remains is irrelevant for tilt and decisive for anything integrated.</span></p>
+</div>
+</div>
 </div>
 </section>
 <section id="inertial-measurement-units-9" class="slide level2">
 <h2>Inertial measurement units</h2>
-<p><span class="framesub">Can an IMU measure position?</span></p>
-<div class="columns" style="align-items:center; margin-top: -0.5em;">
-<div class="column" style="width:56%;">
-<p><img data-src="figures/imu-drift-accel.svg" style="width:100%; max-height:none; display:block;"></p>
-</div><div class="column" style="width:2%;">
-
-</div><div class="column" style="width:42%; font-size: 0.85em;">
-<p>Position needs the acceleration integrated <span class="red">twice</span>, after gravity has been subtracted using an orientation that itself came from integrating the gyro.</p>
-<div class="fragment">
-<p>A bias <span class="math inline">\(b\)</span> in the acceleration becomes a position error <span class="math inline">\(\tfrac{1}{2} b\,t^2\)</span>. <span class="highlight">The plot</span>: a still accelerometer with <span class="math inline">\(10\)</span> mg of residual bias, about <span class="math inline">\(0.1\ \mathrm{m\,s^{-2}}\)</span>, is <span class="math inline">\(5\)</span> cm out after one second and metres out after ten.</p>
-</div>
-<div class="fragment">
-<p><span class="red">So, no.</span> Not for more than a second or two, and not without something else to reset it: a camera, a foot known to be flat on the floor at each step, a known start and end point.</p>
-</div>
-<div class="fragment">
-<p><span class="deemph">What an IMU is good at is orientation. Its position is a by-product nobody should use.</span></p>
-</div>
-</div></div>
-<div style="margin-top: -0.25em;">
-<p><span class="cite">Residual bias and noise as stated above the plot, 500 runs: <a href="data/make_imu_drift.py">make_imu_drift.py</a>; figure source <a href="tikz/imu-drift-accel.tex">imu-drift-accel.tex</a>.</span></p>
-</div>
+<p><span class="framesub">Accelerometer — bias, misalignment, and what calibration removes</span></p>
+<iframe src="interactive/pendulum-accel.html?phi=0&amp;delta=10&amp;eps=3&amp;bx=50&amp;by=-30&amp;sigma=5" style="width:100%; height:560px; border:0; display:block;" title="A two-axis accelerometer on a pendulum">
+</iframe>
 </section>
 <section id="inertial-measurement-units-10" class="slide level2">
 <h2>Inertial measurement units</h2>
-<p><span class="framesub">Putting the two together</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>The two sensors fail in opposite ways:</p>
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th></th>
-<th>Accelerometer tilt</th>
-<th>Integrated gyro angle</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Short term</td>
-<td>wrong whenever the segment moves</td>
-<td>right</td>
-</tr>
-<tr class="even">
-<td>Long term</td>
-<td>right, as soon as the segment is still</td>
-<td>drifts away</td>
-</tr>
-<tr class="odd">
-<td>Reference</td>
-<td>gravity, absolute</td>
-<td>the starting angle, relative</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
-<p><span class="highlight">Sensor fusion</span> is any rule that takes the gyro for the fast part and the accelerometer for the slow part. The simplest one, the <span class="highlight">complementary filter</span>, in one line per sample: <span class="math display">\[\hat\theta_k = \alpha\left(\hat\theta_{k-1} + \omega_k\,\Delta t\right) + (1 - \alpha)\,\theta^{\text{acc}}_k, \qquad \alpha \approx 0.98\]</span> <span class="deemph">Mostly the gyro, pulled gently back towards gravity. A Kalman filter is the same idea with the weights chosen from the noise levels instead of by hand.</span></p>
-</div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
-<p><span class="red">Gravity fixes two of the three angles.</span> Rotation about the vertical, the heading, leaves gravity unchanged and is invisible to the accelerometer. For that the chip’s <span class="highlight">magnetometer</span> plays the part of gravity, with the Earth’s field as the reference. <span class="deemph">Indoors, near steel, motors and wiring, that reference bends by tens of degrees, and so does the heading.</span></p>
-</div>
-</section>
-<section id="inertial-measurement-units-11" class="slide level2">
-<h2>Inertial measurement units</h2>
-<p><span class="framesub">A joint angle from two IMUs</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>Fuse each IMU to get its orientation in the earth frame, <span class="math inline">\(\v{R}_{S_1}^E\)</span> on the thigh and <span class="math inline">\(\v{R}_{S_2}^E\)</span> on the shank. The orientation of one chip relative to the other is <span class="math display">\[\v{R}_{S_2}^{S_1} = \left(\v{R}_{S_1}^E\right)^\top \v{R}_{S_2}^E\]</span> and the knee angle is read from it, exactly as it was read from the two marker-defined segment frames earlier in this module.</p>
-</div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
-<p><span class="highlight">Two things this quietly assumes.</span></p>
-<ul>
-<li>The chip’s axes are the segment’s axes. <span class="deemph">They are not: the chip is stuck on wherever the strap holds, at some unknown angle to the bone. This is the <span class="red">sensor-to-segment alignment</span> problem, solved by a calibration pose or movement, and it is the largest error in IMU joint angles in practice.</span></li>
-<li>Both headings share a reference. <span class="deemph">They do only if both magnetometers see the same, undisturbed field. Flexion and extension, about a horizontal axis, survive a bad heading; rotation and abduction do not.</span></li>
-</ul>
-</div>
-<div class="fragment" style="font-size: 0.9em; margin-top: -0.25em;">
-<p><span class="red">And the strap is skin.</span> <span class="deemph">Soft-tissue artefact applies to an IMU as it does to a marker, with the added twist that the IMU feels the strap’s own vibration as acceleration.</span></p>
-</div>
-</section>
-<section id="inertial-measurement-units-12" class="slide level2">
-<h2>Inertial measurement units</h2>
-<p><span class="framesub">Calibration, and what to read on the datasheet</span></p>
-<div class="columns" style="font-size: 0.85em; margin-top: -0.5em;">
-<div class="column" style="width:49%;">
-<p><span class="highlight">Calibration you do yourself</span></p>
-<ul>
-<li><span class="red">Gyro bias:</span> leave the sensor still for ten seconds, average each axis, subtract. Before every session; it changes with temperature.</li>
-<li><span class="red">Accelerometer bias and scale:</span> the six-position test. Lay the sensor on each of its six faces; each axis should read <span class="math inline">\(+g\)</span>, <span class="math inline">\(-g\)</span> and four zeros. Fit offset and gain per axis.</li>
-<li><span class="red">Check, don’t assume:</span> after calibrating, the magnitude <span class="math inline">\(\|\v{a}_S^S\|\)</span> at rest should be <span class="math inline">\(g\)</span> in every orientation. If it is not, the axes are not orthogonal or the scales are off.</li>
-</ul>
-</div><div class="column" style="width:2%;">
+<p><span class="framesub">Accelerometer — can it give position?</span></p>
+<iframe src="interactive/accel-position.html?T=2&amp;bx=20&amp;by=-10&amp;delta=1&amp;sigma=5" style="width:100%; height:600px; border:0; display:block;" title="Position from a two-axis accelerometer, orientation known">
+</iframe>
+<!-- ## Inertial measurement units
 
-</div><div class="column" style="width:49%;">
-<p><span class="highlight">Numbers to find on the datasheet</span></p>
-<ul>
-<li><span class="red">Range:</span> <span class="math inline">\(\pm 2\,g\)</span> or <span class="math inline">\(\pm 16\,g\)</span>; <span class="math inline">\(\pm 250\)</span> or <span class="math inline">\(\pm 2000\ ^\circ\)</span>/s. Heel strike can exceed <span class="math inline">\(\pm 2\,g\)</span>; the reading clips and the integral is wrong forever.</li>
-<li><span class="red">Noise density:</span> <span class="math inline">\(\mu g/\sqrt{\mathrm{Hz}}\)</span> and <span class="math inline">\(^\circ/\mathrm{s}/\sqrt{\mathrm{Hz}}\)</span>. Multiply by <span class="math inline">\(\sqrt{\text{bandwidth}}\)</span> for the noise you will see.</li>
-<li><span class="red">Zero-rate and zero-<span class="math inline">\(g\)</span> offset</span>, and their drift with temperature: the bias you will be subtracting, and how fast it moves.</li>
-<li><span class="red">Bandwidth and output rate:</span> the sensor’s own low-pass, and the sampling theorem from Module 1.</li>
-</ul>
-<p><span class="deemph">Values for the lab’s IMU: to be filled in from its datasheet in the lab handout.</span></p>
-</div></div>
-<div class="fragment" style="font-size: 0.85em; margin-top: 0.25em;">
-<p><span class="deemph">The lab does both calibrations on the kit’s IMU, then uses it for joint range of motion. Keep the calibrated numbers: the drift plots on the previous slides are what the uncalibrated sensor does.</span></p>
-</div>
-</section>
-<section id="inertial-measurement-units-13" class="slide level2">
-<h2>Inertial measurement units</h2>
-<p><span class="framesub">IMUs — in one place</span></p>
-<div class="columns" style="font-size: 0.85em; margin-top: -0.5em;">
-<div class="column" style="width:49%;">
-<p><span class="highlight">What they measure</span></p>
-<ul>
-<li>Specific force <span class="math inline">\(\v{a} - \v{g}\)</span> and angular velocity, in the chip’s own frame, with no external reference.</li>
-<li>A still accelerometer is a tilt sensor; use both axes.</li>
-<li>A gyro is a rate sensor; its angle is an integral and drifts.</li>
-<li>Fused, they give orientation: two angles against gravity, the third against the magnetic field.</li>
-</ul>
-<p><span class="highlight">What they do not</span></p>
-<ul>
-<li>Position, beyond a second or two.</li>
-<li>The segment’s frame: only the chip’s.</li>
-<li>Heading, indoors, reliably.</li>
-</ul>
-</div><div class="column" style="width:2%;">
+[Gyroscope --- the mechanism]{.framesub}
 
-</div><div class="column" style="width:49%;">
-<p><span class="highlight">Against cameras</span></p>
-<ul>
-<li><span class="red">No line of sight, no lab, no capture volume.</span> Works in a clinic corridor, at home, for a day.</li>
-<li><span class="red">No position, so no segment lengths, no step length without a model, no absolute location.</span></li>
-<li><span class="red">Calibration is yours</span>: bias before every session; sensor-to-segment alignment before every placement.</li>
-</ul>
-<p><span class="highlight">The measurement question to ask</span></p>
-<p><span class="deemph">Is it an orientation I need, about a horizontal axis, over minutes? Then an IMU is the right instrument. Is it a position, a heading, or an hour of unsupervised recording? Then it is not, on its own.</span></p>
-</div></div>
+::: {style="margin-top: -0.5em;"}
+![](figures/gyro-coriolis.svg){style="width:84%; max-height:none; display:block; margin:0 auto;"}
+:::
+
+::: {style="font-size: 0.85em; margin-top: -0.5em;"}
+A mass is driven back and forth at a known velocity $\v{v}$. If the chip turns at $\boldsymbol{\omega}$, the mass feels the Coriolis force $\v{f} = 2m\,\v{v}\times\boldsymbol{\omega}$, at right angles to both. Plates on either side read the deflection it causes, exactly as in the accelerometer.
+:::
+
+::: {.fragment style="font-size: 0.85em; margin-top: -0.25em;"}
+Three such structures, one per axis, give $\boldsymbol{\omega}_S^S(t) = \v{R}_E^S(t)\,\boldsymbol{\omega}_S^E(t)$: [the angular velocity of the chip, in the chip's own frame]{.highlight}. Gravity does not enter. Motion does not confound it. What it measures is a [rate]{.red}, not an angle.
+:::
+
+
+## Inertial measurement units
+
+[Gyroscope --- from rate to angle]{.framesub}
+
+:::: {.columns style="align-items:center; margin-top: -0.5em;"}
+
+::: {.column width="56%"}
+![](figures/imu-drift-gyro.svg){style="width:100%; max-height:none; display:block;"}
+:::
+
+::: {.column width="2%"}
+:::
+
+::: {.column style="width:42%; font-size: 0.85em;"}
+To get an angle, integrate: for one axis,
+$$\theta(t) = \theta(0) + \int_0^t \omega(\tau)\,\mathrm{d}\tau$$
+
+::: {.fragment}
+The integral keeps everything, including the errors. A [bias]{.red} $b$ in the rate becomes an angle error $b\,t$ that grows without limit. [Noise]{.red} becomes a random walk, growing as $\sqrt{t}$.
+:::
+
+::: {.fragment}
+[The plot]{.highlight}: a gyro lying still on the bench, integrated. A residual bias of $0.05^\circ$/s, small by consumer standards, is $3^\circ$ a minute. In an hour the angle is meaningless.
+:::
+
+::: {.fragment}
+[Two things follow.]{.highlight} [Calibrate the bias before every session, with the sensor still. And never trust an integrated gyro angle on its own for longer than the task needs.]{.deemph}
+:::
+:::
+
+::::
+
+::: {style="margin-top: -0.25em;"}
+[Residual bias and noise as stated above the plot, 500 runs: [make_imu_drift.py](data/make_imu_drift.py); figure source [imu-drift-gyro.tex](tikz/imu-drift-gyro.tex).]{.cite}
+:::
+
+
+## Inertial measurement units
+
+[Can an IMU measure position?]{.framesub}
+
+:::: {.columns style="align-items:center; margin-top: -0.5em;"}
+
+::: {.column width="56%"}
+![](figures/imu-drift-accel.svg){style="width:100%; max-height:none; display:block;"}
+:::
+
+::: {.column width="2%"}
+:::
+
+::: {.column style="width:42%; font-size: 0.85em;"}
+Position needs the acceleration integrated [twice]{.red}, after gravity has been subtracted using an orientation that itself came from integrating the gyro.
+
+::: {.fragment}
+A bias $b$ in the acceleration becomes a position error $\tfrac{1}{2} b\,t^2$. [The plot]{.highlight}: a still accelerometer with $10$ mg of residual bias, about $0.1\ \mathrm{m\,s^{-2}}$, is $5$ cm out after one second and metres out after ten.
+:::
+
+::: {.fragment}
+[So, no.]{.red} Not for more than a second or two, and not without something else to reset it: a camera, a foot known to be flat on the floor at each step, a known start and end point.
+:::
+
+::: {.fragment}
+[What an IMU is good at is orientation. Its position is a by-product nobody should use.]{.deemph}
+:::
+:::
+
+::::
+
+::: {style="margin-top: -0.25em;"}
+[Residual bias and noise as stated above the plot, 500 runs: [make_imu_drift.py](data/make_imu_drift.py); figure source [imu-drift-accel.tex](tikz/imu-drift-accel.tex).]{.cite}
+:::
+
+
+## Inertial measurement units
+
+[Putting the two together]{.framesub}
+
+::: {style="font-size: 0.9em; margin-top: -0.5em;"}
+The two sensors fail in opposite ways:
+
+| | Accelerometer tilt | Integrated gyro angle |
+|---|---|---|
+| Short term | wrong whenever the segment moves | right |
+| Long term | right, as soon as the segment is still | drifts away |
+| Reference | gravity, absolute | the starting angle, relative |
+:::
+
+::: {.fragment style="font-size: 0.9em; margin-top: -0.25em;"}
+[Sensor fusion]{.highlight} is any rule that takes the gyro for the fast part and the accelerometer for the slow part. The simplest one, the [complementary filter]{.highlight}, in one line per sample:
+$$\hat\theta_k = \alpha\left(\hat\theta_{k-1} + \omega_k\,\Delta t\right) + (1 - \alpha)\,\theta^{\text{acc}}_k, \qquad \alpha \approx 0.98$$
+[Mostly the gyro, pulled gently back towards gravity. A Kalman filter is the same idea with the weights chosen from the noise levels instead of by hand.]{.deemph}
+:::
+
+::: {.fragment style="font-size: 0.9em; margin-top: -0.25em;"}
+[Gravity fixes two of the three angles.]{.red} Rotation about the vertical, the heading, leaves gravity unchanged and is invisible to the accelerometer. For that the chip's [magnetometer]{.highlight} plays the part of gravity, with the Earth's field as the reference. [Indoors, near steel, motors and wiring, that reference bends by tens of degrees, and so does the heading.]{.deemph}
+:::
+
+
+## Inertial measurement units
+
+[A joint angle from two IMUs]{.framesub}
+
+::: {style="font-size: 0.9em; margin-top: -0.5em;"}
+Fuse each IMU to get its orientation in the earth frame, $\v{R}_{S_1}^E$ on the thigh and $\v{R}_{S_2}^E$ on the shank. The orientation of one chip relative to the other is
+$$\v{R}_{S_2}^{S_1} = \left(\v{R}_{S_1}^E\right)^\top \v{R}_{S_2}^E$$
+and the knee angle is read from it, exactly as it was read from the two marker-defined segment frames earlier in this module.
+:::
+
+::: {.fragment style="font-size: 0.9em; margin-top: -0.25em;"}
+[Two things this quietly assumes.]{.highlight}
+
+- The chip's axes are the segment's axes. [They are not: the chip is stuck on wherever the strap holds, at some unknown angle to the bone. This is the [sensor-to-segment alignment]{.red} problem, solved by a calibration pose or movement, and it is the largest error in IMU joint angles in practice.]{.deemph}
+- Both headings share a reference. [They do only if both magnetometers see the same, undisturbed field. Flexion and extension, about a horizontal axis, survive a bad heading; rotation and abduction do not.]{.deemph}
+:::
+
+::: {.fragment style="font-size: 0.9em; margin-top: -0.25em;"}
+[And the strap is skin.]{.red} [Soft-tissue artefact applies to an IMU as it does to a marker, with the added twist that the IMU feels the strap's own vibration as acceleration.]{.deemph}
+:::
+
+
+## Inertial measurement units
+
+[Calibration, and what to read on the datasheet]{.framesub}
+
+:::: {.columns style="font-size: 0.85em; margin-top: -0.5em;"}
+
+::: {.column width="49%"}
+[Calibration you do yourself]{.highlight}
+
+- [Gyro bias:]{.red} leave the sensor still for ten seconds, average each axis, subtract. Before every session; it changes with temperature.
+- [Accelerometer bias and scale:]{.red} the six-position test. Lay the sensor on each of its six faces; each axis should read $+g$, $-g$ and four zeros. Fit offset and gain per axis.
+- [Check, don't assume:]{.red} after calibrating, the magnitude $\|\v{a}_S^S\|$ at rest should be $g$ in every orientation. If it is not, the axes are not orthogonal or the scales are off.
+:::
+
+::: {.column width="2%"}
+:::
+
+::: {.column width="49%"}
+[Numbers to find on the datasheet]{.highlight}
+
+- [Range:]{.red} $\pm 2\,g$ or $\pm 16\,g$; $\pm 250$ or $\pm 2000\ ^\circ$/s. Heel strike can exceed $\pm 2\,g$; the reading clips and the integral is wrong forever.
+- [Noise density:]{.red} $\mu g/\sqrt{\mathrm{Hz}}$ and $^\circ/\mathrm{s}/\sqrt{\mathrm{Hz}}$. Multiply by $\sqrt{\text{bandwidth}}$ for the noise you will see.
+- [Zero-rate and zero-$g$ offset]{.red}, and their drift with temperature: the bias you will be subtracting, and how fast it moves.
+- [Bandwidth and output rate:]{.red} the sensor's own low-pass, and the sampling theorem from Module 1.
+
+[Values for the lab's IMU: to be filled in from its datasheet in the lab handout.]{.deemph}
+:::
+
+::::
+
+::: {.fragment style="font-size: 0.85em; margin-top: 0.25em;"}
+[The lab does both calibrations on the kit's IMU, then uses it for joint range of motion. Keep the calibrated numbers: the drift plots on the previous slides are what the uncalibrated sensor does.]{.deemph}
+:::
+
+
+## Inertial measurement units
+
+[IMUs --- in one place]{.framesub}
+
+:::: {.columns style="font-size: 0.85em; margin-top: -0.5em;"}
+
+::: {.column width="49%"}
+[What they measure]{.highlight}
+
+- Specific force $\v{a} - \v{g}$ and angular velocity, in the chip's own frame, with no external reference.
+- A still accelerometer is a tilt sensor; use both axes.
+- A gyro is a rate sensor; its angle is an integral and drifts.
+- Fused, they give orientation: two angles against gravity, the third against the magnetic field.
+
+[What they do not]{.highlight}
+
+- Position, beyond a second or two.
+- The segment's frame: only the chip's.
+- Heading, indoors, reliably.
+:::
+
+::: {.column width="2%"}
+:::
+
+::: {.column width="49%"}
+[Against cameras]{.highlight}
+
+- [No line of sight, no lab, no capture volume.]{.red} Works in a clinic corridor, at home, for a day.
+- [No position, so no segment lengths, no step length without a model, no absolute location.]{.red}
+- [Calibration is yours]{.red}: bias before every session; sensor-to-segment alignment before every placement.
+
+[The measurement question to ask]{.highlight}
+
+[Is it an orientation I need, about a horizontal axis, over minutes? Then an IMU is the right instrument. Is it a position, a heading, or an hour of unsupervised recording? Then it is not, on its own.]{.deemph}
+:::
+
+:::: -->
 
 </section></section>
     </div>

@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tilt from a two-axis accelerometer, with noise</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Compact by design: this sits on a slide. */
+  #panel {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 150px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .sl { margin-bottom: 4px; }
+  #panel .k { display: inline-block; width: 3.4em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .val { display: inline-block; width: 3.6em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+
+  /* the numbers: reading, then the three angles, then running RMS error */
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 6px 0 0; font-variant-numeric: tabular-nums;
+            white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.2em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.t  td { color: var(--charcoal); }
+  #tab tr.one td { color: var(--crimson); }
+  #tab tr.two td { color: var(--forest); }
+  #tab tr.hd td { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+                  color: var(--warmgray); padding-top: 4px; }
+  sub { font-size: 0.7em; }
+
+  #legend {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 18px; font-size: 12.5px; white-space: nowrap;
+  }
+  #legend span::before {
+    content: ""; display: inline-block; width: 18px; height: 0; vertical-align: middle;
+    margin-right: 5px; border-top: 2.4px solid currentColor;
+  }
+  #legend .t   { color: var(--charcoal); }
+  #legend .t::before { border-top: 9px solid #CBD5E0; }
+  #legend .one { color: var(--crimson); }
+  #legend .two { color: var(--forest); }
+  #legend .two::before { border-top-style: dashed; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the truth</div>
+      <label class="sl"><span class="k">tilt &theta;</span>
+        <input type="range" id="sth" min="-90" max="90" step="1" value="30">
+        <span class="val" id="vth">30&deg;</span></label>
+      <label class="sl"><span class="k">noise &sigma;</span>
+        <input type="range" id="ssg" min="0" max="10" step="0.25" value="1">
+        <span class="val" id="vsg">1% g</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">this sample</div>
+      <table id="tab">
+        <tr class="t"><td class="lab">a<sub>x</sub>, a<sub>y</sub></td>
+            <td class="n" id="ax">0</td><td class="n" id="ay">0</td><td>m&thinsp;s<sup>&minus;2</sup></td></tr>
+        <tr class="hd"><td>estimate</td><td class="n">&theta;&#770;</td><td class="n">error</td><td class="n">rms, 100 samples</td></tr>
+        <tr class="one"><td class="lab">arcsin(a<sub>x</sub>/g)</td>
+            <td class="n" id="t1">0</td><td class="n" id="e1">0</td><td class="n" id="r1">0</td></tr>
+        <tr class="two"><td class="lab">atan2(a<sub>x</sub>, a<sub>y</sub>)</td>
+            <td class="n" id="t2">0</td><td class="n" id="e2">0</td><td class="n" id="r2">0</td></tr>
+      </table>
+      <button id="run">pause</button><button id="clear">clear rms</button>
+    </div>
+  </div>
+
+  <div id="legend">
+    <span class="t">true sensor</span>
+    <span class="one">one axis, arcsin</span>
+    <span class="two">both axes, atan2</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { true: "#CBD5E0", trueEdge: "#718096", one: "#A51C30", two: "#2B6CB0",
+              g: "#D69E2E", meas: "#2D3748", axis: "#2B6CB0", ground: "#CBD5E0" };
+  var G = 9.81, D = Math.PI / 180;
+
+  // ---- state ---------------------------------------------------------
+  var theta = 30, sigma = 1;          // degrees, percent of g
+  var running = true;
+  var W = 0, H = 0, DPR = 1;
+  var errs1 = [], errs2 = [], NRMS = 100;
+  var last = { ax: 0, ay: G, t1: theta, t2: theta };
+
+  function gauss() {                  // Box-Muller
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function fmt(v, n) { if (Math.abs(v) < 5e-3) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+  function fmtDeg(v, n) { return fmt(v, n === undefined ? 1 : n) + "°"; }
+
+  // ---- one noisy sample and the two inversions ------------------------
+  // Sensor y_S up at theta = 0, turned anticlockwise by theta. At rest the
+  // reading is -g in the sensor frame: a_x = g sin(theta), a_y = g cos(theta)
+  // (the Sensor 3 case on the two-axis slide), plus noise on each axis.
+  function sample() {
+    var s = sigma / 100 * G;
+    var ax = G * Math.sin(theta * D) + s * gauss();
+    var ay = G * Math.cos(theta * D) + s * gauss();
+    var t1 = Math.asin(clamp(ax / G, -1, 1)) / D;   // assumes |a| = g
+    var t2 = Math.atan2(ax, ay) / D;                // uses the measured vector
+    var e1 = t1 - theta, e2 = t2 - theta;
+    errs1.push(e1); errs2.push(e2);
+    if (errs1.length > NRMS) { errs1.shift(); errs2.shift(); }
+    last = { ax: ax, ay: ay, t1: t1, t2: t2, e1: e1, e2: e2 };
+  }
+  function rms(a) {
+    if (!a.length) return 0;
+    var s = 0; for (var i = 0; i < a.length; i++) s += a[i] * a[i];
+    return Math.sqrt(s / a.length);
+  }
+
+  // ---- drawing helpers -------------------------------------------------
+  function arrow(x0, y0, x1, y1, color, width, dash) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), L = 9, w = 0.42;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - L * Math.cos(ang - w), y1 - L * Math.sin(ang - w));
+    ctx.lineTo(x1 - L * Math.cos(ang + w), y1 - L * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 13) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+  // a sensor outline, centred at (cx, cy), turned by t degrees anticlockwise
+  function body(cx, cy, t, bw, bh, style) {
+    var c = Math.cos(t * D), s = Math.sin(t * D);
+    ctx.save();
+    ctx.translate(cx, cy); ctx.transform(c, -s, s, c, 0, 0);   // screen y is down
+    ctx.beginPath(); ctx.rect(-bw / 2, -bh / 2, bw, bh);
+    if (style.fill) { ctx.fillStyle = style.fill; ctx.fill(); }
+    ctx.strokeStyle = style.stroke; ctx.lineWidth = style.width;
+    ctx.setLineDash(style.dash || []); ctx.stroke();
+    ctx.restore();
+  }
+  function axes(cx, cy, t, len, color, lw, labelled) {
+    var c = Math.cos(t * D), s = Math.sin(t * D);
+    arrow(cx, cy, cx + len * c, cy - len * s, color, lw);           // x_S
+    arrow(cx, cy, cx - len * s, cy - len * c, color, lw);           // y_S
+    if (labelled) {
+      text("x", cx + (len + 16) * c, cy - (len + 16) * s, color, 14, "center", true);
+      text("S", cx + (len + 16) * c + 8, cy - (len + 16) * s + 5, color, 9, "center");
+      text("y", cx - (len + 16) * s, cy - (len + 16) * c, color, 14, "center", true);
+      text("S", cx - (len + 16) * s + 8, cy - (len + 16) * c + 5, color, 9, "center");
+    }
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    // the sensor sits centred below the controls, above the legend
+    var top = document.getElementById("panel").offsetHeight + 10;
+    var bot = H - 30;
+    var cx = W / 2, cy = (top + bot) / 2;
+    var R  = Math.min(W * 0.26, (bot - top) * 0.36);   // length of a g-sized arrow
+    var bw = R * 0.78, bh = R * 0.32;
+
+    // ground line and gravity, for reference
+    ctx.save();
+    ctx.strokeStyle = COL.ground; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(cx - R * 1.2, cy); ctx.lineTo(cx + R * 1.2, cy); ctx.stroke();
+    ctx.restore();
+
+    // the estimates, as outlines, drawn under the true body
+    body(cx, cy, last.t1, bw, bh, { stroke: COL.one, width: 2.0 });
+    body(cx, cy, last.t2, bw, bh, { stroke: COL.two, width: 2.0, dash: [6, 4] });
+
+    // the true sensor and its frame
+    body(cx, cy, theta, bw, bh, { fill: COL.true, stroke: COL.trueEdge, width: 1.2 });
+    axes(cx, cy, theta, R * 0.62, COL.axis, 2.2, true);
+
+    // -g, straight up, and the noisy measurement expressed back in the room
+    arrow(cx, cy, cx, cy - R, COL.g, 2.6);
+    text("−g", cx + 12, cy - R + 4, COL.g, 14, "left");
+    var c = Math.cos(theta * D), s = Math.sin(theta * D);
+    var mx = last.ax / G, my = last.ay / G;               // in S, units of g
+    var ex = mx * c - my * s, ey = mx * s + my * c;       // in E
+    arrow(cx, cy, cx + R * ex, cy - R * ey, COL.meas, 1.4, [3, 3]);
+
+    // the tilt arc from vertical to y_S
+    ctx.save();
+    ctx.strokeStyle = COL.trueEdge; ctx.lineWidth = 1;
+    ctx.beginPath();
+    var r0 = R * 0.78, a0 = -Math.PI / 2, a1 = -Math.PI / 2 - theta * D;
+    ctx.arc(cx, cy, r0, Math.min(a0, a1), Math.max(a0, a1));
+    ctx.stroke();
+    ctx.restore();
+    var am = -Math.PI / 2 - theta * D / 2;
+    text("θ", cx + (r0 + 12) * Math.cos(am), cy + (r0 + 12) * Math.sin(am),
+         COL.trueEdge, 14, "center", true);
+
+    // numbers
+    document.getElementById("ax").textContent = fmt(last.ax);
+    document.getElementById("ay").textContent = fmt(last.ay);
+    document.getElementById("t1").textContent = fmtDeg(last.t1);
+    document.getElementById("t2").textContent = fmtDeg(last.t2);
+    document.getElementById("e1").textContent = fmtDeg(last.e1);
+    document.getElementById("e2").textContent = fmtDeg(last.e2);
+    document.getElementById("r1").textContent = fmtDeg(rms(errs1));
+    document.getElementById("r2").textContent = fmtDeg(rms(errs2));
+  }
+
+  // ---- animation: a fresh sample ~15 times a second --------------------
+  var lastT = 0;
+  function tick(t) {
+    if (running && t - lastT > 66) { lastT = t; sample(); draw(); }
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls -------------------------------------------------------
+  function resetErrs() { errs1 = []; errs2 = []; }
+  document.getElementById("sth").addEventListener("input", function () {
+    theta = parseFloat(this.value);
+    document.getElementById("vth").textContent = theta + "°";
+    resetErrs(); sample(); draw();
+  });
+  document.getElementById("ssg").addEventListener("input", function () {
+    sigma = parseFloat(this.value);
+    document.getElementById("vsg").textContent = sigma + "% g";
+    resetErrs(); sample(); draw();
+  });
+  document.getElementById("run").addEventListener("click", function () {
+    running = !running;
+    this.textContent = running ? "pause" : "run";
+  });
+  document.getElementById("clear").addEventListener("click", function () {
+    resetErrs(); sample(); draw();
+  });
+
+  // ---- presets from the URL: ?theta=80&sigma=2 --------------------------
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("theta")) {
+      theta = clamp(parseFloat(q.get("theta")) || 0, -90, 90);
+      document.getElementById("sth").value = theta;
+      document.getElementById("vth").textContent = theta + "°";
+    }
+    if (q.has("sigma")) {
+      sigma = clamp(parseFloat(q.get("sigma")) || 0, 0, 10);
+      document.getElementById("ssg").value = sigma;
+      document.getElementById("vsg").textContent = sigma + "% g";
+    }
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  sample();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

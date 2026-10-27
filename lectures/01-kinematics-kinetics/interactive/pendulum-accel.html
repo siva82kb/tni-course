@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A two-axis accelerometer on a pendulum</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Compact by design: this sits on a slide. */
+  #panel {
+    position: absolute; top: 8px; left: 8px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 130px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .sl { margin-bottom: 3px; }
+  #panel .k { display: inline-block; width: 6.2em; font-family: "Linux Libertine O", Georgia, serif;
+              font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.2em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel button:disabled { color: var(--warmgray); cursor: default; }
+  #panel .cal { font-size: 10px; color: var(--warmgray); margin-top: 2px; min-height: 1.3em; }
+  #panel .cal b { color: var(--forest); font-weight: 600; }
+
+  /* the numbers */
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums;
+            white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.4em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.hd td { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+                  color: var(--warmgray); padding-top: 3px; }
+  #tab tr.t  td { color: var(--charcoal); }
+  #tab tr.e  td { color: var(--crimson); }
+  sub { font-size: 0.7em; }
+
+  #legend {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 18px; font-size: 12.5px; white-space: nowrap;
+  }
+  #legend span::before {
+    content: ""; display: inline-block; width: 18px; height: 0; vertical-align: middle;
+    margin-right: 5px; border-top: 2.4px solid currentColor;
+  }
+  #legend .t   { color: var(--charcoal); }
+  #legend .e   { color: var(--crimson); }
+  #legend .e::before { border-top-style: dashed; }
+  #legend .s   { color: var(--forest); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the pendulum</div>
+      <label class="sl"><span class="k">angle <i>&phi;</i></span>
+        <input type="range" id="sphi" min="-90" max="90" step="1" value="0">
+        <span class="val" id="vphi">0&deg;</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">how the sensor is fixed to it</div>
+      <label class="sl"><span class="k">mounting <i>&delta;</i></span>
+        <input type="range" id="sdel" min="-20" max="20" step="0.5" value="0">
+        <span class="val" id="vdel">0&deg;</span></label>
+      <label class="sl"><span class="k">non-orthog. <i>&epsilon;</i></span>
+        <input type="range" id="seps" min="-10" max="10" step="0.5" value="0">
+        <span class="val" id="veps">0&deg;</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">what the chip adds</div>
+      <label class="sl"><span class="k">bias <i>b<sub>x</sub></i></span>
+        <input type="range" id="sbx" min="-150" max="150" step="5" value="0">
+        <span class="val" id="vbx">0 mg</span></label>
+      <label class="sl"><span class="k">bias <i>b<sub>y</sub></i></span>
+        <input type="range" id="sby" min="-150" max="150" step="5" value="0">
+        <span class="val" id="vby">0 mg</span></label>
+      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+        <input type="range" id="ssg" min="0" max="50" step="1" value="5">
+        <span class="val" id="vsg">5 mg</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">reconstruction, atan2 on the corrected reading</div>
+      <table id="tab">
+        <tr class="t"><td class="lab">reading a<sub>x</sub>, a<sub>y</sub></td>
+            <td class="n" id="ax">0</td><td class="n" id="ay">9.81</td></tr>
+        <tr class="t"><td class="lab">true <i>&phi;</i></td><td class="n" id="tphi">0&deg;</td><td></td></tr>
+        <tr class="e"><td class="lab">reconstructed <i>&phi;&#770;</i></td><td class="n" id="ephi">0&deg;</td><td class="n" id="err"></td></tr>
+      </table>
+      <button id="calib">static calibration (1 s)</button><button id="uncal" disabled>clear</button><button id="ideal">ideal sensor</button>
+      <div class="cal" id="calmsg">not calibrated</div>
+    </div>
+  </div>
+
+  <div id="legend">
+    <span class="t">true pendulum</span>
+    <span class="e">reconstructed</span>
+    <span class="s">sensor axes</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { rod: "#2D3748", bob: "#CBD5E0", bobEdge: "#718096", est: "#A51C30",
+              axis: "#2B6CB0", g: "#D69E2E", meas: "#2D3748", ground: "#CBD5E0", pivot: "#2D3748" };
+  var G = 9.81, D = Math.PI / 180;
+
+  // ---- state ---------------------------------------------------------
+  // phi: pendulum angle from the vertical, anticlockwise positive.
+  // delta: the sensor's x axis is turned by delta from the rod's normal
+  //        (the mounting error). eps: the y axis is turned by a further eps
+  //        towards x, so the two axes are 90 - eps apart (non-orthogonality).
+  var P = { phi: 0, delta: 0, eps: 0, bx: 0, by: 0, sigma: 5 };
+  var cal = null;                 // {cx, cy, phi} once a calibration has been done
+  var collecting = null;          // {sx, sy, n, until} while the button's second runs
+  var W = 0, H = 0, DPR = 1;
+  var last = { ax: 0, ay: G, phiHat: 0 };
+
+  function gauss() {
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function fmt(v, n) { if (Math.abs(v) < 5e-3) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+  function fmtDeg(v, n) { return fmt(v, n === undefined ? 1 : n) + "°"; }
+
+  // ---- the model ------------------------------------------------------
+  // Specific force at rest is -g, straight up. The ideal sensor frame is the
+  // pendulum's: x along the rod's normal, y along the rod towards the pivot.
+  // In that frame -g has components (g sin phi, g cos phi). The real x axis
+  // is turned by delta, the real y axis by delta + eps; each axis reads the
+  // projection of -g onto itself; then bias and noise are added.
+  function sample() {
+    var phi = P.phi * D, dl = P.delta * D, ep = P.eps * D;
+    var fx = G * Math.sin(phi), fy = G * Math.cos(phi);          // -g in the rod frame
+    // unit vectors of the real axes, in the rod frame
+    var ux = [Math.cos(dl), Math.sin(dl)];
+    var uy = [-Math.sin(dl + ep), Math.cos(dl + ep)];
+    var s = P.sigma / 1000 * G;
+    var ax = fx * ux[0] + fy * ux[1] + P.bx / 1000 * G + s * gauss();
+    var ay = fx * uy[0] + fy * uy[1] + P.by / 1000 * G + s * gauss();
+    if (collecting) { collecting.sx += ax; collecting.sy += ay; collecting.n++; }
+    var cx = cal ? cal.cx : 0, cy = cal ? cal.cy : 0;
+    var phiHat = Math.atan2(ax - cx, ay - cy) / D;
+    last = { ax: ax, ay: ay, phiHat: phiHat };
+  }
+
+  // One-position static calibration: hold the pendulum where it is, average
+  // a second of readings, and store whatever differs from the reading an
+  // ideal sensor would give at this angle. Subtracting that removes the bias
+  // and, at THIS angle only, the misalignment's contribution too.
+  function finishCalibration() {
+    var mx = collecting.sx / collecting.n, my = collecting.sy / collecting.n;
+    var phi = P.phi * D;
+    cal = { cx: mx - G * Math.sin(phi), cy: my - G * Math.cos(phi), phi: P.phi };
+    collecting = null;
+    document.getElementById("calib").disabled = false;
+    document.getElementById("uncal").disabled = false;
+    document.getElementById("calmsg").innerHTML =
+      "calibrated at <b>φ = " + P.phi + "°</b>: subtracting " +
+      fmt(cal.cx) + ", " + fmt(cal.cy) + " m s⁻²";
+  }
+
+  // ---- drawing helpers -------------------------------------------------
+  function arrow(x0, y0, x1, y1, color, width, dash) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), L = 9, w = 0.42;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - L * Math.cos(ang - w), y1 - L * Math.sin(ang - w));
+    ctx.lineTo(x1 - L * Math.cos(ang + w), y1 - L * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 13) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+  // a point at distance r from the pivot along a rod at angle a from the
+  // downward vertical, anticlockwise positive (screen y is down)
+  function onRod(px, py, a, r) {
+    return { x: px + r * Math.sin(a * D), y: py + r * Math.cos(a * D) };
+  }
+  function roundRect(g, x, y, w, h, r) {
+    g.beginPath(); g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.arcTo(x + w, y, x + w, y + r, r);
+    g.lineTo(x + w, y + h - r); g.arcTo(x + w, y + h, x + w - r, y + h, r); g.lineTo(x + r, y + h);
+    g.arcTo(x, y + h, x, y + h - r, r); g.lineTo(x, y + r); g.arcTo(x, y, x + r, y, r); g.closePath();
+  }
+  // a rounded bar from the pivot, hanging at angle a from the vertical,
+  // length len and half-width hw; the pivot sits hw inside its top end
+  function drawBar(px, py, a, len, hw, style) {
+    ctx.save();
+    ctx.translate(px, py); ctx.rotate(-a * D);
+    roundRect(ctx, -hw, -hw, 2 * hw, len + 2 * hw, hw * 0.9);
+    if (style.fill) { ctx.fillStyle = style.fill; ctx.fill(); }
+    ctx.strokeStyle = style.stroke; ctx.lineWidth = style.width || 1.2;
+    ctx.setLineDash(style.dash || []); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    var px = W * 0.66, py = H * 0.16;               // pivot
+    var L  = Math.min(W * 0.26, H * 0.60);          // rod length
+    var phi = P.phi, phiHat = last.phiHat;
+
+    // ceiling and the vertical
+    ctx.save();
+    ctx.strokeStyle = COL.ground; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px - L * 0.6, py); ctx.lineTo(px + L * 0.6, py); ctx.stroke();
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + L * 1.08); ctx.stroke();
+    ctx.restore();
+
+    // the link: a rounded bar hanging from the pivot, as in the mocap widget
+    var HW = L * 0.065;                             // half-width of the bar
+    // reconstructed link, dashed outline, under the true one
+    drawBar(px, py, phiHat, L, HW, { stroke: COL.est, width: 1.8, dash: [7, 5] });
+    // true link
+    drawBar(px, py, phi, L, HW, { fill: COL.bob, stroke: COL.bobEdge, width: 1.2 });
+    // the pivot
+    ctx.save();
+    ctx.fillStyle = COL.pivot;
+    ctx.beginPath(); ctx.arc(px, py, 3.2, 0, 2 * Math.PI); ctx.fill();
+    ctx.restore();
+
+    // the tilt arc
+    var r0 = L * 0.42;
+    ctx.save();
+    ctx.strokeStyle = COL.bobEdge; ctx.lineWidth = 1;
+    ctx.beginPath();
+    var a0 = Math.PI / 2, a1 = Math.PI / 2 - phi * D;
+    ctx.arc(px, py, r0, Math.min(a0, a1), Math.max(a0, a1));
+    ctx.stroke();
+    ctx.restore();
+    var am = Math.PI / 2 - phi * D / 2;
+    text("φ", px + (r0 + 11) * Math.cos(am), py + (r0 + 11) * Math.sin(am),
+         COL.bobEdge, 14, "center", true);
+
+    // the sensor: a small chip on the link, smaller than the bar, turned by delta
+    var sc = onRod(px, py, phi, L * 0.58);
+    var bw = L * 0.085, bh = L * 0.055;
+    var rot = -(phi + P.delta) * D;                 // chip orientation on screen
+    ctx.save();
+    ctx.translate(sc.x, sc.y); ctx.rotate(rot);
+    ctx.fillStyle = "#A0AEC0"; ctx.strokeStyle = COL.rod; ctx.lineWidth = 0.9;
+    ctx.beginPath(); ctx.rect(-bw / 2, -bh / 2, bw, bh); ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    // sensor axes, short: x turned by delta from the rod's normal, y by delta + eps
+    var AL = L * 0.17;
+    var ax0 = phi + P.delta, ay0 = phi + P.delta + P.eps;      // angles from the vertical
+    // x axis points along the rod's normal, i.e. the direction the bob swings
+    var xe = { x: sc.x + AL * Math.cos(ax0 * D), y: sc.y - AL * Math.sin(ax0 * D) };
+    // y axis points up the rod towards the pivot
+    var ye = { x: sc.x - AL * Math.sin(ay0 * D), y: sc.y - AL * Math.cos(ay0 * D) };
+    arrow(sc.x, sc.y, xe.x, xe.y, COL.axis, 1.8);
+    arrow(sc.x, sc.y, ye.x, ye.y, COL.axis, 1.8);
+    text("x", xe.x + 9 * Math.cos(ax0 * D), xe.y - 9 * Math.sin(ax0 * D), COL.axis, 12, "center", true);
+    text("y", ye.x - 9 * Math.sin(ay0 * D), ye.y - 9 * Math.cos(ay0 * D), COL.axis, 12, "center", true);
+
+    // -g at the sensor, straight up; the noisy reading laid back along the real axes
+    var GL = L * 0.26;
+    arrow(sc.x, sc.y, sc.x, sc.y - GL, COL.g, 2.2);
+    text("−g", sc.x + 10, sc.y - GL + 4, COL.g, 12, "left");
+    var mx = last.ax / G, my = last.ay / G;
+    var rx = mx * Math.cos(ax0 * D) - my * Math.sin(ay0 * D);
+    var ry = -mx * Math.sin(ax0 * D) - my * Math.cos(ay0 * D);
+    arrow(sc.x, sc.y, sc.x + GL * rx, sc.y + GL * ry, COL.meas, 1.3, [3, 3]);
+
+    // numbers
+    document.getElementById("ax").textContent = fmt(last.ax);
+    document.getElementById("ay").textContent = fmt(last.ay);
+    document.getElementById("tphi").textContent = fmtDeg(phi, 0);
+    document.getElementById("ephi").textContent = fmtDeg(phiHat);
+    document.getElementById("err").textContent = "(" + (phiHat - phi >= 0 ? "+" : "") + fmtDeg(phiHat - phi) + ")";
+  }
+
+  // ---- animation: a fresh sample ~15 times a second --------------------
+  var lastT = 0;
+  function tick(t) {
+    if (t - lastT > 66) {
+      lastT = t; sample();
+      if (collecting && performance.now() >= collecting.until) finishCalibration();
+      draw();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls -------------------------------------------------------
+  function bind(id, valId, key, unit, dp) {
+    var s = document.getElementById(id);
+    s.addEventListener("input", function () {
+      P[key] = parseFloat(s.value);
+      document.getElementById(valId).innerHTML = fmt(P[key], dp) + unit;
+      sample(); draw();
+    });
+  }
+  bind("sphi", "vphi", "phi",   "°", 0);
+  bind("sdel", "vdel", "delta", "°", 1);
+  bind("seps", "veps", "eps",   "°", 1);
+  bind("sbx",  "vbx",  "bx",    " mg", 0);
+  bind("sby",  "vby",  "by",    " mg", 0);
+  bind("ssg",  "vsg",  "sigma", " mg", 0);
+
+  document.getElementById("calib").addEventListener("click", function () {
+    collecting = { sx: 0, sy: 0, n: 0, until: performance.now() + 1000 };
+    this.disabled = true;
+    document.getElementById("calmsg").textContent =
+      "collecting for 1 s at φ = " + P.phi + "°, hold still…";
+  });
+  document.getElementById("uncal").addEventListener("click", function () {
+    cal = null;
+    this.disabled = true;
+    document.getElementById("calmsg").textContent = "not calibrated";
+    sample(); draw();
+  });
+  // an ideal accelerometer: no mounting error, orthogonal axes, no bias, no
+  // noise. The pendulum angle is left where it is. Any calibration is cleared
+  // too, since it would now be correcting errors that no longer exist.
+  document.getElementById("ideal").addEventListener("click", function () {
+    var zero = { sdel: ["vdel", "delta", "°", 1], seps: ["veps", "eps", "°", 1],
+                 sbx: ["vbx", "bx", " mg", 0], sby: ["vby", "by", " mg", 0],
+                 ssg: ["vsg", "sigma", " mg", 0] };
+    Object.keys(zero).forEach(function (id) {
+      var z = zero[id];
+      P[z[1]] = 0;
+      document.getElementById(id).value = 0;
+      document.getElementById(z[0]).innerHTML = fmt(0, z[3]) + z[2];
+    });
+    cal = null; collecting = null;
+    document.getElementById("calib").disabled = false;
+    document.getElementById("uncal").disabled = true;
+    document.getElementById("calmsg").textContent = "ideal sensor, not calibrated";
+    sample(); draw();
+  });
+
+  // ---- presets from the URL: ?phi=20&delta=10&eps=3&bx=50&by=-30&sigma=5 --
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var spec = { phi: ["sphi", "vphi", "°", 0], delta: ["sdel", "vdel", "°", 1],
+                 eps: ["seps", "veps", "°", 1], bx: ["sbx", "vbx", " mg", 0],
+                 by: ["sby", "vby", " mg", 0], sigma: ["ssg", "vsg", " mg", 0] };
+    Object.keys(spec).forEach(function (k) {
+      if (!q.has(k)) return;
+      var v = parseFloat(q.get(k));
+      if (!isFinite(v)) return;
+      var el = document.getElementById(spec[k][0]);
+      v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[k] = v; el.value = v;
+      document.getElementById(spec[k][1]).innerHTML = fmt(v, spec[k][3]) + spec[k][2];
+    });
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  sample();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

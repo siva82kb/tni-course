@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accelerometer as a tilt sensor</title>
+
+<!-- Same macros as the deck, so \v and \m mean here what they mean there. -->
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)']],
+      macros: {
+        v: ['{\\mathbf{#1}}', 1],
+        m: ['{\\begin{bmatrix}#1\\end{bmatrix}}', 1]
+      }
+    },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  body { display: flex; flex-direction: column; }
+  #stage { position: relative; width: 100%; flex: 1 1 auto; min-height: 0; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  #stage.panning  { cursor: move; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .lbl {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 14px; font-style: italic; white-space: nowrap;
+    pointer-events: none; user-select: none;
+  }
+  .lbl b { font-style: normal; font-weight: 700; }
+  .lbl sub, .lbl sup { font-size: 0.68em; font-style: normal; }
+  .lbl.ip { font-size: 11.5px; }
+  .lbl.ip .num { font-variant-numeric: tabular-nums; font-style: normal;
+                 font-weight: 700; padding-left: 2px; }
+
+  /* Compact by design: this sits on a slide. */
+  #panel {
+    flex: 0 0 auto; display: flex; align-items: flex-start; gap: 14px;
+    margin: 6px 8px 0 8px;
+    background: transparent;
+    border: 0;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { flex: 0 0 auto; padding-left: 12px; border-left: 1px solid #EDF2F7; }
+  #panel .grp:first-child { padding-left: 0; border-left: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel .hd.s { color: var(--forest); }
+
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 130px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--forest);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--forest);
+  }
+  /* yaw is the one that does nothing to the reading; it gets the gray thumb */
+  #panel .sl.yaw input[type=range]::-webkit-slider-thumb { background: var(--warmgray); }
+  #panel .sl.yaw input[type=range]::-moz-range-thumb     { background: var(--warmgray); }
+  #panel .sl { margin-bottom: 4px; }
+  #panel .k { display: inline-block; width: 2.8em; font-style: italic;
+              font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .val { display: inline-block; width: 3.0em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel .sub { font-size: 9px; color: var(--warmgray); margin: -2px 0 3px 3.1em; }
+  #panel input[type=checkbox] {
+    width: 11px; height: 11px; vertical-align: -1px; margin: 0 2px 0 0;
+  }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel .hint { font-size: 9.5px; color: var(--warmgray); margin-top: 3px; }
+
+  /* the three components as bars: these are what the slide is about */
+  #bars { margin-top: 2px; }
+  #bars .row { display: flex; align-items: center; height: 14px; }
+  #bars .row .k { width: 2.2em; }
+  #bars .track { position: relative; width: 130px; height: 8px;
+                 background: #EDF2F7; border-radius: 2px; }
+  #bars .track::after { content: ""; position: absolute; left: 50%; top: -2px;
+                        width: 1px; height: 12px; background: #CBD5E0; }
+  #bars .fill { position: absolute; top: 0; height: 8px; background: var(--forest);
+                border-radius: 2px; }
+  #bars .n { width: 3.4em; text-align: right; padding-left: 4px;
+             font-variant-numeric: tabular-nums; }
+
+  #readout {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 14px; font-size: 14px;
+  }
+  #readout .bmat {
+    display: inline-flex; flex-direction: column; align-items: center;
+    padding: 1px 5px; line-height: 1.2;
+    font-variant-numeric: tabular-nums; font-size: 12px;
+    border-left: 1.2px solid var(--forest); border-right: 1.2px solid var(--forest);
+    color: var(--forest);
+  }
+  #readout .unit { font-size: 12px; color: var(--warmgray); }
+  #readout .mag { font-size: 12px; color: var(--warmgray); margin-left: 6px; }
+</style>
+</head>
+<body>
+<div id="panel">
+    <div class="grp">
+      <div class="hd s">sensor orientation R<sub>S</sub><sup>E</sup></div>
+      <label class="sl"><span class="k">pitch</span>
+        <input type="range" id="sp" min="-180" max="180" step="5" value="0">
+        <span class="val" id="vp">0&deg;</span></label>
+      <div class="sub">about the sensor's x axis</div>
+      <label class="sl"><span class="k">roll</span>
+        <input type="range" id="sr" min="-180" max="180" step="5" value="0">
+        <span class="val" id="vr">0&deg;</span></label>
+      <div class="sub">about the sensor's z axis</div>
+      <label class="sl yaw"><span class="k">yaw</span>
+        <input type="range" id="sy" min="-180" max="180" step="5" value="0">
+        <span class="val" id="vy">0&deg;</span></label>
+      <div class="sub">about the vertical, y<sub>E</sub></div>
+    </div>
+
+    <div class="grp">
+      <div class="hd s">reading a<sub>S</sub><sup>S</sup>, sensor at rest</div>
+      <div id="bars">
+        <div class="row"><span class="k">x</span><span class="track"><span class="fill" id="bx"></span></span><span class="n" id="nx">0</span></div>
+        <div class="row"><span class="k">y</span><span class="track"><span class="fill" id="by"></span></span><span class="n" id="ny">9.81</span></div>
+        <div class="row"><span class="k">z</span><span class="track"><span class="fill" id="bz"></span></span><span class="n" id="nz">0</span></div>
+      </div>
+      <button id="zero">zero angles</button><button id="reset">reset view</button>
+      <div class="hint">drag &middot; shift-drag pans &middot; scroll</div>
+    </div>
+</div>
+
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="readout">
+    <span id="sym">\(\v{a}_S^S = \v{R}_E^S\left(\v{0} - \v{g}^E\right) =\)</span>
+    <span class="bmat"><span id="mx">0</span><span id="my">9.81</span><span id="mz">0</span></span>
+    <span class="unit">m&thinsp;s<sup>&minus;2</sup></span>
+    <span class="mag" id="mag">|a| = 9.81</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  // Earth frame in charcoal, sensor frame in blues (matching the tikz
+  // figures: earth charcoal, sensor forest), the specific force in amber.
+  var COL = {
+    E: { x: "#2D3748", y: "#2D3748", z: "#2D3748" },
+    S: { x: "#2C5282", y: "#2B6CB0", z: "#7EB2E4" },
+    g: "#D69E2E", box: "#718096"
+  };
+  var GRID = "#CBD5E0";
+  var G = 9.81;
+
+  // ---- state ---------------------------------------------------------
+  var DEF  = { az: 35 * Math.PI / 180, el: 20 * Math.PI / 180, scale: 54 };
+  var view = { az: DEF.az, el: DEF.el, scale: DEF.scale, px: 0, py: 0 };
+  var ANG  = { pitch: 0, roll: 0, yaw: 0 };
+  var showProj = true, showGrid = true;
+  var W = 0, H = 0, DPR = 1;
+  var KEYS = ["x", "y", "z"];
+
+  // ---- rotation: R = Ry(yaw) Rx(pitch) Rz(roll), columns = S's basis in E --
+  // Yaw is the outermost factor, about the earth's vertical y_E. That is what
+  // makes it drop out of R^T e_y exactly, whatever pitch and roll are.
+  function mul(A, B) {
+    var C = [[0,0,0],[0,0,0],[0,0,0]];
+    for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++)
+      C[i][j] = A[i][0]*B[0][j] + A[i][1]*B[1][j] + A[i][2]*B[2][j];
+    return C;
+  }
+  function rotMat() {
+    var d = Math.PI / 180;
+    var cr = Math.cos(ANG.roll * d),  sr = Math.sin(ANG.roll * d);
+    var cp = Math.cos(ANG.pitch * d), sp = Math.sin(ANG.pitch * d);
+    var cy = Math.cos(ANG.yaw * d),   sy = Math.sin(ANG.yaw * d);
+    var Rz = [[cr, -sr, 0], [sr, cr, 0], [0, 0, 1]];     // roll  about z_S
+    var Rx = [[1, 0, 0], [0, cp, -sp], [0, sp, cp]];     // pitch about x_S
+    var Ry = [[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]];     // yaw   about y_E
+    return mul(Ry, mul(Rx, Rz));
+  }
+  function col(R, j) { return [R[0][j], R[1][j], R[2][j]]; }
+  function tmul(R, v) {                       // R^T v
+    return [R[0][0]*v[0] + R[1][0]*v[1] + R[2][0]*v[2],
+            R[0][1]*v[0] + R[1][1]*v[1] + R[2][1]*v[2],
+            R[0][2]*v[0] + R[1][2]*v[1] + R[2][2]*v[2]];
+  }
+  function mv(R, v) {                         // R v
+    return [R[0][0]*v[0] + R[0][1]*v[1] + R[0][2]*v[2],
+            R[1][0]*v[0] + R[1][1]*v[1] + R[1][2]*v[2],
+            R[2][0]*v[0] + R[2][1]*v[1] + R[2][2]*v[2]];
+  }
+  function add(a, b) { return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+  function sub(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function scl(a, s) { return [a[0]*s, a[1]*s, a[2]*s]; }
+  function dot(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+
+  // ---- orthographic projection, y up ----------------------------------
+  // The IMU slides use y_E up (a level sensor at rest reads [0, 9.81, 0]),
+  // so the camera basis here is built around y, not z.
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az);
+    var ce = Math.cos(view.el), se = Math.sin(view.el);
+    return { right: [ca, 0, -sa],
+             up:    [-sa * se, ce, -ca * se],
+             dir:   [sa * ce, se, ca * ce] };
+  }
+  var B3 = basis();
+  function project(p) {
+    return { x: W / 2 + view.px + dot(B3.right, p) * view.scale,
+             y: H / 2 + view.py - dot(B3.up, p) * view.scale,
+             d: dot(B3.dir, p) };
+  }
+
+  // ---- scene: segments and polygons, painter-sorted ------------------
+  var scene = [];
+  function seg(a, b, s) {
+    scene.push({ kind: "seg", a: a, b: b, s: s,
+                 d: (dot(B3.dir, a) + dot(B3.dir, b)) / 2 });
+  }
+  function poly(pts, s) {
+    var d = 0;
+    for (var i = 0; i < pts.length; i++) d += dot(B3.dir, pts[i]);
+    scene.push({ kind: "poly", pts: pts, s: s, d: d / pts.length });
+  }
+  function strokeSeg(it) {
+    var s = it.s, A = project(it.a), Bp = project(it.b);
+    ctx.save();
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.width || 1;
+    ctx.setLineDash(s.dash || []);
+    ctx.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+    ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(Bp.x, Bp.y); ctx.stroke();
+    if (s.arrow) {
+      var ang = Math.atan2(Bp.y - A.y, Bp.x - A.x), L = s.arrow, w = 0.42;
+      ctx.setLineDash([]); ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.moveTo(Bp.x, Bp.y);
+      ctx.lineTo(Bp.x - L * Math.cos(ang - w), Bp.y - L * Math.sin(ang - w));
+      ctx.lineTo(Bp.x - L * Math.cos(ang + w), Bp.y - L * Math.sin(ang + w));
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function fillPoly(it) {
+    var s = it.s;
+    ctx.save();
+    ctx.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+    ctx.fillStyle = s.fill; ctx.strokeStyle = s.stroke; ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (var i = 0; i < it.pts.length; i++) {
+      var q = project(it.pts[i]);
+      if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  function disc(p, color, r) {
+    var s = project(p);
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, 2 * Math.PI); ctx.fill();
+  }
+
+  // ---- labels ---------------------------------------------------------
+  var labels = {};
+  function mkLabel(key, html, color, cls) {
+    var d = document.createElement("div");
+    d.className = "lbl" + (cls ? " " + cls : "");
+    d.innerHTML = html;
+    if (color) d.style.color = color;
+    stage.appendChild(d);
+    labels[key] = d;
+  }
+  ["E", "S"].forEach(function (F) {
+    KEYS.forEach(function (a) {
+      mkLabel(F + a, "\\(\\v{" + a + "}_{" + F + "}\\)", COL[F][a]);
+    });
+  });
+  mkLabel("g", "\\(-\\v{g}^E\\)", COL.g);
+  KEYS.forEach(function (a) {
+    mkLabel("ip" + a,
+      '<span class="sym">\\(a_' + a + ' =\\)</span><span class="num"></span>',
+      COL.S[a], "ip");
+  });
+
+  function placeLabel(key, p, dx, dy, show) {
+    var d = labels[key];
+    if (show === false) { d.style.display = "none"; return; }
+    d.style.display = "";
+    var s = project(p);
+    d.style.left = (s.x + (dx || 0)) + "px";
+    d.style.top  = (s.y + (dy || 0)) + "px";
+  }
+  function fmt(v) {
+    if (Math.abs(v) < 5e-3) v = 0;
+    return v.toFixed(2);
+  }
+  function fmtDeg(v) { return v + "&deg;"; }
+
+  // ---- the sensor body: a grey cuboid in S, half-sizes along x, y, z ---
+  var HX = 0.9, HY = 0.22, HZ = 0.55;
+  function boxFaces(R) {
+    var V = [];
+    for (var i = 0; i < 8; i++) {
+      var q = [ (i & 1) ? HX : -HX, (i & 2) ? HY : -HY, (i & 4) ? HZ : -HZ ];
+      V.push(mv(R, q));
+    }
+    // faces as vertex-index quads; shade the top (+y in S) lightest
+    return [
+      { idx: [2, 3, 7, 6], fill: "#E2E8F0" },   // +y, top
+      { idx: [0, 1, 5, 4], fill: "#A0AEC0" },   // -y, bottom
+      { idx: [1, 3, 7, 5], fill: "#CBD5E0" },   // +x
+      { idx: [0, 2, 6, 4], fill: "#CBD5E0" },   // -x
+      { idx: [4, 5, 7, 6], fill: "#D6DDE6" },   // +z
+      { idx: [0, 1, 3, 2], fill: "#D6DDE6" }    // -z
+    ].map(function (f) {
+      return { pts: f.idx.map(function (k) { return V[k]; }), fill: f.fill };
+    });
+  }
+
+  // ---- draw -----------------------------------------------------------
+  var EO = [-3.2, -2.0, 2.6];                  // where the earth frame sits
+  var AXL = 1.5;                               // basis arrow length
+
+  function draw() {
+    B3 = basis();
+    scene = [];
+
+    var R = rotMat();
+    var ey = [0, 1, 0];
+    var a = scl(tmul(R, ey), G);               // a_S^S = R^T (0 - g^E), |g| = 9.81
+    var uS = { x: col(R, 0), y: col(R, 1), z: col(R, 2) };
+    var uE = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
+
+    if (showGrid) {
+      for (var g = -4; g <= 4; g++) {
+        var al = (g === 0) ? 0.8 : 0.45;
+        seg([g, -2.0, -4], [g, -2.0, 4], { color: GRID, width: 0.6, alpha: al });
+        seg([-4, -2.0, g], [4, -2.0, g], { color: GRID, width: 0.6, alpha: al });
+      }
+    }
+
+    // earth frame, off to the side, upright by construction
+    KEYS.forEach(function (k) {
+      seg(EO, add(EO, scl(uE[k], AXL)), { color: COL.E[k], width: 2.2, arrow: 8 });
+    });
+
+    // the sensor body
+    boxFaces(R).forEach(function (f) {
+      poly(f.pts, { fill: f.fill, stroke: COL.box, alpha: 0.96 });
+    });
+
+    // sensor frame at the body's centre
+    KEYS.forEach(function (k) {
+      seg([0, 0, 0], scl(uS[k], AXL), { color: COL.S[k], width: 2.4, arrow: 8.5 });
+    });
+
+    // what the accelerometer feels at rest: -g, straight up in E, from the origin
+    var GL = 1.9;
+    var gTip = scl(ey, GL);
+    seg([0, 0, 0], gTip, { color: COL.g, width: 2.6, arrow: 9 });
+
+    // its components along the sensor axes: foot F = (v . u) u on each axis
+    var feet = {};
+    if (showProj) {
+      KEYS.forEach(function (k) {
+        var c = dot(gTip, uS[k]);
+        var Ft = scl(uS[k], c);
+        feet[k] = Ft;
+        seg([0, 0, 0], Ft, { color: COL.S[k], width: 1.6, alpha: 0.95 });
+        seg(gTip, Ft,      { color: COL.S[k], width: 1, dash: [3, 3], alpha: 0.85 });
+      });
+    }
+
+    scene.sort(function (m, n) { return m.d - n.d; });
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < scene.length; i++) {
+      if (scene[i].kind === "poly") fillPoly(scene[i]); else strokeSeg(scene[i]);
+    }
+    disc([0, 0, 0], "#2D3748", 3.2);
+    disc(EO, "#2D3748", 3.0);
+
+    // labels
+    KEYS.forEach(function (k) {
+      placeLabel("E" + k, add(EO, scl(uE[k], AXL + 0.3)), 0, 0);
+      placeLabel("S" + k, scl(uS[k], AXL + 0.3), 0, 0);
+    });
+    placeLabel("g", gTip, 0, -14);
+    var IPOFF = { x: [0, 16], y: [-22, 0], z: [0, 16] };
+    KEYS.forEach(function (k) {
+      var Ft = feet[k];
+      if (!Ft) { placeLabel("ip" + k, [0, 0, 0], 0, 0, false); return; }
+      labels["ip" + k].querySelector(".num").textContent = fmt(a[KEYS.indexOf(k)]);
+      placeLabel("ip" + k, scl(Ft, 0.6), IPOFF[k][0], IPOFF[k][1],
+                 Math.abs(a[KEYS.indexOf(k)]) > 0.3);
+      disc(Ft, COL.S[k], 3.0);
+    });
+
+    // readout
+    document.getElementById("mx").textContent = fmt(a[0]);
+    document.getElementById("my").textContent = fmt(a[1]);
+    document.getElementById("mz").textContent = fmt(a[2]);
+    document.getElementById("mag").textContent =
+      "|a| = " + fmt(Math.hypot(a[0], a[1], a[2]));
+    KEYS.forEach(function (k, i) {
+      var v = a[i], half = 65;                          // track is 130 px
+      var f = document.getElementById("b" + k);
+      var w = Math.abs(v) / G * half;
+      f.style.width = w + "px";
+      f.style.left  = (v >= 0 ? half : half - w) + "px";
+      document.getElementById("n" + k).textContent = fmt(v);
+    });
+  }
+
+  // ---- interaction ----------------------------------------------------
+  var drag = null;
+  stage.addEventListener("contextmenu", function (e) {
+    if (!e.target.closest("#panel")) e.preventDefault();
+  });
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#panel")) return;
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el,
+             px: view.px, py: view.py, pan: pan };
+    stage.classList.add(pan ? "panning" : "dragging");
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) {
+      view.px = drag.px + (e.clientX - drag.x);
+      view.py = drag.py + (e.clientY - drag.y);
+    } else {
+      view.az = drag.az - (e.clientX - drag.x) * 0.008;
+      view.el = Math.max(-1.45, Math.min(1.45, drag.el + (e.clientY - drag.y) * 0.008));
+    }
+    draw();
+  });
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null;
+    stage.classList.remove("dragging"); stage.classList.remove("panning");
+    if (e && e.pointerId !== undefined) {
+      try { stage.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+  }
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+  stage.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    view.scale = Math.max(24, Math.min(180,
+      view.scale * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    draw();
+  }, { passive: false });
+
+  function bind(id, valId, key) {
+    var s = document.getElementById(id);
+    s.addEventListener("input", function () {
+      ANG[key] = parseFloat(s.value);
+      document.getElementById(valId).innerHTML = fmtDeg(ANG[key]);
+      draw();
+    });
+  }
+  bind("sp", "vp", "pitch");
+  bind("sr", "vr", "roll");
+  bind("sy", "vy", "yaw");
+
+  function setAngle(key, id, valId, v) {
+    ANG[key] = v;
+    document.getElementById(id).value = v;
+    document.getElementById(valId).innerHTML = fmtDeg(v);
+  }
+  document.getElementById("zero").addEventListener("click", function () {
+    setAngle("pitch", "sp", "vp", 0);
+    setAngle("roll",  "sr", "vr", 0);
+    setAngle("yaw",   "sy", "vy", 0);
+    draw();
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    view.az = DEF.az; view.el = DEF.el; view.scale = DEF.scale;
+    view.px = 0; view.py = 0; draw();
+  });
+  // ---- presets from the URL -------------------------------------------
+  // ?rot=pitch,roll,yaw&proj=0&grid=0 — lets a slide link to a state.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("rot")) {
+      var v = q.get("rot").split(",").map(parseFloat);
+      if (isFinite(v[0])) setAngle("pitch", "sp", "vp", v[0]);
+      if (isFinite(v[1])) setAngle("roll",  "sr", "vr", v[1]);
+      if (isFinite(v[2])) setAngle("yaw",   "sy", "vy", v[2]);
+    }
+    if (q.has("proj")) showProj = q.get("proj") !== "0";
+    if (q.has("grid")) showGrid = q.get("grid") !== "0";
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---- typeset the labels ONCE ----------------------------------------
+  var typeset = false;
+  function useFallback() {
+    if (typeset) return;
+    typeset = true;
+    ["E", "S"].forEach(function (F) {
+      KEYS.forEach(function (a) {
+        labels[F + a].innerHTML = "<b>" + a + "</b><sub>" + F + "</sub>";
+      });
+    });
+    labels.g.innerHTML = "&minus;<b>g</b><sup>E</sup>";
+    KEYS.forEach(function (a) {
+      labels["ip" + a].querySelector(".sym").innerHTML = "a<sub>" + a + "</sub>&nbsp;=";
+    });
+    document.getElementById("sym").innerHTML =
+      "<b>a</b><sub style='font-style:normal'>S</sub><sup style='font-style:normal'>S</sup>" +
+      "&nbsp;= <b>R</b><sub style='font-style:normal'>E</sub><sup style='font-style:normal'>S</sup>" +
+      "(<b>0</b> &minus; <b>g</b><sup style='font-style:normal'>E</sup>) =";
+    draw();
+  }
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    var nodes = Object.keys(labels).map(function (k) { return labels[k]; });
+    nodes.push(document.getElementById("sym"));
+    window.MathJax.typesetPromise(nodes).then(draw).catch(function () {
+      typeset = false; useFallback();
+    });
+  }
+  function whenReady() {
+    if (window.MathJax && window.MathJax.startup) {
+      window.MathJax.startup.promise.then(typesetOnce).catch(useFallback);
+    }
+  }
+  document.getElementById("MathJax-script").addEventListener("load", whenReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  whenReady();
+  setTimeout(useFallback, 2500);
+})();
+</script>
+</body>
+</html>
