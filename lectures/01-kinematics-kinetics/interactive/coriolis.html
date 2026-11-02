@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A vibrating mass in a turning frame</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* Compact by design: this sits on a slide. */
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 226px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; white-space: nowrap; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 120px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .k { display: inline-block; width: 3.2em; font-family: "Linux Libertine O", Georgia, serif;
+              font-size: 11px; font-style: italic; }
+  #panel .val { display: inline-block; width: 4.4em; text-align: right;
+                font-variant-numeric: tabular-nums; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel button.on { background: var(--charcoal); color: #fff; border-color: transparent; }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.2em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.f td { color: var(--crimson); }
+  #panel .note { font-size: 10px; color: var(--warmgray); margin-top: 3px; line-height: 1.3; }
+
+  #legend {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 16px; font-size: 12px; white-space: nowrap;
+  }
+  #legend span::before {
+    content: ""; display: inline-block; width: 16px; height: 0; vertical-align: middle;
+    margin-right: 5px; border-top: 2.4px solid currentColor;
+  }
+  #legend .v { color: var(--amber); }
+  #legend .f { color: var(--crimson); }
+  #legend .y { color: var(--warmgray); }
+  #legend .p { color: #2F855A; }
+  #legend .s { color: var(--crimson); }
+  #legend .s::before { border-top-width: 3px; opacity: 0.55; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the chip turns at</div>
+      <label><span class="k">&omega;</span>
+        <input type="range" id="sw" min="-200" max="200" step="5" value="0">
+        <span class="val" id="vw">0&deg;/s</span></label>
+      <button id="w0">0</button><button id="w40">+60</button><button id="wm40">&minus;60</button><button id="w90">+200</button>
+    </div>
+    <div class="grp">
+      <div class="hd">the mass's displacement</div>
+      <table id="tab">
+        <tr><td class="lab">drive, along <i>x</i></td><td class="n" id="dx">0</td><td>&micro;m</td></tr>
+        <tr class="f"><td class="lab">sense, along <i>y</i></td><td class="n" id="dy">0</td><td>&micro;m</td></tr>
+        <tr class="f"><td class="lab">sense amplitude</td><td class="n" id="ay">0</td><td>&micro;m</td></tr>
+        <tr class="f"><td class="lab">phase vs drive</td><td class="n" id="ph">&ndash;</td><td></td></tr>
+        <tr class="f"><td class="lab">rate it implies</td><td class="n" id="wr">0</td><td>&deg;/s</td></tr>
+      </table>
+      <div class="note">The mass is driven along <i>x</i> only. Any motion along <i>y</i> is the Coriolis force. Its amplitude is the size of the rate; its phase against the drive, 0&deg; or 180&deg;, is the sign.</div>
+    </div>
+  </div>
+
+  <div id="legend">
+    <span class="y">the mass's displacement along the sensor's y axis</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { frame: "#2D3748", spring: "#718096", mass: "#2D3748", room: "#718096",
+              v: "#D69E2E", f: "#A51C30", path: "#2B6CB0", trail: "#2F855A", grid: "#EDF2F7", text: "#718096",
+              trace: { x: "#D69E2E", y: "#A51C30", w: "#718096" } };
+  var D = Math.PI / 180;
+
+  // ---- the model ------------------------------------------------------
+  // In the chip's frame the mass is driven along x at the drive frequency.
+  // Along y it hangs on the sense springs, tuned to the same frequency, and
+  // feels the Coriolis force -2 m omega x v, which for a drive velocity xdot
+  // along x is -2 m omega xdot along y. Per unit mass:
+  //     ydd = -ws^2 y - 2 zeta ws yd - 2 omega xd  (+ omega^2 y, centrifugal)
+  // Drive amplitude 1 unit = A0 micrometres for the readout. Slowed to 1 Hz
+  // so it can be watched; a real part runs at tens of kilohertz with the
+  // same physics.
+  var FD = 2.0, WD = 2 * Math.PI * FD;     // drive frequency, slow enough to watch
+  var WS = WD, ZETA = 0.2;                 // sense mode on resonance, Q = 2.5, so 200 deg/s fits in the case
+  var A0 = 10;                             // micrometres per unit, for the readout
+  var omega = 0;                           // rad/s, anticlockwise positive
+
+  var t = 0, y = 0, yd = 0, phi = 0;       // time, sense displacement and velocity, chip angle
+  var lastNow = performance.now();
+  var trail = [];                          // [x, y] over the last second, chip frame
+  var hist = [];                           // [t, x, y, omega] for the traces
+  var HIST_T = 6;
+  var ampY = 0, phaseY = 0, rateY = 0;     // demodulated sense: amplitude, phase vs drive, signed rate
+  var W = 0, H = 0, DPR = 1;
+
+  function fmt(v, n) { if (Math.abs(v) < 5e-3) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+  function drive(tt) { return { x: Math.sin(WD * tt), xd: WD * Math.cos(WD * tt) }; }
+
+  function step(dt) {
+    // semi-implicit Euler at a small fixed step; the drive is prescribed
+    var n = Math.max(1, Math.round(dt / 0.001)), h = dt / n;
+    for (var i = 0; i < n; i++) {
+      var d = drive(t);
+      var ydd = -WS * WS * y - 2 * ZETA * WS * yd - 2 * omega * d.xd + omega * omega * y;
+      yd += ydd * h; y += yd * h; t += h; phi += omega * h;
+    }
+    var dd = drive(t);
+    trail.push([dd.x, y]); while (trail.length > 1 && trail.length > Math.round(1.0 / dt)) trail.shift();
+    hist.push([t, dd.x, y, omega]); while (hist.length && hist[0][0] < t - HIST_T) hist.shift();
+    // synchronous demodulation of y against the drive over the last cycle:
+    // I is the part of y in phase with x, Qd the part a quarter cycle off.
+    // Amplitude is the magnitude of the rate; the phase against the drive,
+    // 0 or 180 degrees, is its sign.
+    var I = 0, Qd = 0, c = 0;
+    for (var k = hist.length - 1; k >= 0 && hist[k][0] > t - 1 / FD; k--) {
+      I  += hist[k][2] * Math.sin(WD * hist[k][0]);
+      Qd += hist[k][2] * Math.cos(WD * hist[k][0]);
+      c++;
+    }
+    I = c ? 2 * I / c : 0; Qd = c ? 2 * Qd / c : 0;
+    ampY = Math.hypot(I, Qd);
+    phaseY = ampY > 0.02 ? Math.atan2(Qd, I) / D : 0;
+    rateY = -I / GAIN / D;                       // y = -GAIN * omega * x, so the sign is in I
+  }
+
+  // steady-state sense amplitude per unit rate, on resonance: 2 omega WD / (2 zeta WS^2)
+  var GAIN = 2 * WD / (2 * ZETA * WS * WS);          // units of drive amplitude per rad/s
+
+  // ---- drawing helpers -------------------------------------------------
+  function arrow(x0, y0, x1, y1, color, width) {
+    var L = Math.hypot(x1 - x0, y1 - y0);
+    if (L < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), h = Math.min(9, L), w = 0.42;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - h * Math.cos(ang - w), y1 - h * Math.sin(ang - w));
+    ctx.lineTo(x1 - h * Math.cos(ang + w), y1 - h * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    var panelW = document.getElementById("panel").offsetWidth + 20;
+    var traceH = Math.max(90, Math.min(130, H * 0.24));
+    var top = 30, bot = H - 30 - traceH - 10;
+    var avail = W - panelW - 16;
+    var S = Math.min((avail - 40) / 2, bot - top - 20) * 0.57;   // chip side, px (70% of the earlier size)
+    var cy = (top + bot) / 2;
+    var cxL = panelW + avail / 4, cxR = panelW + 3 * avail / 4;
+    var X0 = S * 0.30;                                   // px per unit of drive amplitude
+
+    var d = drive(t);
+    var mx = d.x * X0, my = y * X0;                      // mass offset, chip frame, px (y up)
+
+    // ---- one chip: case, short sensor axes, spring, mass, arrows, trail.
+    // 'turn' is the case's angle on screen: phi on the left, 0 on the right.
+    function chip(cx, turn) {
+      ctx.save();
+      ctx.translate(cx, cy); ctx.rotate(-turn);
+
+      // the case, and the sensor axes through the mass's rest position, kept short
+      ctx.strokeStyle = COL.frame; ctx.lineWidth = 2;
+      ctx.strokeRect(-S / 2, -S / 2, S, S);
+      // the sensor's x and y axes across the whole case, dotted grey
+      ctx.save();
+      ctx.strokeStyle = COL.room; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+      ctx.beginPath(); ctx.moveTo(-S / 2, 0); ctx.lineTo(S / 2, 0); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -S / 2); ctx.lineTo(0, S / 2); ctx.stroke();
+      ctx.restore();
+      var AL = S * 0.20;
+      arrow(0, 0, AL, 0, COL.path, 1.6);
+      arrow(0, 0, 0, -AL, COL.path, 1.6);
+      text("x", AL + 9, 0, COL.path, 11, "center", true);
+      text("S", AL + 15, 4, COL.path, 8, "center");
+      text("y", 0, -AL - 9, COL.path, 11, "center", true);
+      text("S", 6, -AL - 5, COL.path, 8, "center");
+
+      // the spring: a straight line from the rest position to the mass,
+      // darker the further the mass is from rest
+      var stretch = Math.hypot(d.x, y), u = Math.min(1, stretch / 1.4);
+      ctx.lineWidth = 2.5; ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(113,128,150," + (0.35 + 0.65 * u).toFixed(2) + ")";
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(mx, -my); ctx.stroke();
+      ctx.fillStyle = COL.mass;
+      ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, 2 * Math.PI); ctx.fill();   // the rest position
+
+      // the displacement along y: a light dashed line at the mass's height
+      // across to the y axis, and a grey arrow up the y axis to that height
+      if (Math.abs(my) > 2) {
+        ctx.save();
+        ctx.strokeStyle = "#CBD5E0"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(mx, -my); ctx.lineTo(0, -my); ctx.stroke();
+        ctx.restore();
+        arrow(0, 0, 0, -my, COL.room, 1.3);
+        text("y", -9, -my / 2, COL.room, 11, "center", true);
+      }
+
+      // the mass
+      var mw = S * 0.11, mh = S * 0.07, rc = mh * 0.3;
+      ctx.fillStyle = COL.mass;
+      ctx.beginPath();
+      ctx.moveTo(mx - mw / 2 + rc, -my - mh / 2);
+      ctx.arcTo(mx + mw / 2, -my - mh / 2, mx + mw / 2, -my + mh / 2, rc);
+      ctx.arcTo(mx + mw / 2, -my + mh / 2, mx - mw / 2, -my + mh / 2, rc);
+      ctx.arcTo(mx - mw / 2, -my + mh / 2, mx - mw / 2, -my - mh / 2, rc);
+      ctx.arcTo(mx - mw / 2, -my - mh / 2, mx + mw / 2, -my - mh / 2, rc);
+      ctx.closePath(); ctx.fill();
+
+      ctx.restore();
+    }
+
+    chip(cxL, phi);                                      // the case really turning
+    chip(cxR, 0);                                        // the same, in the case's own frame
+
+    // captions
+    text("The case turns: what really happens", cxL, top - 14, COL.text, 12.5, "center");
+    text("Seen from the case: what the chip sees", cxR, top - 14, COL.text, 12.5, "center");
+
+    // the turning, as a curved arrow around the left case
+    if (Math.abs(omega) > 1e-6) {
+      var rr = S * 0.76;
+      ctx.save();
+      ctx.strokeStyle = COL.text; ctx.lineWidth = 1.4;
+      var a0 = -Math.PI / 2 - 0.22, a1 = -Math.PI / 2 + 0.22;
+      ctx.beginPath(); ctx.arc(cxL, cy, rr, a0, a1); ctx.stroke();
+      var tip = omega > 0 ? a0 : a1, dir = omega > 0 ? -1 : 1;
+      var tx = cxL + rr * Math.cos(tip), ty = cy + rr * Math.sin(tip);
+      arrow(tx - dir * 6 * Math.sin(tip), ty + dir * 6 * Math.cos(tip), tx, ty, COL.text, 1.4);
+      ctx.restore();
+      text("ω = " + fmt(omega / D, 0) + "°/s", cxL + rr + 6, cy - rr + 4, COL.text, 12, "left");
+    } else {
+      text("ω = 0: the mass vibrates along x and nothing else happens", cxL, cy + S * 0.5 + 16, COL.text, 11.5, "center", true);
+    }
+
+    // the earth frame, small, in the bottom-left corner of the drawing area
+    var ex = panelW + 24, ey = bot - 6, EL = Math.min(44, S * 0.18);
+    arrow(ex, ey, ex + EL, ey, COL.room, 1.5);
+    arrow(ex, ey, ex, ey - EL, COL.room, 1.5);
+    text("x", ex + EL + 8, ey, COL.room, 11, "center", true);
+    text("E", ex + EL + 14, ey + 4, COL.room, 8, "center");
+    text("y", ex, ey - EL - 8, COL.room, 11, "center", true);
+    text("E", ex + 6, ey - EL - 4, COL.room, 8, "center");
+
+    // ---- traces along the bottom: drive x, sense y, and omega -----------
+    var tx0 = panelW + 40, tx1 = W - 12, ty0 = H - 30 - traceH, ty1 = H - 30;
+    var rows = [
+      { key: 1, title: "drive x", color: COL.trace.x, lim: 1.15 },
+      { key: 2, title: "sense y", color: COL.trace.y, lim: Math.max(0.3, GAIN * 200 * D * 1.1) },
+      { key: 3, title: "ω (°/s)", color: COL.trace.w, lim: 100, scale: 1 / D }
+    ];
+    var rh = (ty1 - ty0) / rows.length;
+    rows.forEach(function (r, i) {
+      var y0 = ty0 + i * rh + 3, y1 = ty0 + (i + 1) * rh - 3, ym = (y0 + y1) / 2, hh = (y1 - y0) / 2;
+      ctx.save();
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(tx0, ym); ctx.lineTo(tx1, ym); ctx.stroke();
+      ctx.strokeStyle = r.color; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (var k = 0; k < hist.length; k++) {
+        var xx = tx0 + (1 - (t - hist[k][0]) / HIST_T) * (tx1 - tx0);
+        var v = hist[k][r.key] * (r.scale || 1), yy = ym - Math.max(-1, Math.min(1, v / r.lim)) * hh;
+        if (k === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+      ctx.restore();
+      text(r.title, tx0 - 4, ym, r.color, 11, "right");
+    });
+    text("last " + HIST_T + " s", tx1, ty1 + 9, COL.text, 10, "right");
+
+    // readout
+    document.getElementById("dx").textContent = fmt(d.x * A0, 1);
+    document.getElementById("dy").textContent = fmt(y * A0, 2);
+    document.getElementById("ay").textContent = fmt(ampY * A0, 2);
+    document.getElementById("ph").textContent = ampY > 0.02 ? fmt(phaseY, 0) + "°" : "–";
+    document.getElementById("wr").textContent = fmt(rateY, 0);
+  }
+
+  function tick(now) {
+    var dt = Math.min(0.05, (now - lastNow) / 1000); lastNow = now;
+    step(dt); draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls -------------------------------------------------------
+  function setOmega(deg) {
+    omega = deg * D;
+    document.getElementById("sw").value = deg;
+    document.getElementById("vw").textContent = deg + "°/s";
+  }
+  document.getElementById("sw").addEventListener("input", function () { setOmega(parseFloat(this.value)); });
+  document.getElementById("w0").addEventListener("click",   function () { setOmega(0); });
+  document.getElementById("w40").addEventListener("click",  function () { setOmega(60); });
+  document.getElementById("wm40").addEventListener("click", function () { setOmega(-60); });
+  document.getElementById("w90").addEventListener("click",  function () { setOmega(200); });
+  // ---- presets from the URL: ?omega=40 ---------------------------------------
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("omega")) setOmega(Math.max(-200, Math.min(200, parseFloat(q.get("omega")) || 0)));
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

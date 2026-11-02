@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tuning the sense mode of a gyroscope</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 236px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; white-space: nowrap; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 110px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .k { display: inline-block; width: 3.6em; font-family: "Linux Libertine O", Georgia, serif;
+              font-size: 11px; font-style: italic; }
+  #panel .val { display: inline-block; width: 4.6em; text-align: right;
+                font-variant-numeric: tabular-nums; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.2em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.f td { color: var(--crimson); }
+  #tab tr.g td { color: var(--forest); }
+  #panel .note { font-size: 10px; color: var(--warmgray); margin-top: 3px; line-height: 1.3; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the sense springs</div>
+      <label><span class="k">&omega;<sub>s</sub>/&omega;<sub>d</sub></span>
+        <input type="range" id="sr" min="0.80" max="1.20" step="0.01" value="1.00">
+        <span class="val" id="vr">1.00</span></label>
+      <label><span class="k">Q</span>
+        <input type="range" id="sq" min="1" max="10" step="0.5" value="5">
+        <span class="val" id="vq">5.0</span></label>
+      <button id="bmatch">matched</button><button id="bsplit">split +5%</button><button id="bq">Q +10%</button>
+    </div>
+    <div class="grp">
+      <div class="hd">the chip turns at</div>
+      <label><span class="k">&omega;</span>
+        <input type="range" id="sw" min="0" max="100" step="5" value="60">
+        <span class="val" id="vw">60&deg;/s</span></label>
+      <button id="bstep">step the rate from 0</button><button id="b0">0</button>
+    </div>
+    <div class="grp">
+      <div class="hd">readout</div>
+      <table id="tab">
+        <tr class="f"><td class="lab">sense amplitude</td><td class="n" id="ay">0</td><td>&micro;m</td></tr>
+        <tr class="f"><td class="lab">phase vs drive</td><td class="n" id="ph">&ndash;</td><td></td></tr>
+        <tr class="g"><td class="lab">rate estimate</td><td class="n" id="wr">0</td><td>&deg;/s</td></tr>
+        <tr><td class="lab">true rate</td><td class="n" id="wt">0</td><td>&deg;/s</td></tr>
+      </table>
+      <button id="bcal">recalibrate</button><button id="breset">reset</button>
+      <div class="note" id="note">The scale factor was set with the springs matched and <i>Q</i> = 5. Change either and the estimate drifts from the true rate.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { frame: "#2D3748", mass: "#2D3748", room: "#718096", path: "#2B6CB0",
+              grid: "#EDF2F7", text: "#718096",
+              trace: { x: "#D69E2E", y: "#A51C30", w: "#2D3748", est: "#2B6CB0" } };
+  var D = Math.PI / 180;
+
+  // ---- the model ------------------------------------------------------
+  // Chip frame. The mass is driven along x at omega_d. Along y it hangs on
+  // sense springs with natural frequency omega_s = ratio * omega_d and
+  // quality factor Q, and feels the Coriolis force -2 omega xdot. Per unit
+  // mass:   ydd = -ws^2 y - (ws/Q) yd - 2 omega xd  (+ omega^2 y)
+  // Slowed to 2 Hz so it can be watched.
+  var FD = 2.0, WD = 2 * Math.PI * FD;
+  var A0 = 10;                             // micrometres per unit of drive amplitude
+  var RATIO = 1.0, Q = 5, WS = WD;
+  var Q0 = 5, RATIO0 = 1.0;                // the design point the scale factor assumes
+  var omega = 60 * D;
+  var YLIM = 3.0;                          // trace and drawing limit for y, in units of A
+
+  var t = 0, y = 0, yd = 0;
+  var lastNow = performance.now();
+  var hist = [];                           // [t, x, y, omega, estimate]
+  var HIST_T = 8;
+  var ampY = 0, phaseY = 0, rateY = 0;
+  var stepT = -1;                          // time of the last rate step, for a marker
+  var W = 0, H = 0, DPR = 1;
+
+  function fmt(v, n) { if (Math.abs(v) < 5e-3) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+  function drive(tt) { return { x: Math.sin(WD * tt), xd: WD * Math.cos(WD * tt) }; }
+
+  // In-phase sense displacement per rad/s of rate, steady state, for given
+  // springs: the Coriolis force -2 omega A wd cos(wd t) through the sense
+  // mode's response |H| at phase lag phi gives an in-phase part
+  // -2 omega A wd |H| sin(phi). On resonance this is -2 Q A omega / ws.
+  function gainI(ratio, q) {
+    var ws = ratio * WD;
+    var re = ws * ws - WD * WD, im = ws * WD / q;
+    var Hm = 1 / Math.hypot(re, im), phi = Math.atan2(im, re);
+    return 2 * WD * Hm * Math.sin(phi);
+  }
+  var GAIN = gainI(RATIO0, Q0);            // the scale factor the electronics use
+
+  // the demodulator's window: exactly one drive cycle of the fine-grid samples
+  var HS = 0.001, NCYC = Math.round(1 / (FD * HS));
+  var ybuf = new Float64Array(NCYC), tbuf = new Float64Array(NCYC), bi = 0, bfill = 0;
+
+  function step(dt) {
+    var n = Math.max(1, Math.round(dt / HS)), h = HS;
+    for (var i = 0; i < n; i++) {
+      var d = drive(t);
+      var ydd = -WS * WS * y - (WS / Q) * yd - 2 * omega * d.xd + omega * omega * y;
+      yd += ydd * h; y += yd * h; t += h;
+      ybuf[bi] = y; tbuf[bi] = t; bi = (bi + 1) % NCYC; if (bfill < NCYC) bfill++;
+    }
+    var dd = drive(t);
+    // synchronous demodulation against the drive over the last cycle, with a
+    // fixed reference sin(wd t): I in phase with the drive, Qd a quarter cycle off
+    var I = 0, Qd = 0;
+    for (var k = 0; k < bfill; k++) {
+      I  += ybuf[k] * Math.sin(WD * tbuf[k]);
+      Qd += ybuf[k] * Math.cos(WD * tbuf[k]);
+    }
+    I = bfill ? 2 * I / bfill : 0; Qd = bfill ? 2 * Qd / bfill : 0;
+    ampY = Math.hypot(I, Qd);
+    phaseY = ampY > 0.02 ? Math.atan2(Qd, I) / D : 0;
+    rateY = -I / GAIN / D;
+    hist.push([t, dd.x, y, omega, rateY]); while (hist.length && hist[0][0] < t - HIST_T) hist.shift();
+  }
+
+  // magnitude of the sense mode's response at frequency w, relative to its
+  // static deflection: 1 / sqrt((1 - (w/ws)^2)^2 + (w/(ws Q))^2)
+  function Hmag(w, ratio, q) {
+    var r = w / (ratio * WD);
+    return 1 / Math.hypot(1 - r * r, r / q);
+  }
+
+  // ---- drawing helpers -------------------------------------------------
+  function arrow(x0, y0, x1, y1, color, width) {
+    var L = Math.hypot(x1 - x0, y1 - y0);
+    if (L < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), h = Math.min(9, L), w = 0.42;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - h * Math.cos(ang - w), y1 - h * Math.sin(ang - w));
+    ctx.lineTo(x1 - h * Math.cos(ang + w), y1 - h * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    var panelW = document.getElementById("panel").offsetWidth + 20;
+    var top = 34, bot = H - 26;
+    var avail = W - panelW - 16;
+    var chipW = avail * 0.40;
+    var S = Math.min(chipW - 24, bot - top - 24);
+    var cx = panelW + chipW / 2, cy = (top + bot) / 2;
+    var X0 = S / (2 * (YLIM + 0.15));              // px per unit of A; the largest y fits the case
+
+    var d = drive(t);
+    var mx = d.x * X0, my = y * X0;
+
+    // ---- the chip, in its own frame ------------------------------------
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = COL.frame; ctx.lineWidth = 2;
+    ctx.strokeRect(-S / 2, -S / 2, S, S);
+    ctx.save();
+    ctx.strokeStyle = COL.room; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(-S / 2, 0); ctx.lineTo(S / 2, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -S / 2); ctx.lineTo(0, S / 2); ctx.stroke();
+    ctx.restore();
+    var AL = S * 0.20;
+    arrow(0, 0, AL, 0, COL.path, 1.6);
+    arrow(0, 0, 0, -AL, COL.path, 1.6);
+    text("x", AL + 9, 0, COL.path, 11, "center", true);
+    text("S", AL + 15, 4, COL.path, 8, "center");
+    text("y", 0, -AL - 9, COL.path, 11, "center", true);
+    text("S", 6, -AL - 5, COL.path, 8, "center");
+
+    var stretch = Math.hypot(d.x, y), u = Math.min(1, stretch / 2.0);
+    ctx.lineWidth = 2.5; ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(113,128,150," + (0.35 + 0.65 * u).toFixed(2) + ")";
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(mx, -my); ctx.stroke();
+    ctx.fillStyle = COL.mass;
+    ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, 2 * Math.PI); ctx.fill();
+
+    if (Math.abs(my) > 2) {
+      ctx.save();
+      ctx.strokeStyle = "#CBD5E0"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(mx, -my); ctx.lineTo(0, -my); ctx.stroke();
+      ctx.restore();
+      arrow(0, 0, 0, -my, COL.room, 1.3);
+      text("y", -9, -my / 2, COL.room, 11, "center", true);
+    }
+
+    var mw = S * 0.11, mh = S * 0.07, rc = mh * 0.3;
+    ctx.fillStyle = COL.mass;
+    ctx.beginPath();
+    ctx.moveTo(mx - mw / 2 + rc, -my - mh / 2);
+    ctx.arcTo(mx + mw / 2, -my - mh / 2, mx + mw / 2, -my + mh / 2, rc);
+    ctx.arcTo(mx + mw / 2, -my + mh / 2, mx - mw / 2, -my + mh / 2, rc);
+    ctx.arcTo(mx - mw / 2, -my + mh / 2, mx - mw / 2, -my - mh / 2, rc);
+    ctx.arcTo(mx - mw / 2, -my - mh / 2, mx + mw / 2, -my - mh / 2, rc);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    text("Seen from the case, turning at ω = " + fmt(omega / D, 0) + "°/s", cx, top - 16, COL.text, 12.5, "center");
+    text("ω_s = " + fmt(RATIO, 2) + " ω_d,  Q = " + fmt(Q, 1), cx, cy + S / 2 + 14, COL.text, 11.5, "center");
+
+    // ---- right column: the sense mode's frequency response on top, then
+    // the drive and sense traces, then the rate estimate -------------------
+    var tx0 = panelW + chipW + 44, tx1 = W - 14;
+    var gap = 26, frH = (bot - top - 2 * gap) * 0.40, rowH = (bot - top - 2 * gap) * 0.30;
+
+    // frequency response: |H| against frequency in units of omega_d, 0 to 2,
+    // the drive frequency as a dotted vertical line, the operating point marked
+    (function () {
+      var y0 = top, y1 = top + frH, GM = 10.5;
+      function X(f) { return tx0 + f / 2 * (tx1 - tx0); }
+      function Y(g) { return y1 - Math.min(1, g / GM) * (y1 - y0); }
+      ctx.save();
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+      [2, 4, 6, 8, 10].forEach(function (g) {
+        ctx.beginPath(); ctx.moveTo(tx0, Y(g)); ctx.lineTo(tx1, Y(g)); ctx.stroke();
+        text(String(g), tx0 - 4, Y(g), COL.text, 9.5, "right");
+      });
+      ctx.strokeStyle = "#CBD5E0";
+      ctx.beginPath(); ctx.moveTo(tx0, y1); ctx.lineTo(tx1, y1); ctx.stroke();
+      [0, 0.5, 1, 1.5, 2].forEach(function (f) {
+        text(f === 1 ? "ω_d" : (f === 0 ? "0" : f + " ω_d"), X(f), y1 + 8, COL.text, 9.5, "center");
+      });
+      // the drive frequency
+      ctx.strokeStyle = "#CBD5E0"; ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(X(1), y0); ctx.lineTo(X(1), y1); ctx.stroke();
+      ctx.setLineDash([]);
+      // the curve
+      ctx.strokeStyle = COL.trace.y; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      for (var i = 0; i <= 300; i++) {
+        var f = 2 * i / 300, g = Hmag(f * WD, RATIO, Q);
+        var yy = Y(g);
+        if (i === 0) ctx.moveTo(X(f), yy); else ctx.lineTo(X(f), yy);
+      }
+      ctx.stroke();
+      // omega_s and the operating point
+      ctx.strokeStyle = COL.trace.y; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(X(RATIO), y1); ctx.lineTo(X(RATIO), y1 - 10); ctx.stroke();
+      ctx.setLineDash([]);
+      text("ω_s", X(RATIO), y1 - 16, COL.trace.y, 10, "center");
+      var gop = Hmag(WD, RATIO, Q);
+      ctx.fillStyle = COL.trace.y;
+      ctx.beginPath(); ctx.arc(X(1), Y(gop), 4, 0, 2 * Math.PI); ctx.fill();
+      text("×" + fmt(gop, 1) + " at ω_d", X(1) + 8, Y(gop) - (gop > GM * 0.9 ? -8 : 2), COL.trace.y, 10.5, "left");
+      ctx.restore();
+      text("the sense springs' response to a force, against the force's frequency", tx0, y0 - 9, COL.text, 11.5, "left");
+    })();
+
+    var r1 = top + frH + gap;
+    var rows = [
+      { y0: r1, y1: r1 + rowH, lim: YLIM,
+        series: [{ key: 1, color: COL.trace.x, w: 1.3 }, { key: 2, color: COL.trace.y, w: 1.6 }],
+        ticks: [-2, -1, 1, 2], tick: function (v) { return v + "A"; },
+        title: "drive x and sense y, in units of A" },
+      { y0: r1 + rowH + gap, y1: bot, lim: 110,
+        series: [{ key: 3, color: COL.trace.w, w: 1.2, dash: [5, 4] }, { key: 4, color: COL.trace.est, w: 1.6 }],
+        ticks: [-50, 50, 100], tick: function (v) { return v + "°/s"; },
+        title: "rate estimate (blue) and the true rate (dashed)" }
+    ];
+    rows.forEach(function (r) {
+      var ym = (r.y0 + r.y1) / 2, hh = (r.y1 - r.y0) / 2;
+      ctx.save();
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+      r.ticks.forEach(function (v) {
+        var yy = ym - v / r.lim * hh;
+        ctx.beginPath(); ctx.moveTo(tx0, yy); ctx.lineTo(tx1, yy); ctx.stroke();
+        text(r.tick(v), tx0 - 4, yy, COL.text, 9.5, "right");
+      });
+      ctx.strokeStyle = "#CBD5E0";
+      ctx.beginPath(); ctx.moveTo(tx0, ym); ctx.lineTo(tx1, ym); ctx.stroke();
+      text("0", tx0 - 4, ym, COL.text, 9.5, "right");
+      if (stepT >= 0 && stepT > t - HIST_T) {
+        var sx = tx0 + (1 - (t - stepT) / HIST_T) * (tx1 - tx0);
+        ctx.save(); ctx.strokeStyle = "#CBD5E0"; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(sx, r.y0); ctx.lineTo(sx, r.y1); ctx.stroke(); ctx.restore();
+      }
+      r.series.forEach(function (s) {
+        ctx.save();
+        ctx.strokeStyle = s.color; ctx.lineWidth = s.w;
+        if (s.dash) ctx.setLineDash(s.dash);
+        ctx.beginPath();
+        for (var k = 0; k < hist.length; k++) {
+          var xx = tx0 + (1 - (t - hist[k][0]) / HIST_T) * (tx1 - tx0);
+          var v = hist[k][s.key] * (s.key === 3 ? 1 / D : 1);
+          var yy = ym - Math.max(-1, Math.min(1, v / r.lim)) * hh;
+          if (k === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+        ctx.restore();
+      });
+      ctx.restore();
+      text(r.title, tx0, r.y0 - 9, COL.text, 11.5, "left");
+    });
+    text("last " + HIST_T + " s", tx1, bot + 10, COL.text, 10, "right");
+
+    document.getElementById("ay").textContent = fmt(ampY * A0, 2);
+    document.getElementById("ph").textContent = ampY > 0.02 ? fmt(phaseY, 0) + "°" : "–";
+    document.getElementById("wr").textContent = fmt(rateY, 0);
+    document.getElementById("wt").textContent = fmt(omega / D, 0);
+  }
+
+  function tick(now) {
+    var dt = Math.min(0.05, (now - lastNow) / 1000); lastNow = now;
+    step(dt); draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls -------------------------------------------------------
+  function setRatio(r) {
+    RATIO = Math.max(0.8, Math.min(1.2, r)); WS = RATIO * WD;
+    document.getElementById("sr").value = RATIO;
+    document.getElementById("vr").textContent = fmt(RATIO, 2);
+  }
+  function setQ(q) {
+    Q = Math.max(1, Math.min(10, q));
+    document.getElementById("sq").value = Q;
+    document.getElementById("vq").textContent = fmt(Q, 1);
+  }
+  function setOmega(deg) {
+    omega = deg * D;
+    document.getElementById("sw").value = deg;
+    document.getElementById("vw").textContent = deg + "°/s";
+  }
+  function recalibrate() {
+    GAIN = gainI(RATIO, Q);
+    document.getElementById("note").textContent =
+      "The scale factor was reset with ω_s = " + fmt(RATIO, 2) + " ω_d and Q = " + fmt(Q, 1) + ". Change either and the estimate drifts again.";
+  }
+  document.getElementById("sr").addEventListener("input", function () { setRatio(parseFloat(this.value)); });
+  document.getElementById("sq").addEventListener("input", function () { setQ(parseFloat(this.value)); });
+  document.getElementById("sw").addEventListener("input", function () { setOmega(parseFloat(this.value)); });
+  document.getElementById("bmatch").addEventListener("click", function () { setRatio(1.0); });
+  document.getElementById("bsplit").addEventListener("click", function () { setRatio(1.05); });
+  document.getElementById("bq").addEventListener("click", function () { setQ(Math.round(Q * 1.1 * 2) / 2); });
+  document.getElementById("b0").addEventListener("click", function () { if (omega !== 0) stepTarget = Math.round(omega / D); setOmega(0); stepLabel(); });
+  var stepTarget = 60;
+  function stepLabel() {
+    document.getElementById("bstep").textContent =
+      omega === 0 ? "step up to " + stepTarget + "°/s" : "step down to 0";
+  }
+  document.getElementById("bstep").addEventListener("click", function () {
+    if (omega === 0) setOmega(stepTarget); else { stepTarget = Math.max(5, Math.round(omega / D)); setOmega(0); }
+    stepT = t; stepLabel();
+  });
+  document.getElementById("sw").addEventListener("input", function () {
+    if (omega !== 0) stepTarget = Math.round(omega / D); stepLabel();
+  });
+  stepLabel();
+  document.getElementById("bcal").addEventListener("click", recalibrate);
+  document.getElementById("breset").addEventListener("click", function () {
+    setRatio(RATIO0); setQ(Q0); setOmega(60); stepTarget = 60; stepLabel(); GAIN = gainI(RATIO0, Q0); stepT = -1;
+    document.getElementById("note").innerHTML =
+      "The scale factor was set with the springs matched and <i>Q</i> = 5. Change either and the estimate drifts from the true rate.";
+  });
+
+  // ---- presets from the URL: ?ratio=1.05&Q=5&omega=60 ---------------------
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.has("ratio")) setRatio(parseFloat(q.get("ratio")) || 1);
+    if (q.has("Q"))     setQ(parseFloat(q.get("Q")) || 5);
+    if (q.has("omega")) setOmega(Math.max(0, Math.min(100, parseFloat(q.get("omega")) || 0)));
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

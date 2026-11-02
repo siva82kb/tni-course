@@ -16,7 +16,7 @@
 % from ../data/imu-drift-gyro.csv (written by ../data/make_imu_drift.py: residual
 % bias N(0, 0.05 deg/s) after a static calibration, noise density 0.01 deg/s/sqrt(Hz),
 % 100 Hz; median and quartiles of |error| over 500 runs). The dashed line is the
-% bias alone, 0.05 deg/s times t.
+% median residual bias alone, 0.034 deg/s times t.
 %   pdflatex imu-drift-gyro.tex && pdftocairo -svg imu-drift-gyro.pdf ../figures/imu-drift-gyro.svg
 
 \begin{document}
@@ -26,7 +26,7 @@
       axis line style={warmgray, line width=0.5pt},
       tick style={warmgray}, ticklabel style={font=\footnotesize, color=warmgray},
       label style={font=\small, color=charcoal},
-      title style={font=\small, color=charcoal, yshift=2pt},
+      title style={font=\small, color=charcoal, yshift=2pt, align=center},
       legend style={draw=none, fill=none, font=\scriptsize, at={(0.03,0.97)}, anchor=north west, cells={anchor=west}, row sep=-2pt},
       legend image post style={mark size=1.4pt},
       axis x line=bottom, axis y line=left,
@@ -34,18 +34,22 @@
       ymin=0, ymax=3.6, ytick={0,1,2,3},
       xlabel={Time since the integration started (s)},
       ylabel={Angle error (deg)},
-      title={A still gyroscope, integrated: the angle walks away}]
+      title={A still gyroscope, integrated:\\ the angle walks away}]
     \addplot[name path=hi, draw=none, forget plot] table[col sep=comma, x=t_s, y=err_q75] {../data/imu-drift-gyro.csv};
     \addplot[name path=lo, draw=none, forget plot] table[col sep=comma, x=t_s, y=err_q25] {../data/imu-drift-gyro.csv};
     \addplot[forest!18] fill between[of=hi and lo];
     \addlegendentry{Interquartile range}
     \addplot[forest, line width=1.0pt] table[col sep=comma, x=t_s, y=err_med] {../data/imu-drift-gyro.csv};
     \addlegendentry{Median}
-    \addplot[warmgray, dashed, line width=0.7pt, domain=0:60, samples=2] {0.05*x};
-    \addlegendentry{Bias alone, $0.05^\circ$/s $\times\, t$}
+    % the median residual bias, 0.6745 sigma = 0.034 deg/s, so the line sits on the median curve
+    \addplot[warmgray, dashed, line width=0.7pt, domain=0:60, samples=2] {0.034*x};
+    \addlegendentry{Median bias alone, $0.034^\circ$/s $\times\, t$}
   \end{axis}
-  \node[anchor=south, font=\scriptsize, text=warmgray, align=center, text width=13.5cm] at ($(panel.north west)!0.5!(panel.north east)$) [yshift=30pt]
-    {Residual bias after a static calibration $\sim\mathcal{N}(0,\,0.05^\circ\!/\text{s})$ \;\textperiodcentered\; Noise $0.01^\circ\!/\text{s}/\sqrt{\text{Hz}}$ at 100 Hz\\
-     Assumed values of the order found in consumer MEMS gyros \;\textperiodcentered\; Median and interquartile range of 500 runs};
+  % the assumptions, above the title, wrapped to the width of the axis
+  \node[anchor=south, font=\scriptsize, text=warmgray, align=center, text width=7.2cm] at ($(panel.north west)!0.5!(panel.north east)$) [yshift=36pt]
+    {Residual bias after a static calibration $\sim\mathcal{N}(0,\,0.05^\circ\!/\text{s})$\\
+     Noise $0.01^\circ\!/\text{s}/\sqrt{\text{Hz}}$ at 100 Hz\\
+     Values typical of consumer MEMS gyros\\
+     Median and interquartile range of 500 runs};
 \end{tikzpicture}
 \end{document}

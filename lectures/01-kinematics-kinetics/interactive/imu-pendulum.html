@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orientation of a swinging link from an IMU</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.3;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 4px; padding-top: 3px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 104px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .sl { margin-bottom: 2px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 5.8em; font-family: "Linux Libertine O", Georgia, serif;
+              font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.2em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel .cb { display: flex; align-items: flex-start; margin-top: 2px; }
+  #panel .cb input { width: 11px; height: 11px; flex: none; margin: 2px 4px 0 0; }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums;
+            white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 3.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.a td { color: var(--amber); }
+  #tab tr.g td { color: var(--crimson); }
+  #tab tr.f td { color: var(--forest); }
+  sub { font-size: 0.7em; }
+
+  #legend {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 16px; font-size: 12.5px; white-space: nowrap;
+  }
+  #legend span::before {
+    content: ""; display: inline-block; width: 18px; height: 0; vertical-align: middle;
+    margin-right: 5px; border-top: 2.4px solid currentColor;
+  }
+  #legend .t { color: var(--charcoal); }
+  #legend .a { color: var(--amber); }
+  #legend .g { color: var(--crimson); }
+  #legend .f { color: var(--forest); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the link: random swings from rest</div>
+      <label class="sl"><span class="k">duration <i>T</i></span>
+        <input type="range" id="sT" min="2" max="30" step="1" value="10">
+        <span class="val" id="vT">10 s</span></label>
+      <label class="sl"><span class="k">IMU at <i>r</i></span>
+        <input type="range" id="sr" min="0" max="1" step="0.05" value="0.5">
+        <span class="val" id="vr">0.50 <i>L</i></span></label>
+      <button id="pnew">new movement</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">accelerometer</div>
+      <label class="sl"><span class="k">bias</span>
+        <input type="range" id="sba" min="0" max="100" step="5" value="20">
+        <span class="val" id="vba">20 mg</span></label>
+      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+        <input type="range" id="ssa" min="0" max="100" step="5" value="20">
+        <span class="val" id="vsa">20 mg</span></label>
+      <label class="cb"><input type="checkbox" id="cca"><span>static calibration, 1 s hanging still</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">gyroscope</div>
+      <label class="sl"><span class="k">bias</span>
+        <input type="range" id="sbg" min="-5" max="5" step="0.1" value="1">
+        <span class="val" id="vbg">1.0 °/s</span></label>
+      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+        <input type="range" id="ssg" min="0" max="10" step="0.5" value="1">
+        <span class="val" id="vsg">1.0 °/s</span></label>
+      <label class="cb"><input type="checkbox" id="ccg"><span>static calibration, 1 s hanging still</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">complementary filter</div>
+      <label class="sl"><span class="k">weight <i>&alpha;</i></span>
+        <input type="range" id="sal" min="0.90" max="0.999" step="0.001" value="0.98">
+        <span class="val" id="val">0.980</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">angle error, rms over 50 runs</div>
+      <table id="tab">
+        <tr class="a"><td class="lab">accelerometer tilt</td><td class="n" id="ea">0.0</td><td>&deg;</td></tr>
+        <tr class="g"><td class="lab">integrated gyroscope</td><td class="n" id="eg">0.0</td><td>&deg;</td></tr>
+        <tr class="f"><td class="lab">complementary filter</td><td class="n" id="ef">0.0</td><td>&deg;</td></tr>
+      </table>
+      <button id="replay">replay</button><button id="pause">pause</button><button id="ideal">ideal sensors</button>
+    </div>
+  </div>
+
+  <div id="legend">
+    <span class="t">true link</span>
+    <span class="a">accelerometer tilt</span>
+    <span class="g">integrated gyroscope</span>
+    <span class="f">complementary filter</span>
+    <span style="color:#718096">arrow: one run; shaded: 10–90% of 50 runs</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { done: "#2D3748", acc: "#D69E2E", gyr: "#A51C30", fus: "#2B6CB0",
+              body: "#E2E8F0", edge: "#718096", chip: "#2D3748", axis: "#2B6CB0",
+              grid: "#EDF2F7", text: "#718096", rim: "#CBD5E0" };
+  var G = 9.81, D = Math.PI / 180;
+  var FS = 200;
+  var PRE = 1;
+  var M = 50;                                        // noise realisations per movement
+  var bdirFixed = 2 * Math.PI * Math.random();       // direction of the accelerometer's bias
+
+  // ---- the movement: a random sequence of smooth swings ----------------
+  // The link hangs from a pivot; phi is its angle from straight down,
+  // anticlockwise positive. From rest at phi = 0 it swings through four to
+  // eight targets between -70 and +70 degrees, each with a minimum-jerk
+  // profile, with short pauses, the whole sequence scaled to fill T.
+  var segs = { parts: [], total: 1 };
+  function minjerk(tau) { return 10 * tau * tau * tau - 15 * tau * tau * tau * tau + 6 * tau * tau * tau * tau * tau; }
+  function newMovement() {
+    var n = 4 + Math.floor(5 * Math.random()), total = 0, parts = [], from = 0;
+    for (var i = 0; i < n; i++) {
+      var to = (-70 + 140 * Math.random()) * D;
+      if (Math.abs(to - from) < 20 * D) to = from + (to > from ? 1 : -1) * 20 * D;
+      var dur = 0.5 + 0.9 * Math.random(), pause = 0.1 + 0.5 * Math.random();
+      parts.push({ dur: dur, pause: pause, from: from, to: to }); total += dur + pause; from = to;
+    }
+    segs = { parts: parts, total: total };
+  }
+  function angleAt(t, T) {
+    var s = segs.total / T, u = t * s, phi = 0;
+    for (var i = 0; i < segs.parts.length; i++) {
+      var p = segs.parts[i];
+      if (u <= 0) break;
+      phi = p.from + (p.to - p.from) * minjerk(Math.max(0, Math.min(1, u / p.dur)));
+      u -= p.dur + p.pause;
+    }
+    return phi;
+  }
+
+  // ---- state ---------------------------------------------------------
+  var P = { T: 10, r: 0.5, ba: 20, sa: 20, bg: 1, sg: 1, alpha: 0.98, cala: false, calg: false };
+  var L = 1.0;                                       // link length, metres
+  var run = null;
+  var playing = true, t0 = 0, pauseAt = 0;
+
+  function gauss() {
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function fmt(v, n) { if (Math.abs(v) < 5e-4) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+  function wrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+
+  // ---- one run -------------------------------------------------------
+  // Sensor frame on the link: x_S along the link towards the tip, y_S
+  // perpendicular, in the direction of increasing phi. The sensor at radius
+  // r sees gravity plus the link's own acceleration there, tangential
+  // r phidd along y_S and centripetal r phid^2 along -x_S:
+  //     f_x = -r phid^2 - G cos(phi),   f_y = r phidd + G sin(phi)
+  // Hanging still, f = (-G, 0). Tilt from the accelerometer is
+  // atan2(f_y, -f_x). The gyroscope reads phid about the pivot axis.
+  function compute() {
+    var N = Math.round(P.T * FS), dt = 1 / FS, r = P.r * L;
+    var phi = new Array(N + 1), w = new Array(N + 1), a = new Array(N + 1);
+    for (var k = 0; k <= N; k++) phi[k] = angleAt(k * dt, P.T);
+    for (k = 0; k <= N; k++) {
+      var km = Math.max(0, k - 1), kp = Math.min(N, k + 1);
+      w[k] = (phi[kp] - phi[km]) / ((kp - km) * dt);
+    }
+    for (k = 0; k <= N; k++) {
+      var km2 = Math.max(0, k - 1), kp2 = Math.min(N, k + 1);
+      a[k] = (w[kp2] - w[km2]) / ((kp2 - km2) * dt);
+    }
+
+    var sA = P.sa / 1000 * G, bA = P.ba / 1000 * G, sGy = P.sg * D, bG = P.bg * D;
+    // the accelerometer's bias: fixed size, a direction drawn once per
+    // movement, the same for all M runs; only the noise differs between runs
+    var bax = bA * Math.cos(bdirFixed), bay = bA * Math.sin(bdirFixed);
+    var nCal = Math.round(PRE * FS);
+
+    // one run: the sensor readings with fresh noise, then the three estimates
+    function oneRun() {
+      // static calibration while hanging still at phi = 0, a known orientation
+      var cax = 0, cay = 0, cg = 0;
+      if (P.cala) {
+        var sx = 0, sy = 0;
+        for (var i = 0; i < nCal; i++) { sx += -G + bax + sA * gauss(); sy += bay + sA * gauss(); }
+        cax = sx / nCal + G; cay = sy / nCal;            // what the sensor adds to the ideal (-G, 0)
+      }
+      if (P.calg) {
+        var sg = 0;
+        for (i = 0; i < nCal; i++) sg += bG + sGy * gauss();
+        cg = sg / nCal;
+      }
+      var tA = new Float64Array(N + 1), tG = new Float64Array(N + 1), tF = new Float64Array(N + 1);
+      var eA = new Float64Array(N + 1), eG = new Float64Array(N + 1), eF = new Float64Array(N + 1);
+      for (var k = 0; k <= N; k++) {
+        var c = Math.cos(phi[k]), s = Math.sin(phi[k]);
+        var fx = -r * w[k] * w[k] - G * c + bax + sA * gauss() - cax;
+        var fy =  r * a[k] + G * s + bay + sA * gauss() - cay;
+        var wm = w[k] + bG + sGy * gauss() - cg;
+        tA[k] = Math.atan2(fy, -fx);
+        if (k === 0) { tG[0] = tA[0]; tF[0] = tA[0]; }
+        else {
+          tG[k] = tG[k - 1] + wm * dt;
+          tF[k] = P.alpha * (tF[k - 1] + wm * dt) + (1 - P.alpha) * tA[k];
+        }
+        eA[k] = wrap(tA[k] - phi[k]); eG[k] = wrap(tG[k] - phi[k]); eF[k] = wrap(tF[k] - phi[k]);
+      }
+      return { t: [tA, tG, tF], e: [eA, eG, eF] };
+    }
+    var runs = [];
+    for (var m = 0; m < M; m++) runs.push(oneRun());
+
+    // the spread of the M runs at each sample: the 10th to 90th percentile
+    // of each estimate, and of each error
+    var iLo = Math.floor(0.10 * (M - 1)), iHi = Math.ceil(0.90 * (M - 1));
+    var bandT = [], bandE = [], tmp = new Float64Array(M);
+    var sum = [0, 0, 0], emax = 0, pmin = Infinity, pmax = -Infinity;
+    for (var e = 0; e < 3; e++) {
+      var loT = new Float64Array(N + 1), hiT = new Float64Array(N + 1);
+      var loE = new Float64Array(N + 1), hiE = new Float64Array(N + 1);
+      for (k = 0; k <= N; k++) {
+        for (m = 0; m < M; m++) tmp[m] = runs[m].t[e][k];
+        tmp.sort(); loT[k] = tmp[iLo]; hiT[k] = tmp[iHi];
+        for (m = 0; m < M; m++) { tmp[m] = runs[m].e[e][k]; sum[e] += tmp[m] * tmp[m]; }
+        tmp.sort(); loE[k] = tmp[iLo]; hiE[k] = tmp[iHi];
+        emax = Math.max(emax, Math.abs(loE[k]), Math.abs(hiE[k]), Math.abs(runs[0].e[e][k]));
+        pmin = Math.min(pmin, loT[k], runs[0].t[e][k]); pmax = Math.max(pmax, hiT[k], runs[0].t[e][k]);
+      }
+      bandT.push([loT, hiT]); bandE.push([loE, hiE]);
+    }
+    for (k = 0; k <= N; k++) { pmin = Math.min(pmin, phi[k]); pmax = Math.max(pmax, phi[k]); }
+    var span = Math.max(30 * D, pmax - pmin); pmin -= 0.08 * span; pmax += 0.08 * span;
+    run = { N: N, dt: dt, phi: phi, w: w, t: runs[0].t, e: runs[0].e, bandT: bandT, bandE: bandE,
+            emax: emax, pmin: pmin, pmax: pmax };
+    var ids = ["ea", "eg", "ef"];
+    for (e = 0; e < 3; e++) document.getElementById(ids[e]).textContent = fmt(Math.sqrt(sum[e] / (M * (N + 1))) / D, 1);
+  }
+  function restart() { compute(); t0 = performance.now(); pauseAt = 0; }
+
+  // ---- drawing helpers -------------------------------------------------
+  function arrow(x0, y0, x1, y1, color, width) {
+    var Ln = Math.hypot(x1 - x0, y1 - y0);
+    if (Ln < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), h = Math.min(7, Ln), wd = 0.38;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - h * Math.cos(ang - wd), y1 - h * Math.sin(ang - wd));
+    ctx.lineTo(x1 - h * Math.cos(ang + wd), y1 - h * Math.sin(ang + wd));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+  function roundRect(x, y, w, h, rc) {
+    ctx.beginPath();
+    ctx.moveTo(x + rc, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rc);
+    ctx.arcTo(x + w, y + h, x, y + h, rc);
+    ctx.arcTo(x, y + h, x, y, rc);
+    ctx.arcTo(x, y, x + w, y, rc);
+    ctx.closePath();
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!run) return;
+
+    var panel  = document.getElementById("panel");
+    var panelW = panel.offsetWidth + 16, panelB = panel.offsetTop + panel.offsetHeight;
+    var RH = Math.max(110, Math.min(150, H * 0.27));
+    var rowTop = H - 30 - RH;
+    var rowX0 = (panelB + 8 > rowTop) ? panelW : 12, rowX1 = W - 8;
+    var ax0 = panelW, ax1 = W - 10, ay0 = 10, ay1 = rowTop - 8;
+
+    var tNow = playing ? (performance.now() - t0) / 1000 : pauseAt;
+    var pre = (P.cala || P.calg) ? PRE : 0;
+    var LOOP = pre + P.T + 1.5;
+    if (tNow > LOOP) { if (playing) { restart(); tNow = 0; } }
+    var calibrating = tNow < pre;
+    var tClamp = Math.max(0, Math.min(tNow - pre, P.T));
+    var k = Math.min(run.N, Math.round(tClamp * FS));
+
+    // ---- the link, hanging from a pivot near the top of the area --------
+    var px = (ax0 + ax1) / 2, py = ay0 + 28;
+    var Lp = Math.min((ay1 - py) - 24, (ax1 - ax0) / 2 - 30) * 0.75;    // link length, px
+    function tip(angle, len) { return { x: px + len * Math.sin(angle), y: py + len * Math.cos(angle) }; }
+    // a faint arc of ticks for the angle scale
+    ctx.save();
+    ctx.strokeStyle = COL.rim; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + Lp + 10); ctx.stroke();
+    ctx.setLineDash([]);
+    for (var a = -90; a <= 90; a += 30) {
+      var q0 = tip(a * D, Lp + 6), q1 = tip(a * D, Lp + (a % 90 === 0 ? 14 : 10));
+      ctx.strokeStyle = COL.edge;
+      ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.stroke();
+    }
+    ctx.restore();
+    var ql = tip(0, Lp + 24); text("0°", ql.x, ql.y, COL.text, 11, "center");
+    var qr = tip(90 * D, Lp + 24); text("90°", qr.x, qr.y, COL.text, 11, "center");
+    var qm = tip(-90 * D, Lp + 24); text("−90°", qm.x, qm.y, COL.text, 11, "center");
+
+    // the true link: a rounded bar with the chip at r
+    var phi = run.phi[k], HW = 0.055 * Lp;
+    ctx.save();
+    ctx.translate(px, py); ctx.rotate(-phi);              // local y down the link
+    ctx.fillStyle = COL.body; ctx.strokeStyle = COL.edge; ctx.lineWidth = 1.2;
+    roundRect(-HW, -HW, 2 * HW, Lp + 2 * HW, HW); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = COL.edge;
+    ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, 2 * Math.PI); ctx.fill();   // the pivot
+    var cw = 0.09 * Lp, ch = 0.06 * Lp, cyk = P.r * Lp;
+    ctx.fillStyle = COL.chip;
+    roundRect(-cw / 2, cyk - ch / 2, cw, ch, ch * 0.25); ctx.fill();
+    // the sensor axes: x_S along the link, y_S across it
+    var AL = 0.14 * Lp;
+    arrow(0, cyk, 0, cyk + AL, COL.axis, 1.1);
+    arrow(0, cyk, AL, cyk, COL.axis, 1.1);
+    ctx.restore();
+    var lx = tip(phi, P.r * Lp + AL + 10), ly0 = { x: px + (P.r * Lp) * Math.sin(phi) + (AL + 10) * Math.cos(phi),
+                                                   y: py + (P.r * Lp) * Math.cos(phi) - (AL + 10) * Math.sin(phi) };
+    text("x", lx.x, lx.y, COL.axis, 11, "center", true);
+    text("S", lx.x + 6, lx.y + 4, COL.axis, 8, "center");
+    text("y", ly0.x, ly0.y, COL.axis, 11, "center", true);
+    text("S", ly0.x + 6, ly0.y + 4, COL.axis, 8, "center");
+
+    // the spread of the 50 runs as a faint sector for each estimate, then the
+    // followed run's estimate as a short arrow, all in front of the link
+    var ECOL = [COL.acc, COL.gyr, COL.fus], RS = 0.45 * Lp;
+    for (var e = 0; e < 3; e++) {
+      var lo = run.bandT[e][0][k], hi = run.bandT[e][1][k];
+      ctx.save(); ctx.fillStyle = ECOL[e]; ctx.globalAlpha = 0.18;
+      ctx.beginPath(); ctx.moveTo(px, py);
+      ctx.arc(px, py, RS * 0.92, Math.PI / 2 - hi, Math.PI / 2 - lo);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    for (e = 0; e < 3; e++) {
+      var q = tip(run.t[e][k], RS);
+      arrow(px, py, q.x, q.y, ECOL[e], 1.2);
+    }
+
+    if (calibrating) {
+      text("static calibration, hanging still…", px, ay1 - 4, COL.gyr, 12, "center", true);
+    }
+    text("φ = " + fmt(phi / D, 0) + "°", ax1 - 8, ay0 + 10, COL.text, 12, "right");
+
+    // ---- bottom row: angle and error against time -----------------------
+    var NP = 2, LM = 38, gapX = 16;
+    var pw = (rowX1 - rowX0 - NP * LM - (NP - 1) * gapX) / NP;
+    var top = rowTop, y0 = top + 14, y1 = top + RH - 14, h = y1 - y0;
+    function plot(i, title, series, ymin, ymax) {
+      var qx0 = rowX0 + i * (LM + pw + gapX) + LM, qx1 = qx0 + pw;
+      function Y(v) { return y1 - (v - ymin) / (ymax - ymin) * h; }
+      ctx.save();
+      ctx.strokeStyle = COL.edge; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(qx0, y0); ctx.lineTo(qx0, y1); ctx.lineTo(qx1, y1); ctx.stroke();
+      if (ymin < 0 && ymax > 0) {
+        ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(qx0, Y(0)); ctx.lineTo(qx1, Y(0)); ctx.stroke();
+      }
+      function clampY(v) { return Y(Math.max(ymin, Math.min(ymax, v / D))); }
+      // the spread bands first, faint, then the lines on top
+      series.forEach(function (s) {
+        if (!s.band || k < 1) return;
+        ctx.fillStyle = s.color; ctx.globalAlpha = 0.16;
+        ctx.beginPath();
+        for (var j = 0; j <= k; j++) {
+          var xx = qx0 + (j / run.N) * pw, yy = clampY(s.band[0][j]);
+          if (j === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        for (j = k; j >= 0; j--) ctx.lineTo(qx0 + (j / run.N) * pw, clampY(s.band[1][j]));
+        ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
+      });
+      series.forEach(function (s) {
+        ctx.strokeStyle = s.color; ctx.lineWidth = s.lw;
+        ctx.beginPath();
+        for (var j = 0; j <= k; j++) {
+          var xx = qx0 + (j / run.N) * pw, yy = clampY(s.arr[j]);
+          if (j === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+      });
+      ctx.restore();
+      text(title, qx0, top + 2, COL.text, 10.5, "left");
+      text(fmt(ymax, 0), qx0 - 3, y0 + 2, COL.text, 10, "right");
+      text(fmt(ymin, 0), qx0 - 3, y1 - 2, COL.text, 10, "right");
+      text("0", qx0, y1 + 9, COL.text, 10, "center");
+      text(fmt(P.T, 0) + " s", qx1, y1 + 9, COL.text, 10, "center");
+    }
+    plot(0, "angle of the link (°)",
+         [{ arr: run.t[0], band: run.bandT[0], color: COL.acc, lw: 1.2 },
+          { arr: run.t[1], band: run.bandT[1], color: COL.gyr, lw: 1.2 },
+          { arr: run.t[2], band: run.bandT[2], color: COL.fus, lw: 1.4 },
+          { arr: run.phi, color: "#000000", lw: 1.6 }],
+         run.pmin / D, run.pmax / D);
+    var eLim = Math.max(2, Math.ceil(run.emax / D));
+    plot(1, "angle error (°)",
+         [{ arr: run.e[0], band: run.bandE[0], color: COL.acc, lw: 1.2 },
+          { arr: run.e[1], band: run.bandE[1], color: COL.gyr, lw: 1.2 },
+          { arr: run.e[2], band: run.bandE[2], color: COL.fus, lw: 1.4 }],
+         -eLim, eLim);
+  }
+
+  function tick() { draw(); requestAnimationFrame(tick); }
+
+  // ---- controls -------------------------------------------------------
+  var SPEC = { T: ["sT", "vT", " s", 0], r: ["sr", "vr", " <i>L</i>", 2], ba: ["sba", "vba", " mg", 0],
+               sa: ["ssa", "vsa", " mg", 0], bg: ["sbg", "vbg", " °/s", 1], sg: ["ssg", "vsg", " °/s", 1],
+               alpha: ["sal", "val", "", 3] };
+  function show(key) { document.getElementById(SPEC[key][1]).innerHTML = fmt(P[key], SPEC[key][3]) + SPEC[key][2]; }
+  Object.keys(SPEC).forEach(function (key) {
+    var s = document.getElementById(SPEC[key][0]);
+    s.addEventListener("input", function () { P[key] = parseFloat(s.value); show(key); restart(); });
+  });
+  function play() { playing = true; document.getElementById("pause").textContent = "pause"; restart(); }
+  document.getElementById("replay").addEventListener("click", play);
+  document.getElementById("pnew").addEventListener("click", function () { newMovement(); play(); });
+  document.getElementById("pause").addEventListener("click", function () {
+    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, ((P.cala || P.calg) ? PRE : 0) + P.T); playing = false; this.textContent = "run"; }
+    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "pause"; }
+  });
+  document.getElementById("ideal").addEventListener("click", function () {
+    ["ba", "sa", "bg", "sg"].forEach(function (key) { P[key] = 0; document.getElementById(SPEC[key][0]).value = 0; show(key); });
+    restart();
+  });
+  document.getElementById("cca").addEventListener("change", function () { P.cala = this.checked; restart(); });
+  document.getElementById("ccg").addEventListener("change", function () { P.calg = this.checked; restart(); });
+
+  // ---- presets from the URL: ?T=10&r=0.5&ba=20&sa=20&bg=1&sg=1&alpha=0.98&cala=1&calg=1
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SPEC).forEach(function (key) {
+      if (!q.has(key)) return;
+      var v = parseFloat(q.get(key)); if (!isFinite(v)) return;
+      var el = document.getElementById(SPEC[key][0]);
+      v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[key] = v; el.value = v; show(key);
+    });
+    if (q.has("cala")) { P.cala = q.get("cala") !== "0"; document.getElementById("cca").checked = P.cala; }
+    if (q.has("calg")) { P.calg = q.get("calg") !== "0"; document.getElementById("ccg").checked = P.calg; }
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  newMovement();
+  restart();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

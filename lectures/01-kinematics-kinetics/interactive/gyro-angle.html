@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Angle from a one-axis gyroscope</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 110px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 2px; background: #CBD5E0;
+  }
+  #panel input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none;
+    border-radius: 50%; background: var(--charcoal);
+  }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 5.6em; font-family: "Linux Libertine O", Georgia, serif;
+              font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.4em; text-align: right;
+                font-variant-numeric: tabular-nums; color: var(--charcoal); }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px;
+    background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums;
+            white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.t td { color: var(--charcoal); }
+  #tab tr.e td { color: var(--crimson); }
+  sub { font-size: 0.7em; }
+
+  #legend {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 18px; font-size: 12.5px; white-space: nowrap;
+  }
+  #legend span::before {
+    content: ""; display: inline-block; width: 18px; height: 0; vertical-align: middle;
+    margin-right: 5px; border-top: 2.4px solid currentColor;
+  }
+  #legend .t { color: var(--charcoal); }
+  #legend .e { color: var(--crimson); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the movement: turns in the plane,<br>both ways, starting from rest</div>
+      <label class="sl"><span class="k">duration <i>T</i></span>
+        <input type="range" id="sT" min="2" max="30" step="1" value="10">
+        <span class="val" id="vT">10 s</span></label>
+      <button id="pnew">new movement</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the sensor's errors</div>
+      <label class="sl"><span class="k">bias <i>b</i></span>
+        <input type="range" id="sb" min="-5" max="5" step="0.1" value="1">
+        <span class="val" id="vb">1.0 °/s</span></label>
+      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+        <input type="range" id="ssg" min="0" max="10" step="0.5" value="2">
+        <span class="val" id="vsg">2.0 °/s</span></label>
+      <label class="sl"><span class="k">bias drift</span>
+        <input type="range" id="sdr" min="0" max="1" step="0.05" value="0">
+        <span class="val" id="vdr">0.00 °/s/√s</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">one integration</div>
+      <table id="tab">
+        <tr class="t"><td class="lab">time</td><td class="n" id="tt">0.00 s</td><td></td></tr>
+        <tr class="e"><td class="lab">error now</td><td class="n" id="en">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">error at <i>T</i></td><td class="n" id="eT">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">spread of 50 at <i>T</i></td><td class="n" id="sp">0.0</td><td>&deg;</td></tr>
+      </table>
+      <label style="margin-top:3px; display:flex; align-items:flex-start;"><input type="checkbox" id="ccal" style="width:11px;height:11px;flex:none;margin:2px 4px 0 0"><span>static calibration: 1 s still at the start,<br>then subtract the mean reading</span></label>
+      <button id="replay">replay</button><button id="pause">pause</button><button id="ideal">ideal sensor</button>
+    </div>
+  </div>
+
+  <div id="legend">
+    <span class="t">the sensor's x axis, true</span>
+    <span class="e">where the integrated gyroscope says it points, 50 runs</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { rim: "#CBD5E0", done: "#2D3748", est: "#A51C30", grid: "#EDF2F7",
+              text: "#718096", edge: "#718096", body: "#E2E8F0" };
+  var D = Math.PI / 180;
+  var FS = 200;                                    // samples per second, internal
+  var M  = 50;                                     // noise realisations per run
+  var PRE = 1;                                     // seconds held still for the calibration
+
+  // ---- the movement: a random sequence of smooth turns from rest ------
+  // Three to six turns of 30 to 150 degrees either way, each with a
+  // minimum-jerk profile so the rate starts and ends at zero, separated by
+  // short pauses, the whole sequence scaled to fill T. The rate is zero at
+  // t = 0, which is what a static calibration at the start relies on.
+  var segs = { parts: [], total: 1 };
+  function minjerk(tau) { return 10 * tau * tau * tau - 15 * tau * tau * tau * tau + 6 * tau * tau * tau * tau * tau; }
+  function newMovement() {
+    var n = 3 + Math.floor(4 * Math.random()), total = 0, parts = [];
+    for (var i = 0; i < n; i++) {
+      var dur = 0.6 + 1.0 * Math.random(), pause = 0.2 + 0.6 * Math.random();
+      var amp = (30 + 120 * Math.random()) * (Math.random() < 0.5 ? -1 : 1) * D;
+      parts.push({ dur: dur, pause: pause, amp: amp }); total += dur + pause;
+    }
+    segs = { parts: parts, total: total };
+  }
+  function angleAt(t, T) {
+    var s = segs.total / T, th = 0, u = t * s;
+    for (var i = 0; i < segs.parts.length; i++) {
+      var p = segs.parts[i];
+      if (u <= 0) break;
+      th += p.amp * minjerk(Math.max(0, Math.min(1, u / p.dur)));
+      u -= p.dur + p.pause;
+    }
+    return th;
+  }
+
+  // ---- state ---------------------------------------------------------
+  var P = { T: 10, b: 1, sigma: 2, drift: 0, cal: false };
+  var run = null;
+  var playing = true, t0 = 0, pauseAt = 0;
+
+  function gauss() {
+    var u = 1 - Math.random(), v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function fmt(v, n) { if (Math.abs(v) < 5e-4) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+  function wrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+
+  // ---- one run: simulate the sensor, then integrate -------------------
+  // The true rate is the backward difference of the true angle on the
+  // sample grid; the integration is the matching cumulative sum from the
+  // known start angle, so an ideal sensor returns the true angle exactly.
+  function compute() {
+    var N = Math.round(P.T * FS), dt = 1 / FS;
+    var th = new Array(N + 1), w = new Array(N + 1);
+    for (var k = 0; k <= N; k++) th[k] = angleAt(k * dt, P.T);
+    w[0] = 0;
+    for (k = 1; k <= N; k++) w[k] = (th[k] - th[k - 1]) / dt;
+
+    var b = P.b * D, sN = P.sigma * D, sD = P.drift * D * Math.sqrt(dt);
+    function integrate() {
+      // the bias: a fixed part b, plus (optionally) a random walk on top
+      var drift = 0, wm = new Array(N + 1), q = new Array(N + 1), err = new Array(N + 1);
+      // static calibration: PRE seconds still, average what the sensor reads
+      var c = 0;
+      if (P.cal) {
+        var nCal = Math.round(PRE * FS), s = 0;
+        for (var i = 0; i < nCal; i++) { drift += sD * gauss(); s += b + drift + sN * gauss(); }
+        c = s / nCal;
+      }
+      q[0] = th[0]; err[0] = 0; wm[0] = b + drift + sN * gauss() - c;
+      for (var k = 1; k <= N; k++) {
+        drift += sD * gauss();
+        wm[k] = w[k] + b + drift + sN * gauss() - c;    // what the gyro reports, after calibration
+        q[k] = q[k - 1] + wm[k] * dt;
+        err[k] = wrap(q[k] - th[k]);
+      }
+      return { wm: wm, q: q, err: err, cal: c };
+    }
+    var runs = [], emax = 0, wmax = 0;
+    for (var m = 0; m < M; m++) {
+      var r = integrate(); runs.push(r);
+      for (k = 0; k <= N; k++) { emax = Math.max(emax, Math.abs(r.err[k])); }
+    }
+    for (k = 0; k <= N; k++) wmax = Math.max(wmax, Math.abs(w[k]), Math.abs(runs[0].wm[k]));
+    // spread of the 50 final errors: interquartile range
+    var fin = runs.map(function (r) { return r.err[N] / D; }).sort(function (a, b) { return a - b; });
+    var iqr = fin[Math.floor(0.75 * (M - 1))] - fin[Math.floor(0.25 * (M - 1))];
+    run = { N: N, dt: dt, th: th, w: w, runs: runs, emax: emax, wmax: wmax };
+    document.getElementById("eT").textContent = fmt(runs[0].err[N] / D, 1);
+    document.getElementById("sp").textContent = fmt(iqr, 1);
+  }
+  function restart() { compute(); t0 = performance.now(); pauseAt = 0; }
+
+  // ---- drawing helpers -------------------------------------------------
+  function arrow(x0, y0, x1, y1, color, width) {
+    var L = Math.hypot(x1 - x0, y1 - y0);
+    if (L < 2) return;
+    ctx.save();
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), h = Math.min(9, L), w = 0.42;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - h * Math.cos(ang - w), y1 - h * Math.sin(ang - w));
+    ctx.lineTo(x1 - h * Math.cos(ang + w), y1 - h * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s, x, y);
+    ctx.restore();
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!run) return;
+
+    var panel  = document.getElementById("panel");
+    var panelW = panel.offsetWidth + 16, panelB = panel.offsetTop + panel.offsetHeight;
+    var RH = Math.max(110, Math.min(150, H * 0.27));
+    var rowTop = H - 30 - RH;
+    var rowX0 = (panelB + 8 > rowTop) ? panelW : 12, rowX1 = W - 8;
+    var ax0 = panelW, ax1 = W - 10, ay0 = 10, ay1 = rowTop - 8;
+
+    // where we are in the replay
+    var tNow = playing ? (performance.now() - t0) / 1000 : pauseAt;
+    var pre = P.cal ? PRE : 0;
+    var LOOP = pre + P.T + 1.5;
+    if (tNow > LOOP) { if (playing) { restart(); tNow = 0; } }
+    var calibrating = tNow < pre;
+    var tClamp = Math.max(0, Math.min(tNow - pre, P.T));
+    var k = Math.min(run.N, Math.round(tClamp * FS));
+
+    // ---- the sensor at the centre, and where each run thinks its x axis points
+    var cx = (ax0 + ax1) / 2, cy = (ay0 + ay1) / 2;
+    var R = Math.min((ax1 - ax0) / 2 - 40, (ay1 - ay0) / 2 - 24);
+    function onRim(a, r) { return { x: cx + r * Math.cos(a), y: cy - r * Math.sin(a) }; }
+    // the 0–180 and 90–270 lines, light and dotted, through the centre
+    ctx.save();
+    ctx.strokeStyle = COL.rim; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
+    ctx.restore();
+    // a ring of ticks for the angular scale, no rim: every 30 degrees,
+    // labelled every 90
+    ctx.save();
+    for (var a = 0; a < 360; a += 30) {
+      var p0 = onRim(a * D, R), p1 = onRim(a * D, R - (a % 90 === 0 ? 10 : 5));
+      ctx.strokeStyle = COL.edge; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+      if (a % 90 === 0) {
+        var pl = onRim(a * D, R + 16);
+        text(a + "°", pl.x, pl.y, COL.text, 11, "center");
+      }
+    }
+    ctx.restore();
+
+    // the 49 other runs' x axes, faint, then the followed run's in red
+    var AX = R * 0.82;
+    ctx.save(); ctx.globalAlpha = 0.14;
+    for (var m = 1; m < M; m++) {
+      var pe = onRim(run.runs[m].q[k], AX);
+      arrow(cx, cy, pe.x, pe.y, COL.est, 1.0);
+    }
+    ctx.restore();
+    var qe = onRim(run.runs[0].q[k], AX);
+    arrow(cx, cy, qe.x, qe.y, COL.est, 2.2);
+
+    // the chip, turned to the true angle, with its true axes: x_S in black,
+    // y_S lighter and shorter
+    var th = run.th[k];
+    var bw = R * 0.22, bh = R * 0.14;
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(-th);
+    ctx.fillStyle = COL.body; ctx.strokeStyle = COL.edge; ctx.lineWidth = 1;
+    var rc = bh * 0.25;
+    ctx.beginPath();
+    ctx.moveTo(-bw / 2 + rc, -bh / 2);
+    ctx.arcTo( bw / 2, -bh / 2,  bw / 2,  bh / 2, rc);
+    ctx.arcTo( bw / 2,  bh / 2, -bw / 2,  bh / 2, rc);
+    ctx.arcTo(-bw / 2,  bh / 2, -bw / 2, -bh / 2, rc);
+    ctx.arcTo(-bw / 2, -bh / 2,  bw / 2, -bh / 2, rc);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    var qt = onRim(th, AX), qy = onRim(th + Math.PI / 2, R * 0.35);
+    arrow(cx, cy, qy.x, qy.y, COL.edge, 1.4);
+    arrow(cx, cy, qt.x, qt.y, COL.done, 2.6);
+    var lx = onRim(th, AX + 14), ly = onRim(th + Math.PI / 2, R * 0.35 + 12);
+    text("x", lx.x, lx.y, COL.done, 12, "center", true);
+    text("S", lx.x + 7, lx.y + 4, COL.done, 8, "center");
+    text("y", ly.x, ly.y, COL.edge, 11, "center", true);
+    text("S", ly.x + 6, ly.y + 4, COL.edge, 8, "center");
+    ctx.save(); ctx.fillStyle = COL.done;
+    ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.restore();
+    // a small arc from the true angle to the followed estimate: the error
+    var e0 = run.th[k], e1 = run.runs[0].q[k], de = wrap(e1 - e0);
+    if (Math.abs(de) > 0.5 * D) {
+      ctx.save();
+      ctx.strokeStyle = COL.est; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(cx, cy, R * 0.55, -e0, -(e0 + de), de > 0); ctx.stroke();
+      ctx.restore();
+      var pm = onRim(e0 + de / 2, R * 0.55 + 12);
+      text(fmt(de / D, 1) + "°", pm.x, pm.y, COL.est, 11, "center");
+    }
+    if (calibrating) {
+      text("static calibration, holding still…", cx, ay1 - 6, COL.est, 12, "center", true);
+    } else if (P.cal) {
+      text("subtracted as bias: " + fmt(run.runs[0].cal / D, 2) + " °/s", cx, ay1 - 6, COL.text, 11, "center");
+    }
+
+    // ---- bottom row: rate, angle, angle error against time ------------
+    var NP = 3, LM = 38, gapX = 14;
+    var pw = (rowX1 - rowX0 - NP * LM - (NP - 1) * gapX) / NP;
+    var top = rowTop, y0 = top + 14, y1 = top + RH - 14, h = y1 - y0;
+    function plot(i, title, series, ymin, ymax, fmtY) {
+      var px0 = rowX0 + i * (LM + pw + gapX) + LM, px1 = px0 + pw, w = pw;
+      function Y(v) { return y1 - (v - ymin) / (ymax - ymin) * h; }
+      ctx.save();
+      ctx.strokeStyle = COL.edge; ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(px0, y0); ctx.lineTo(px0, y1); ctx.lineTo(px1, y1); ctx.stroke();
+      if (ymin < 0 && ymax > 0) {
+        ctx.strokeStyle = COL.grid; ctx.beginPath(); ctx.moveTo(px0, Y(0)); ctx.lineTo(px1, Y(0)); ctx.stroke();
+      }
+      series.forEach(function (s) {
+        ctx.strokeStyle = s.color; ctx.lineWidth = s.lw; ctx.globalAlpha = s.alpha === undefined ? 1 : s.alpha;
+        ctx.beginPath();
+        for (var j = 0; j <= k; j++) {
+          var xx = px0 + (j / run.N) * w, yy = Y(Math.max(ymin, Math.min(ymax, s.get(j))));
+          if (j === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+      });
+      ctx.restore();
+      text(title, px0, top + 2, COL.text, 10.5, "left");
+      text(fmtY(ymax), px0 - 3, y0 + 2, COL.text, 10, "right");
+      if (ymin < 0) text(fmtY(ymin), px0 - 3, y1 - 2, COL.text, 10, "right");
+      else text("0", px0 - 3, y1, COL.text, 10, "right");
+      text("0", px0, y1 + 9, COL.text, 10, "center");
+      text(fmt(P.T, 0) + " s", px1, y1 + 9, COL.text, 10, "center");
+    }
+    function trio(pickRun, pickTrue) {
+      var s = run.runs.slice(1).map(function (r) {
+        return { get: function (j) { return pickRun(r, j); }, color: COL.est, lw: 0.7, alpha: 0.2 };
+      });
+      s.push({ get: function (j) { return pickRun(run.runs[0], j); }, color: COL.est, lw: 1.6 });
+      if (pickTrue) s.push({ get: pickTrue, color: "#000000", lw: 1.8 });
+      return s;
+    }
+    var f0 = function (v) { return fmt(v, 0); };
+    var wLim = Math.max(10, Math.ceil(run.wmax / D / 50) * 50);
+    plot(0, "rate (°/s)", trio(function (r, j) { return r.wm[j] / D; }, function (j) { return run.w[j] / D; }), -wLim, wLim, f0);
+    // the angle, unwrapped, over the range the truth and the runs cover
+    var qmin = Infinity, qmax = -Infinity;
+    for (var j = 0; j <= run.N; j++) {
+      qmin = Math.min(qmin, run.th[j]); qmax = Math.max(qmax, run.th[j]);
+      for (m = 0; m < M; m++) { qmin = Math.min(qmin, run.runs[m].q[j]); qmax = Math.max(qmax, run.runs[m].q[j]); }
+    }
+    var span = Math.max(30 * D, qmax - qmin); qmin -= 0.08 * span; qmax += 0.08 * span;
+    plot(1, "angle (°)", trio(function (r, j) { return r.q[j] / D; }, function (j) { return run.th[j] / D; }), qmin / D, qmax / D, f0);
+    var eLim = Math.max(2, Math.ceil(run.emax / D));
+    plot(2, "angle error (°)", trio(function (r, j) { return r.err[j] / D; }, null), -eLim, eLim, f0);
+
+    document.getElementById("tt").textContent = calibrating ? "calibrating" : fmt(tClamp) + " s";
+    document.getElementById("en").textContent = fmt(run.runs[0].err[k] / D, 1);
+  }
+
+  function tick() { draw(); requestAnimationFrame(tick); }
+
+  // ---- controls -------------------------------------------------------
+  var SPEC = { T: ["sT", "vT", " s", 0], b: ["sb", "vb", " °/s", 1], sigma: ["ssg", "vsg", " °/s", 1],
+               drift: ["sdr", "vdr", " °/s/√s", 2] };
+  function show(key) { document.getElementById(SPEC[key][1]).textContent = fmt(P[key], SPEC[key][3]) + SPEC[key][2]; }
+  Object.keys(SPEC).forEach(function (key) {
+    var s = document.getElementById(SPEC[key][0]);
+    s.addEventListener("input", function () { P[key] = parseFloat(s.value); show(key); restart(); });
+  });
+  function play() { playing = true; document.getElementById("pause").textContent = "pause"; restart(); }
+  document.getElementById("replay").addEventListener("click", play);
+  document.getElementById("pnew").addEventListener("click", function () { newMovement(); play(); });
+  document.getElementById("pause").addEventListener("click", function () {
+    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, (P.cal ? PRE : 0) + P.T); playing = false; this.textContent = "run"; }
+    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "pause"; }
+  });
+  document.getElementById("ideal").addEventListener("click", function () {
+    ["b", "sigma", "drift"].forEach(function (key) { P[key] = 0; document.getElementById(SPEC[key][0]).value = 0; show(key); });
+    restart();
+  });
+  document.getElementById("ccal").addEventListener("change", function () { P.cal = this.checked; restart(); });
+
+  // ---- presets from the URL: ?T=10&b=1&sigma=2&drift=0&cal=1 -------------
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SPEC).forEach(function (key) {
+      if (!q.has(key)) return;
+      var v = parseFloat(q.get(key)); if (!isFinite(v)) return;
+      var el = document.getElementById(SPEC[key][0]);
+      v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[key] = v; el.value = v; show(key);
+    });
+    if (q.has("cal")) { P.cal = q.get("cal") !== "0"; document.getElementById("ccal").checked = P.cal; }
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  newMovement();
+  restart();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

@@ -18,8 +18,8 @@ FS = 100.0                      # sample rate, Hz
 REPEATS = 500
 rng = np.random.default_rng(3)
 
-# gyro: residual bias ~ N(0, 0.05 deg/s), noise density 0.01 deg/s/sqrt(Hz), 60 s
-GYRO_BIAS_SD = 0.05             # deg/s
+# gyro: residual bias ~ N(0, 0.1 deg/s), noise density 0.01 deg/s/sqrt(Hz), 60 s
+GYRO_BIAS_SD = 0.1              # deg/s
 GYRO_NOISE_DENSITY = 0.01       # deg/s per sqrt(Hz)
 T_GYRO = 60.0
 
