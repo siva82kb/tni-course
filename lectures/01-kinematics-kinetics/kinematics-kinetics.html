@@ -2461,58 +2461,227 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 </section>
 <section id="inertial-measurement-units-34" class="slide level2">
 <h2>Inertial measurement units</h2>
-<p><span class="framesub">What to read on the datasheet</span></p>
-<div style="font-size: 0.9em;">
-<ul>
-<li><span class="red">Range:</span> Accelerometers come as <span class="math inline">\(\pm 2\,g\)</span> or <span class="math inline">\(\pm 16\,g\)</span>. Gyroscopes come as <span class="math inline">\(\pm 250\)</span> or <span class="math inline">\(\pm 2000\ ^\circ\)</span>/s. Heel strike can exceed <span class="math inline">\(\pm 2\,g\)</span>. The reading then clips, and every later integral is wrong.</li>
-</ul>
-<div class="fragment">
-<ul>
-<li><span class="red">Noise density:</span> The datasheet gives it in <span class="math inline">\(\mu g/\sqrt{\mathrm{Hz}}\)</span> and <span class="math inline">\(^\circ/\mathrm{s}/\sqrt{\mathrm{Hz}}\)</span>. Multiply by <span class="math inline">\(\sqrt{\text{bandwidth}}\)</span> to get the noise you will see in the signal.</li>
-</ul>
+<p><span class="framesub">The lab’s IMU: MPU-9250, the device</span></p>
+<div class="columns" style="margin-top: -0.5em;">
+<div class="column" style="width: 58%; font-size: 0.9em;">
+<div class="fit">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">What</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Sensors</td>
+<td style="text-align: left;">3 accel, 3 gyro, 3 mag, 1 temperature</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">ADC</td>
+<td style="text-align: left;">16 bit (magnetometer 14 bit)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Package</td>
+<td style="text-align: left;">3 × 3 × 1 mm QFN, 24 pins</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Supply</td>
+<td style="text-align: left;">2.4 to 3.6 V</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Current</td>
+<td style="text-align: left;">3.7 mA all axes, 8 µA idle</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Interface</td>
+<td style="text-align: left;">I²C to 400 kHz, SPI to 1 MHz</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">I²C address</td>
+<td style="text-align: left;">0x68, or 0x69 with AD0 high</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Sample rate</td>
+<td style="text-align: left;">1 kHz with the low-pass filter on</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Temperature</td>
+<td style="text-align: left;">−40 to +85 °C</td>
+</tr>
+</tbody>
+</table>
 </div>
-<div class="fragment">
+</div><div class="column" style="width: 40%; font-size: 0.7em; padding-left: 0.5em;">
+<p><span class="highlight">What this means for us</span></p>
 <ul>
-<li><span class="red">Zero-rate and zero-<span class="math inline">\(g\)</span> offset:</span> This is the bias you will subtract. The datasheet also gives its drift with temperature. That number tells you how fast the bias moves after you subtract it.</li>
+<li>Nine axes of data arrive as integers over one two-wire bus. The microcontroller does the unit conversion.</li>
+<li>At 3.7 mA a coin cell runs the chip for days. The radio and the microcontroller will use more.</li>
+<li>Two chips can share one I²C bus, one with AD0 low and one with AD0 high. A third needs a second bus or SPI.</li>
+<li>1 kHz is the practical sample rate. Human movement needs far less, and the sampling theorem from Module 1 tells you how much.</li>
 </ul>
-</div>
-<div class="fragment">
-<ul>
-<li><span class="red">Bandwidth and output rate:</span> The bandwidth is the sensor’s own low-pass filter. The output rate must satisfy the sampling theorem from Module 1.</li>
-</ul>
-</div>
+</div></div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">InvenSense, MPU-9250 Product Specification, rev. 1.0, 2014, section 3.4, tables 3 to 5.</span></p>
 </div>
 </section>
 <section id="inertial-measurement-units-35" class="slide level2">
 <h2>Inertial measurement units</h2>
-<p><span class="framesub">IMUs — in one place</span></p>
-<div class="columns" style="font-size: 0.85em; margin-top: -0.5em;">
-<div class="column" style="width:49%;">
-<p><span class="highlight">What they measure</span></p>
+<p><span class="framesub">The lab’s IMU: MPU-9250, the accelerometer</span></p>
+<div class="columns" style="margin-top: -0.5em;">
+<div class="column" style="width: 60%; font-size: 0.9em;">
+<div class="fit">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Full-scale range</td>
+<td style="text-align: left;">±2, ±4, ±8, ±16 g, selectable</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Sensitivity at ±2 g</td>
+<td style="text-align: left;">16384 LSB/g</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Sensitivity tolerance</td>
+<td style="text-align: left;">±3 % of the reading</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Sensitivity change with temperature</td>
+<td style="text-align: left;">±0.026 % of the reading per °C</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Nonlinearity</td>
+<td style="text-align: left;">±0.5 % of full scale</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Cross-axis sensitivity</td>
+<td style="text-align: left;">±2 % of the input on the other axis</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Zero-g offset, x and y</td>
+<td style="text-align: left;">±60 mg</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Zero-g offset, z</td>
+<td style="text-align: left;">±80 mg</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Zero-g change with temperature</td>
+<td style="text-align: left;">±1.5 mg/°C</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Noise density</td>
+<td style="text-align: left;">300 µg/√Hz</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Total RMS noise at 94 Hz bandwidth</td>
+<td style="text-align: left;">8 mg</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Low-pass filter</td>
+<td style="text-align: left;">5 to 260 Hz, programmable</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div><div class="column" style="width: 38%; font-size: 0.7em; padding-left: 0.5em;">
+<p><span class="highlight">What this means for us</span></p>
 <ul>
-<li>Specific force <span class="math inline">\(\v{a} - \v{g}\)</span> and angular velocity, in the chip’s own frame, with no external reference.</li>
-<li>A still accelerometer is a tilt sensor; use both axes.</li>
-<li>A gyro is a rate sensor; its angle is an integral and drifts.</li>
-<li>Fused, they give orientation: two angles against gravity, the third against the magnetic field.</li>
+<li>At ±2 g one count is 0.06 mg. Resolution is not the problem.</li>
+<li>The zero-g offset of 60 mg is a tilt error of 3.4° before calibration. This is the <span class="math inline">\(\v{b}_a\)</span> of the six-position test.</li>
+<li>The offset moves 1.5 mg for every degree of warming. A chip that warms by 10 °C after power-up drifts by 15 mg, almost 1° of tilt. Let it settle before you calibrate.</li>
+<li>Cross-axis sensitivity of 2 % is the off-diagonal part of <span class="math inline">\(\v{T}\)</span>.</li>
+<li>8 mg of noise is 0.5° of tilt per sample. Averaging brings it down. The offset does not average away.</li>
 </ul>
-<p><span class="highlight">What they do not</span></p>
-<ul>
-<li>Position, beyond a second or two.</li>
-<li>The segment’s frame: only the chip’s.</li>
-<li>Heading, indoors, reliably.</li>
-</ul>
-</div><div class="column" style="width:2%;">
-
-</div><div class="column" style="width:49%;">
-<p><span class="highlight">Against cameras</span></p>
-<ul>
-<li><span class="red">No line of sight, no lab, no capture volume.</span> Works in a clinic corridor, at home, for a day.</li>
-<li><span class="red">No position, so no segment lengths, no step length without a model, no absolute location.</span></li>
-<li><span class="red">Calibration is yours</span>: bias before every session; sensor-to-segment alignment before every placement.</li>
-</ul>
-<p><span class="highlight">The measurement question to ask</span></p>
-<p><span class="deemph">Is it an orientation I need, about a horizontal axis, over minutes? Then an IMU is the right instrument. Is it a position, a heading, or an hour of unsupervised recording? Then it is not, on its own.</span></p>
 </div></div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">InvenSense, MPU-9250 Product Specification, rev. 1.0, 2014, section 3.2, table 2.</span></p>
+</div>
+</section>
+<section id="inertial-measurement-units-36" class="slide level2">
+<h2>Inertial measurement units</h2>
+<p><span class="framesub">The lab’s IMU: MPU-9250, the gyroscope</span></p>
+<div class="columns" style="margin-top: -0.5em;">
+<div class="column" style="width: 60%; font-size: 0.9em;">
+<div class="fit">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Full-scale range</td>
+<td style="text-align: left;">±250, ±500, ±1000, ±2000 °/s, selectable</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Sensitivity at ±250 °/s</td>
+<td style="text-align: left;">131 LSB/(°/s)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Sensitivity tolerance</td>
+<td style="text-align: left;">±3 % of the reading</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Sensitivity change, −40 to +85 °C</td>
+<td style="text-align: left;">±4 % of the reading</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Nonlinearity</td>
+<td style="text-align: left;">±0.1 % of full scale</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Cross-axis sensitivity</td>
+<td style="text-align: left;">±2 % of the input on the other axis</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Zero-rate offset at 25 °C</td>
+<td style="text-align: left;">±5 °/s</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Zero-rate change, −40 to +85 °C</td>
+<td style="text-align: left;">±30 °/s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Noise density</td>
+<td style="text-align: left;">0.01 °/s/√Hz</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Total RMS noise at 92 Hz bandwidth</td>
+<td style="text-align: left;">0.1 °/s</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Mechanical drive frequency</td>
+<td style="text-align: left;">25 to 29 kHz</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Low-pass filter</td>
+<td style="text-align: left;">5 to 250 Hz, programmable</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div><div class="column" style="width: 38%; font-size: 0.7em; padding-left: 0.5em;">
+<p><span class="highlight">What this means for us</span></p>
+<ul>
+<li>An offset of 5 °/s is 300° of angle error per minute. Calibration is not optional.</li>
+<li>The offset moves about 0.24 °/s per °C. One degree of warming is 14° of angle error per minute. Recalibrate whenever the sensor is still.</li>
+<li>A 3 % scale error turns a 90° rotation into 87° or 93°. The six-position test has no gyroscope equivalent. You need a known rotation.</li>
+<li>Noise is small by comparison. At 0.01 °/√s the random walk is under 0.1° after a minute.</li>
+<li>The drive frequency of 27 kHz is the <span class="math inline">\(\omega_d\)</span> of the Coriolis slides.</li>
+</ul>
+</div></div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">InvenSense, MPU-9250 Product Specification, rev. 1.0, 2014, section 3.1, table 1.</span></p>
+</div>
 
 </section></section>
     </div>
