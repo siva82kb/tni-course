@@ -92,21 +92,21 @@
   <div id="panel">
     <div class="grp">
       <div class="hd">the movement: turns in the plane,<br>both ways, starting from rest</div>
-      <label class="sl"><span class="k">duration <i>T</i></span>
+      <label class="sl"><span class="k">Duration <i>T</i></span>
         <input type="range" id="sT" min="2" max="30" step="1" value="10">
         <span class="val" id="vT">10 s</span></label>
-      <button id="pnew">new movement</button>
+      <button id="pnew">New movement</button>
     </div>
 
     <div class="grp">
       <div class="hd">the sensor's errors</div>
-      <label class="sl"><span class="k">bias <i>b</i></span>
+      <label class="sl"><span class="k">Bias <i>b</i></span>
         <input type="range" id="sb" min="-5" max="5" step="0.1" value="1">
         <span class="val" id="vb">1.0 °/s</span></label>
-      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+      <label class="sl"><span class="k">Noise <i>&sigma;</i></span>
         <input type="range" id="ssg" min="0" max="10" step="0.5" value="2">
         <span class="val" id="vsg">2.0 °/s</span></label>
-      <label class="sl"><span class="k">bias drift</span>
+      <label class="sl"><span class="k">Bias drift</span>
         <input type="range" id="sdr" min="0" max="1" step="0.05" value="0">
         <span class="val" id="vdr">0.00 °/s/√s</span></label>
     </div>
@@ -114,19 +114,19 @@
     <div class="grp">
       <div class="hd">one integration</div>
       <table id="tab">
-        <tr class="t"><td class="lab">time</td><td class="n" id="tt">0.00 s</td><td></td></tr>
-        <tr class="e"><td class="lab">error now</td><td class="n" id="en">0.0</td><td>&deg;</td></tr>
-        <tr class="e"><td class="lab">error at <i>T</i></td><td class="n" id="eT">0.0</td><td>&deg;</td></tr>
-        <tr class="e"><td class="lab">spread of 50 at <i>T</i></td><td class="n" id="sp">0.0</td><td>&deg;</td></tr>
+        <tr class="t"><td class="lab">Time</td><td class="n" id="tt">0.00 s</td><td></td></tr>
+        <tr class="e"><td class="lab">Error now</td><td class="n" id="en">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Error at <i>T</i></td><td class="n" id="eT">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Spread of 50 at <i>T</i></td><td class="n" id="sp">0.0</td><td>&deg;</td></tr>
       </table>
-      <label style="margin-top:3px; display:flex; align-items:flex-start;"><input type="checkbox" id="ccal" style="width:11px;height:11px;flex:none;margin:2px 4px 0 0"><span>static calibration: 1 s still at the start,<br>then subtract the mean reading</span></label>
-      <button id="replay">replay</button><button id="pause">pause</button><button id="ideal">ideal sensor</button>
+      <label style="margin-top:3px; display:flex; align-items:flex-start;"><input type="checkbox" id="ccal" style="width:11px;height:11px;flex:none;margin:2px 4px 0 0"><span>Static calibration: 1 s still at the start,<br>then subtract the mean reading</span></label>
+      <button id="replay">Replay</button><button id="pause">Pause</button><button id="ideal">Ideal sensor</button>
     </div>
   </div>
 
   <div id="legend">
-    <span class="t">the sensor's x axis, true</span>
-    <span class="e">where the integrated gyroscope says it points, 50 runs</span>
+    <span class="t">The sensor's x axis, true</span>
+    <span class="e">Where the integrated gyroscope says it points, 50 runs</span>
   </div>
 </div>
 
@@ -349,9 +349,9 @@
       text(fmt(de / D, 1) + "°", pm.x, pm.y, COL.est, 11, "center");
     }
     if (calibrating) {
-      text("static calibration, holding still…", cx, ay1 - 6, COL.est, 12, "center", true);
+      text("Static calibration, holding still…", cx, ay1 - 6, COL.est, 12, "center", true);
     } else if (P.cal) {
-      text("subtracted as bias: " + fmt(run.runs[0].cal / D, 2) + " °/s", cx, ay1 - 6, COL.text, 11, "center");
+      text("Subtracted as bias: " + fmt(run.runs[0].cal / D, 2) + " °/s", cx, ay1 - 6, COL.text, 11, "center");
     }
 
     // ---- bottom row: rate, angle, angle error against time ------------
@@ -394,7 +394,7 @@
     }
     var f0 = function (v) { return fmt(v, 0); };
     var wLim = Math.max(10, Math.ceil(run.wmax / D / 50) * 50);
-    plot(0, "rate (°/s)", trio(function (r, j) { return r.wm[j] / D; }, function (j) { return run.w[j] / D; }), -wLim, wLim, f0);
+    plot(0, "Rate (°/s)", trio(function (r, j) { return r.wm[j] / D; }, function (j) { return run.w[j] / D; }), -wLim, wLim, f0);
     // the angle, unwrapped, over the range the truth and the runs cover
     var qmin = Infinity, qmax = -Infinity;
     for (var j = 0; j <= run.N; j++) {
@@ -402,11 +402,11 @@
       for (m = 0; m < M; m++) { qmin = Math.min(qmin, run.runs[m].q[j]); qmax = Math.max(qmax, run.runs[m].q[j]); }
     }
     var span = Math.max(30 * D, qmax - qmin); qmin -= 0.08 * span; qmax += 0.08 * span;
-    plot(1, "angle (°)", trio(function (r, j) { return r.q[j] / D; }, function (j) { return run.th[j] / D; }), qmin / D, qmax / D, f0);
+    plot(1, "Angle (°)", trio(function (r, j) { return r.q[j] / D; }, function (j) { return run.th[j] / D; }), qmin / D, qmax / D, f0);
     var eLim = Math.max(2, Math.ceil(run.emax / D));
-    plot(2, "angle error (°)", trio(function (r, j) { return r.err[j] / D; }, null), -eLim, eLim, f0);
+    plot(2, "Angle error (°)", trio(function (r, j) { return r.err[j] / D; }, null), -eLim, eLim, f0);
 
-    document.getElementById("tt").textContent = calibrating ? "calibrating" : fmt(tClamp) + " s";
+    document.getElementById("tt").textContent = calibrating ? "Calibrating" : fmt(tClamp) + " s";
     document.getElementById("en").textContent = fmt(run.runs[0].err[k] / D, 1);
   }
 
@@ -420,12 +420,12 @@
     var s = document.getElementById(SPEC[key][0]);
     s.addEventListener("input", function () { P[key] = parseFloat(s.value); show(key); restart(); });
   });
-  function play() { playing = true; document.getElementById("pause").textContent = "pause"; restart(); }
+  function play() { playing = true; document.getElementById("pause").textContent = "Pause"; restart(); }
   document.getElementById("replay").addEventListener("click", play);
   document.getElementById("pnew").addEventListener("click", function () { newMovement(); play(); });
   document.getElementById("pause").addEventListener("click", function () {
-    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, (P.cal ? PRE : 0) + P.T); playing = false; this.textContent = "run"; }
-    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "pause"; }
+    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, (P.cal ? PRE : 0) + P.T); playing = false; this.textContent = "Run"; }
+    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "Pause"; }
   });
   document.getElementById("ideal").addEventListener("click", function () {
     ["b", "sigma", "drift"].forEach(function (key) { P[key] = 0; document.getElementById(SPEC[key][0]).value = 0; show(key); });

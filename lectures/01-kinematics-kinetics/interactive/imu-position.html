@@ -97,28 +97,28 @@
   <div id="panel">
     <div class="grp">
       <div class="hd">the movement</div>
-      <label class="sl"><span class="k">duration <i>T</i></span>
+      <label class="sl"><span class="k">Duration <i>T</i></span>
         <input type="range" id="sT" min="1" max="5" step="0.5" value="2">
         <span class="val" id="vT">2.0 s</span></label>
-      <button id="pstraight">new straight path</button><button id="pcurved">new curved path</button>
+      <button id="pstraight">New straight path</button><button id="pcurved">New curved path</button>
     </div>
 
     <div class="grp">
       <div class="hd">accelerometer</div>
-      <label class="sl"><span class="k">bias <i>b<sub>x</sub></i>, <i>b<sub>y</sub></i></span>
+      <label class="sl"><span class="k">Bias <i>b<sub>x</sub></i>, <i>b<sub>y</sub></i></span>
         <input type="range" id="sba" min="0" max="50" step="1" value="20">
         <span class="val" id="vba">20 mg</span></label>
-      <label class="sl"><span class="k">noise <i>&sigma;<sub>a</sub></i></span>
+      <label class="sl"><span class="k">Noise <i>&sigma;<sub>a</sub></i></span>
         <input type="range" id="ssa" min="0" max="50" step="1" value="5">
         <span class="val" id="vsa">5 mg</span></label>
     </div>
 
     <div class="grp">
       <div class="hd">gyroscope</div>
-      <label class="sl"><span class="k">bias <i>b<sub>g</sub></i></span>
+      <label class="sl"><span class="k">Bias <i>b<sub>g</sub></i></span>
         <input type="range" id="sbg" min="-5" max="5" step="0.1" value="1">
         <span class="val" id="vbg">1.0 °/s</span></label>
-      <label class="sl"><span class="k">noise <i>&sigma;<sub>g</sub></i></span>
+      <label class="sl"><span class="k">Noise <i>&sigma;<sub>g</sub></i></span>
         <input type="range" id="ssg" min="0" max="10" step="0.5" value="1">
         <span class="val" id="vsg">1.0 °/s</span></label>
     </div>
@@ -126,11 +126,11 @@
     <div class="grp">
       <div class="hd">orientation from</div>
       <div class="rad">
-        <label><input type="radio" name="mode" value="comp" checked>both, complementary</label>
-        <label><input type="radio" name="mode" value="gyro">gyro only</label>
-        <label><input type="radio" name="mode" value="acc">accel only</label>
+        <label><input type="radio" name="mode" value="comp" checked>Both, complementary</label>
+        <label><input type="radio" name="mode" value="gyro">Gyro only</label>
+        <label><input type="radio" name="mode" value="acc">Accel only</label>
       </div>
-      <label class="sl"><span class="k">weight <i>&alpha;</i></span>
+      <label class="sl"><span class="k">Weight <i>&alpha;</i></span>
         <input type="range" id="sal" min="0.90" max="0.999" step="0.001" value="0.98">
         <span class="val" id="val">0.980</span></label>
     </div>
@@ -138,20 +138,20 @@
     <div class="grp">
       <div class="hd">position: rotate, remove g, integrate twice</div>
       <table id="tab">
-        <tr class="t"><td class="lab">time</td><td class="n" id="tt">0.00 s</td><td></td></tr>
-        <tr class="e"><td class="lab">orientation error now</td><td class="n" id="on">0.0</td><td>&deg;</td></tr>
-        <tr class="e"><td class="lab">position error now</td><td class="n" id="en">0.000</td><td>m</td></tr>
-        <tr class="e"><td class="lab">position error at <i>T</i></td><td class="n" id="eT">0.000</td><td>m</td></tr>
+        <tr class="t"><td class="lab">Time</td><td class="n" id="tt">0.00 s</td><td></td></tr>
+        <tr class="e"><td class="lab">Orientation error now</td><td class="n" id="on">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Position error now</td><td class="n" id="en">0.000</td><td>m</td></tr>
+        <tr class="e"><td class="lab">Position error at <i>T</i></td><td class="n" id="eT">0.000</td><td>m</td></tr>
       </table>
-      <label class="cb"><input type="checkbox" id="ccal"><span>static calibration: 1 s still at A, then subtract both sensors' offsets</span></label>
-      <button id="replay">replay</button><button id="pause">pause</button><button id="ideal">ideal sensors</button>
+      <label class="cb"><input type="checkbox" id="ccal"><span>Static calibration: 1 s still at A, then subtract both sensors' offsets</span></label>
+      <button id="replay">Replay</button><button id="pause">Pause</button><button id="ideal">Ideal sensors</button>
     </div>
   </div>
 
   <div id="legend">
-    <span class="t">true path</span>
-    <span class="e">reconstructed, 50 runs</span>
-    <span class="s">sensor axes</span>
+    <span class="t">True path</span>
+    <span class="e">Reconstructed, 50 runs</span>
+    <span class="s">Sensor axes</span>
   </div>
 </div>
 
@@ -378,7 +378,7 @@
     ctx.restore();
     text("A", pa.x - 10, pa.y + 10, COL.text, 12, "center", true);
     text("B", pb.x + 10, pb.y - 10, COL.text, 12, "center", true);
-    if (calibrating) text("static calibration, holding still…", pa.x + 18, pa.y + 22, COL.est, 12, "left", true);
+    if (calibrating) text("Static calibration, holding still…", pa.x + 18, pa.y + 22, COL.est, 12, "left", true);
 
     // the body at the true position and orientation, and the estimated
     // orientation as a dashed red axis pair beside it
@@ -403,7 +403,7 @@
     if (e.x < ax0 || e.x > ax1 || e.y < ay0 || e.y > ay1) {
       var ex = Math.max(ax0 + 8, Math.min(ax1 - 8, e.x)), ey = Math.max(ay0 + 8, Math.min(ay1 - 8, e.y));
       arrow(ex - 14 * Math.sign(e.x - ex || 0.0001), ey - 14 * Math.sign(e.y - ey || 0.0001), ex, ey, COL.est, 1.6);
-      text("off the chart", ex + (e.x < ax0 ? 12 : -12), ey + (e.y < ay0 ? 14 : -14), COL.est, 11, e.x < ax0 ? "left" : "right", true);
+      text("Off the chart", ex + (e.x < ax0 ? 12 : -12), ey + (e.y < ay0 ? 14 : -14), COL.est, 11, e.x < ax0 ? "left" : "right", true);
     }
 
     // ---- bottom row: orientation, orientation error, a_x, a_y, position error
@@ -443,16 +443,16 @@
     var tmin = Infinity, tmax = -Infinity;
     for (var j = 0; j <= run.N; j++) { tmin = Math.min(tmin, run.th[j], run.thh[j]); tmax = Math.max(tmax, run.th[j], run.thh[j]); }
     var tspan = Math.max(20 * D, tmax - tmin); tmin -= 0.1 * tspan; tmax += 0.1 * tspan;
-    plot(0, "orientation θ (°)", trio(function (r, j) { return r.thh[j] / D; }, function (j) { return run.th[j] / D; }), tmin / D, tmax / D, f0d);
+    plot(0, "Orientation θ (°)", trio(function (r, j) { return r.thh[j] / D; }, function (j) { return run.th[j] / D; }), tmin / D, tmax / D, f0d);
     var oLim = Math.max(2, Math.ceil(run.omax / D));
-    plot(1, "orientation error (°)", trio(function (r, j) { return r.oerr[j] / D; }, null), -oLim, oLim, f0d);
+    plot(1, "Orientation error (°)", trio(function (r, j) { return r.oerr[j] / D; }, null), -oLim, oLim, f0d);
     var aLim = Math.max(0.5, Math.ceil(run.amax * 2) / 2);
-    plot(2, "acceleration x (m/s²)", trio(function (r, j) { return r.ah[j][0]; }, function (j) { return run.a[j][0]; }), -aLim, aLim, fa);
-    plot(3, "acceleration y (m/s²)", trio(function (r, j) { return r.ah[j][1]; }, function (j) { return run.a[j][1]; }), -aLim, aLim, fa);
-    plot(4, "position error (m)", trio(function (r, j) { return r.err[j]; }, null), 0, Math.max(0.01, run.emax),
+    plot(2, "Acceleration x (m/s²)", trio(function (r, j) { return r.ah[j][0]; }, function (j) { return run.a[j][0]; }), -aLim, aLim, fa);
+    plot(3, "Acceleration y (m/s²)", trio(function (r, j) { return r.ah[j][1]; }, function (j) { return run.a[j][1]; }), -aLim, aLim, fa);
+    plot(4, "Position error (m)", trio(function (r, j) { return r.err[j]; }, null), 0, Math.max(0.01, run.emax),
          function (v) { return fmt(v, v < 0.1 ? 3 : 2); });
 
-    document.getElementById("tt").textContent = calibrating ? "calibrating" : fmt(tClamp) + " s";
+    document.getElementById("tt").textContent = calibrating ? "Calibrating" : fmt(tClamp) + " s";
     document.getElementById("on").textContent = fmt(run.oerr[k] / D, 1);
     document.getElementById("en").textContent = fmt(run.err[k], 3);
   }
@@ -470,13 +470,13 @@
   Array.prototype.forEach.call(document.querySelectorAll('input[name="mode"]'), function (r) {
     r.addEventListener("change", function () { if (this.checked) { P.mode = this.value; restart(); } });
   });
-  function play() { playing = true; document.getElementById("pause").textContent = "pause"; restart(); }
+  function play() { playing = true; document.getElementById("pause").textContent = "Pause"; restart(); }
   document.getElementById("replay").addEventListener("click", play);
   document.getElementById("pstraight").addEventListener("click", function () { newPath(false); play(); });
   document.getElementById("pcurved").addEventListener("click", function () { newPath(true); play(); });
   document.getElementById("pause").addEventListener("click", function () {
-    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, (P.cal ? PRE : 0) + P.T); playing = false; this.textContent = "run"; }
-    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "pause"; }
+    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, (P.cal ? PRE : 0) + P.T); playing = false; this.textContent = "Run"; }
+    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "Pause"; }
   });
   document.getElementById("ideal").addEventListener("click", function () {
     ["ba", "sa", "bg", "sg"].forEach(function (key) { P[key] = 0; document.getElementById(SPEC[key][0]).value = 0; show(key); });

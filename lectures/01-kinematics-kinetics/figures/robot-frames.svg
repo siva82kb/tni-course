@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="918" height="743" viewBox="0 0 918 743">
+  <!-- Frames on the two largest links of robot.png: the upper arm (shoulder to elbow) and the forearm (elbow to the next joint). -->
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <g font-family="Linux Libertine O, Georgia, serif" font-size="34" font-style="italic">
+  <g>
+    <circle cx="308" cy="288" r="7" fill="#A51C30"/>
+    <line x1="308" y1="288" x2="314" y2="193" stroke="#A51C30" stroke-width="6" marker-end="url(#ah)"/>
+    <line x1="308" y1="288" x2="213" y2="281" stroke="#A51C30" stroke-width="6" marker-end="url(#ah)"/>
+    <text x="316" y="181" fill="#A51C30" text-anchor="middle">x</text>
+    <text x="191" y="289" fill="#A51C30" text-anchor="middle">y</text>
+  </g>
+  <g>
+    <circle cx="455" cy="212" r="7" fill="#2B6CB0"/>
+    <line x1="455" y1="212" x2="518" y2="284" stroke="#2B6CB0" stroke-width="6" marker-end="url(#ah)"/>
+    <line x1="455" y1="212" x2="526" y2="150" stroke="#2B6CB0" stroke-width="6" marker-end="url(#ah)"/>
+    <text x="532" y="310" fill="#2B6CB0" text-anchor="middle">x</text>
+    <text x="543" y="145" fill="#2B6CB0" text-anchor="middle">y</text>
+  </g>
+  </g>
+</svg>

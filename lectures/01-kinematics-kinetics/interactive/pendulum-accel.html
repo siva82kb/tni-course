@@ -102,30 +102,30 @@
   <div id="panel">
     <div class="grp">
       <div class="hd">the pendulum</div>
-      <label class="sl"><span class="k">angle <i>&phi;</i></span>
+      <label class="sl"><span class="k">Angle <i>&phi;</i></span>
         <input type="range" id="sphi" min="-90" max="90" step="1" value="0">
         <span class="val" id="vphi">0&deg;</span></label>
     </div>
 
     <div class="grp">
       <div class="hd">how the sensor is fixed to it</div>
-      <label class="sl"><span class="k">mounting <i>&delta;</i></span>
+      <label class="sl"><span class="k">Mounting <i>&delta;</i></span>
         <input type="range" id="sdel" min="-20" max="20" step="0.5" value="0">
         <span class="val" id="vdel">0&deg;</span></label>
-      <label class="sl"><span class="k">non-orthog. <i>&epsilon;</i></span>
+      <label class="sl"><span class="k">Non-orthog. <i>&epsilon;</i></span>
         <input type="range" id="seps" min="-10" max="10" step="0.5" value="0">
         <span class="val" id="veps">0&deg;</span></label>
     </div>
 
     <div class="grp">
       <div class="hd">what the chip adds</div>
-      <label class="sl"><span class="k">bias <i>b<sub>x</sub></i></span>
+      <label class="sl"><span class="k">Bias <i>b<sub>x</sub></i></span>
         <input type="range" id="sbx" min="-150" max="150" step="5" value="0">
         <span class="val" id="vbx">0 mg</span></label>
-      <label class="sl"><span class="k">bias <i>b<sub>y</sub></i></span>
+      <label class="sl"><span class="k">Bias <i>b<sub>y</sub></i></span>
         <input type="range" id="sby" min="-150" max="150" step="5" value="0">
         <span class="val" id="vby">0 mg</span></label>
-      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+      <label class="sl"><span class="k">Noise <i>&sigma;</i></span>
         <input type="range" id="ssg" min="0" max="50" step="1" value="5">
         <span class="val" id="vsg">5 mg</span></label>
     </div>
@@ -133,20 +133,20 @@
     <div class="grp">
       <div class="hd">reconstruction, atan2 on the corrected reading</div>
       <table id="tab">
-        <tr class="t"><td class="lab">reading a<sub>x</sub>, a<sub>y</sub></td>
+        <tr class="t"><td class="lab">Reading a<sub>x</sub>, a<sub>y</sub></td>
             <td class="n" id="ax">0</td><td class="n" id="ay">9.81</td></tr>
-        <tr class="t"><td class="lab">true <i>&phi;</i></td><td class="n" id="tphi">0&deg;</td><td></td></tr>
-        <tr class="e"><td class="lab">reconstructed <i>&phi;&#770;</i></td><td class="n" id="ephi">0&deg;</td><td class="n" id="err"></td></tr>
+        <tr class="t"><td class="lab">True <i>&phi;</i></td><td class="n" id="tphi">0&deg;</td><td></td></tr>
+        <tr class="e"><td class="lab">Reconstructed <i>&phi;&#770;</i></td><td class="n" id="ephi">0&deg;</td><td class="n" id="err"></td></tr>
       </table>
-      <button id="calib">static calibration (1 s)</button><button id="uncal" disabled>clear</button><button id="ideal">ideal sensor</button>
-      <div class="cal" id="calmsg">not calibrated</div>
+      <button id="calib">Static calibration (1 s)</button><button id="uncal" disabled>Clear</button><button id="ideal">Ideal sensor</button>
+      <div class="cal" id="calmsg">Not calibrated</div>
     </div>
   </div>
 
   <div id="legend">
-    <span class="t">true pendulum</span>
-    <span class="e">reconstructed</span>
-    <span class="s">sensor axes</span>
+    <span class="t">True pendulum</span>
+    <span class="e">Reconstructed</span>
+    <span class="s">Sensor axes</span>
   </div>
 </div>
 
@@ -213,7 +213,7 @@
     document.getElementById("calib").disabled = false;
     document.getElementById("uncal").disabled = false;
     document.getElementById("calmsg").innerHTML =
-      "calibrated at <b>φ = " + P.phi + "°</b>: subtracting " +
+      "Calibrated at <b>φ = " + P.phi + "°</b>: subtracting " +
       fmt(cal.cx) + ", " + fmt(cal.cy) + " m s⁻²";
   }
 
@@ -374,12 +374,12 @@
     collecting = { sx: 0, sy: 0, n: 0, until: performance.now() + 1000 };
     this.disabled = true;
     document.getElementById("calmsg").textContent =
-      "collecting for 1 s at φ = " + P.phi + "°, hold still…";
+      "Collecting for 1 s at φ = " + P.phi + "°, hold still…";
   });
   document.getElementById("uncal").addEventListener("click", function () {
     cal = null;
     this.disabled = true;
-    document.getElementById("calmsg").textContent = "not calibrated";
+    document.getElementById("calmsg").textContent = "Not calibrated";
     sample(); draw();
   });
   // an ideal accelerometer: no mounting error, orthogonal axes, no bias, no
@@ -398,7 +398,7 @@
     cal = null; collecting = null;
     document.getElementById("calib").disabled = false;
     document.getElementById("uncal").disabled = true;
-    document.getElementById("calmsg").textContent = "ideal sensor, not calibrated";
+    document.getElementById("calmsg").textContent = "Ideal sensor, not calibrated";
     sample(); draw();
   });
 

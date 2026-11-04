@@ -145,11 +145,11 @@
       <div class="slider"><label><span class="k">f</span>
         <input type="range" id="sf" min="0.3" max="3" step="0.05" value="1">
         <span class="val" id="vf">1.00</span></label>
-        &nbsp;&nbsp;<label><input type="checkbox" id="crays" checked> rays</label>
+        &nbsp;&nbsp;<label><input type="checkbox" id="crays" checked> Rays</label>
         <label><input type="checkbox" id="cfloor" checked> X–Z plane</label></div>
-      <div class="row">plane:
-        <label><input type="radio" name="plane" value="virtual" checked> virtual (in front)</label>
-        <label><input type="radio" name="plane" value="real"> real (behind, inverted)</label>
+      <div class="row">Plane:
+        <label><input type="radio" name="plane" value="virtual" checked> Virtual (in front)</label>
+        <label><input type="radio" name="plane" value="real"> Real (behind, inverted)</label>
       </div>
     </div>
 
@@ -157,8 +157,8 @@
       <div class="hd">objects</div>
       <div class="row">
         <select id="objsel"></select>
-        <button id="scaled" title="a copy twice as far away and twice as big: same rays, same image">×2 copy</button>
-        <button id="remove" class="danger">remove</button>
+        <button id="scaled" title="A copy twice as far away and twice as big: same rays, same image">×2 copy</button>
+        <button id="remove" class="danger">Remove</button>
       </div>
       <div class="row">
         <button data-add="point">+ point</button><button data-add="segment">+ segment</button><button data-add="cube">+ cube</button><button data-add="sphere">+ sphere</button><button data-add="plate">+ plate</button><button data-add="ground">+ ground</button>
@@ -177,7 +177,7 @@
         <label class="slider"><span class="k">Y</span>
           <input type="range" id="sY" min="-3" max="3" step="0.05" value="0">
           <span class="val" id="vY">0</span></label>
-        <label class="slider"><span class="k">size</span>
+        <label class="slider"><span class="k">Size</span>
           <input type="range" id="sS" min="0.2" max="4" step="0.05" value="1">
           <span class="val" id="vS">1</span></label>
       </div>
@@ -186,16 +186,16 @@
     <div class="grp">
       <div class="hd">presets</div>
       <div class="row">
-        <button data-preset="default">one point</button><button data-preset="cube">one cube</button><button data-preset="vanish">vanishing point</button>
+        <button data-preset="default">One point</button><button data-preset="cube">One cube</button><button data-preset="vanish">Vanishing point</button>
       </div>
-      <div class="row"><button id="resetview">reset view</button></div>
+      <div class="row"><button id="resetview">Reset view</button></div>
     </div>
   </div>
 
   <div id="panes">
   <div id="world">
     <canvas id="cw"></canvas>
-    <div id="hint">drag an object to move it &middot; drag empty space to orbit &middot; shift-drag pans &middot; wheel zooms
+    <div id="hint">Drag an object to move it &middot; drag empty space to orbit &middot; shift-drag pans &middot; wheel zooms
       &nbsp;·&nbsp; <span style="color:#A51C30">X</span> right,
       <span style="color:#2F855A">Y</span> down,
       <span style="color:#2B6CB0">Z</span> optical axis</div>
@@ -387,7 +387,7 @@
   mkLabel("y", "y", "<b>y</b><sub>C</sub>");
   mkLabel("z", "z", "<b>z</b><sub>C</sub>");
   mkLabel("o", "o", "O");
-  mkLabel("plane", "plane", "image plane");
+  mkLabel("plane", "plane", "Image plane");
   function placeLabel(key, p, dx, dy) {
     var s = project(p), d = labels[key];
     d.style.left = (s.x + (dx || 0)) + "px";
@@ -510,9 +510,9 @@
     gi.fillText("u", IW - 16, cy - 10);
     gi.fillText("v", cx + 8, IH - 82);
     gi.font = "12px system-ui, sans-serif"; gi.fillStyle = C.forest;
-    gi.fillText("sensor", s0.x + 4, s0.y - 9);
+    gi.fillText("Sensor", s0.x + 4, s0.y - 9);
     gi.fillStyle = C.warmgray;
-    gi.fillText(cam.plane === "real" ? "real image plane, Z = −f: inverted" : "virtual image plane, Z = +f",
+    gi.fillText(cam.plane === "real" ? "Real image plane, Z = −f: inverted" : "Virtual image plane, Z = +f",
                 s0.x, s1.y + 12);
     gi.restore();
 
@@ -561,7 +561,7 @@
     var el = document.getElementById("readout");
     var o = objects[selected];
     if (!o) { el.innerHTML = ""; return; }
-    var c = o.c, what = o.type === "point" ? "the point" : "the centre of the " + o.type;
+    var c = o.c, what = o.type === "point" ? "The point" : "The centre of the " + o.type;
     var head = '<div class="who">' + what + ' at (X, Y, Z) = (' +
                fmt(c[0]) + ', ' + fmt(c[1]) + ', ' + fmt(c[2]) + ')</div>';
     if (c[2] <= EPS) {
@@ -578,7 +578,7 @@
       '<span class="f">' + fmt(cam.f) + '</span> × ' + fmt(c[1]) + ' / ' + fmt(c[2]) +
       ' = <span class="n">' + fmt(uv[1]) + '</span></div>' +
       (Math.abs(uv[0]) > cam.w / 2 || Math.abs(uv[1]) > cam.h / 2
-        ? '<div class="warn">outside the sensor: out of the field of view, not recorded</div>' : '');
+        ? '<div class="warn">Outside the sensor: out of the field of view, not recorded</div>' : '');
   }
 
   function fmt(v) {
@@ -594,7 +594,7 @@
     sel.innerHTML = "";
     objects.forEach(function (o, i) {
       var opt = document.createElement("option");
-      opt.value = i; opt.textContent = o.type + " " + o.id;
+      opt.value = i; opt.textContent = o.type.charAt(0).toUpperCase() + o.type.slice(1) + " " + o.id;
       sel.appendChild(opt);
     });
     sel.value = selected;

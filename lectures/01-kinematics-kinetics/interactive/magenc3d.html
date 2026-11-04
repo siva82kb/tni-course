@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magnetic encoder in 3D: where the chip sits</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  #stage.panning { cursor: move; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 96px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--charcoal); }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 7.2em; font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.4em; text-align: right; font-variant-numeric: tabular-nums; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.e td { color: var(--crimson); }
+  #tab tr.t td { color: var(--charcoal); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the shaft</div>
+      <label class="sl"><span class="k">speed <i>&omega;</i></span>
+        <input type="range" id="sw" min="-180" max="180" step="5" value="30">
+        <span class="val" id="vw">30 °/s</span></label>
+      <button id="pause">pause</button><button id="reset">reset view</button>
+      <div style="margin-top:3px; color:#718096;">drag to turn the view, shift-drag to pan, wheel to zoom</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">where the chip sits, in magnet radii</div>
+      <label class="sl"><span class="k">height above face</span>
+        <input type="range" id="sh" min="0.1" max="1.5" step="0.05" value="0.25">
+        <span class="val" id="vh">0.25 r</span></label>
+      <label class="sl"><span class="k">off centre</span>
+        <input type="range" id="sd" min="0" max="1.2" step="0.05" value="0">
+        <span class="val" id="vd">0.00 r</span></label>
+      <label class="sl"><span class="k">tilt</span>
+        <input type="range" id="st" min="-30" max="30" step="1" value="0">
+        <span class="val" id="vt">0 °</span></label>
+      <button id="ideal">on the axis, level</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">what the chip reports</div>
+      <table id="tab">
+        <tr class="t"><td class="lab">field at the chip</td><td class="n" id="tB">1.00</td><td>of ref.</td></tr>
+        <tr class="t"><td class="lab">true angle</td><td class="n" id="tth">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">atan2(<i>B<sub>y</sub></i>, <i>B<sub>x</sub></i>)</td><td class="n" id="test">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">largest error</td><td class="n" id="tmax">0.00</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">mean error</td><td class="n" id="tmean">0.00</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">error repeats</td><td class="n" id="tcyc">&ndash;</td><td>per turn</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { N: "#F3D6D9", S: "#D3E1F3", Nd: "#E8B4B8", Sd: "#B3CBE8", edge: "#718096", grid: "#EDF2F7", text: "#718096",
+              x: "#2B6CB0", y: "#A51C30", err: "#D69E2E", ideal: "#CBD5E0", dark: "#2D3748", line: "rgba(43,108,176,0.45)",
+              chip: "#E2E8F0", shaft: "#A0AEC0" };
+  var D = Math.PI / 180;
+
+  // ---- state ---------------------------------------------------------
+  var P = { w: 30, h: 0.25, d: 0, t: 0 };
+  var DOFF = 45 * D;                        // the direction of the offset, in the housing's frame
+  var th = 0, playing = true, last = performance.now();
+
+  // ---- the magnet's field, in its own frame -------------------------------
+  // A thin disc of radius 1 and thickness TH, its face at z = 0 and its body just below,
+  // magnetised along -x (S at +x, N at -x). Its poles are the ring of surface charge
+  // sigma = M . n on the rim, summed over NP x NZ patches. The chip sits above the face.
+  var TH = 0.08, NP = 48, NZ = 2;
+  var PC = [], PS = [], PZ = [];
+  (function () {
+    for (var i = 0; i < NP; i++) { var ph = (i + 0.5) * 2 * Math.PI / NP; PC.push(Math.cos(ph)); PS.push(Math.sin(ph)); }
+    for (var k = 0; k < NZ; k++) PZ.push(-(k + 0.5) * TH / NZ);
+  })();
+  var DA = (2 * Math.PI / NP) * (TH / NZ);
+  function fieldM(x, y, z) {
+    var bx = 0, by = 0, bz = 0;
+    for (var k = 0; k < NZ; k++) {
+      var dz = z - PZ[k];
+      for (var i = 0; i < NP; i++) {
+        var sig = -PC[i], rx = x - PC[i], ry = y - PS[i];
+        var r2 = rx * rx + ry * ry + dz * dz, inv = sig / (r2 * Math.sqrt(r2));
+        bx += rx * inv; by += ry * inv; bz += dz * inv;
+      }
+    }
+    return [bx * DA, by * DA, bz * DA];
+  }
+  var BREF = Math.hypot.apply(null, fieldM(0, 0, 0.25));   // the field a quarter radius above the centre: the reference
+
+  // the field in the housing's frame when the magnet has turned by a about the shaft (z)
+  function fieldH(p, a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    var pm = [c * p[0] + s * p[1], -s * p[0] + c * p[1], p[2]];          // the chip's position, seen from the magnet
+    var b = fieldM(pm[0], pm[1], pm[2]);
+    return [c * b[0] - s * b[1], s * b[0] + c * b[1], b[2]];             // turned back into the housing
+  }
+
+  // ---- the chip ---------------------------------------------------------
+  // Its centre is at (d cos DOFF, d sin DOFF, h). Its own x axis stays along the housing's x;
+  // a tilt turns its y axis up out of the plane about that x axis.
+  function chipPos() { return [P.d * Math.cos(DOFF), P.d * Math.sin(DOFF), P.h]; }
+  function chipAxes() {
+    var ct = Math.cos(P.t * D), st = Math.sin(P.t * D);
+    return { ex: [1, 0, 0], ey: [0, ct, st], ez: [0, -st, ct] };
+  }
+  function readings(a) {                                                    // what the two Hall elements read, in units of the reference
+    var b = fieldH(chipPos(), a), ax = chipAxes();
+    return { x: (b[0] * ax.ex[0] + b[1] * ax.ex[1] + b[2] * ax.ex[2]) / BREF,
+             y: (b[0] * ax.ey[0] + b[1] * ax.ey[1] + b[2] * ax.ey[2]) / BREF,
+             mag: Math.hypot(b[0], b[1], b[2]) / BREF };
+  }
+  function wrap(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
+  function fmt(v, n) { if (Math.abs(v) < 5e-4) v = 0; return v.toFixed(n === undefined ? 2 : n); }
+
+  // the readings and the error over one turn, recomputed when a slider moves
+  var curve = { th: [], bx: [], by: [], err: [], max: 0, mean: 0, cycles: 0 };
+  function recompute() {
+    var n = 180, ths = [], bxs = [], bys = [], errs = [], mx = 0, mean = 0;
+    for (var i = 0; i < n; i++) {
+      var a = i / n * 2 * Math.PI, r = readings(a), e = wrap(Math.atan2(r.y, r.x) - a);
+      ths.push(a); bxs.push(r.x); bys.push(r.y); errs.push(e); mx = Math.max(mx, Math.abs(e)); mean += e / n;
+    }
+    ths.push(2 * Math.PI); bxs.push(bxs[0]); bys.push(bys[0]); errs.push(errs[0]);
+    // the main harmonic of the error about its mean
+    var best = 0, bestA = 0;
+    for (var k = 1; k <= 4; k++) {
+      var ca = 0, sa = 0;
+      for (i = 0; i < n; i++) { ca += (errs[i] - mean) * Math.cos(k * ths[i]); sa += (errs[i] - mean) * Math.sin(k * ths[i]); }
+      var amp = 2 * Math.hypot(ca, sa) / n; if (amp > bestA) { bestA = amp; best = k; }
+    }
+    curve = { th: ths, bx: bxs, by: bys, err: errs, max: mx, mean: mean, cycles: bestA > 1e-4 ? best : 0 };
+    document.getElementById("tmax").textContent = fmt(mx / D, 2);
+    document.getElementById("tmean").textContent = fmt(mean / D, 2);
+    document.getElementById("tcyc").textContent = bestA > 1e-4 ? String(best) : "–";
+  }
+
+  function rotZ(p, a) { var c = Math.cos(a), s = Math.sin(a); return [c * p[0] - s * p[1], s * p[0] + c * p[1], p[2]]; }
+
+  // ---- field lines in 3D, in the magnet's frame ------------------------------------
+  // A line through a point is followed along the field both ways until it meets the magnet's
+  // body, so every line drawn is a complete loop from the N half round to the S half.
+  // a line ends when it reaches the ring of charge on the rim
+  function inside(p) { var rho = Math.hypot(p[0], p[1]); return Math.hypot(rho - 1, p[2] + TH / 2) < 0.05; }
+  function streamline3(p0, h, maxN) {
+    function go(dir) {
+      var pts = [], p = p0.slice();
+      for (var n = 0; n < maxN; n++) {
+        var b = fieldM(p[0], p[1], p[2]), m = Math.hypot(b[0], b[1], b[2]); if (m < 1e-9) break;
+        var q = [p[0] + 0.5 * h * dir * b[0] / m, p[1] + 0.5 * h * dir * b[1] / m, p[2] + 0.5 * h * dir * b[2] / m];
+        var b2 = fieldM(q[0], q[1], q[2]), m2 = Math.hypot(b2[0], b2[1], b2[2]); if (m2 < 1e-9) break;
+        p = [p[0] + h * dir * b2[0] / m2, p[1] + h * dir * b2[1] / m2, p[2] + h * dir * b2[2] / m2];
+        if (inside(p) || Math.hypot(p[0], p[1], p[2]) > 3.2) break;
+        pts.push(p.slice());
+      }
+      return pts;
+    }
+    var back = go(-1).reverse(); back.push(p0.slice());
+    return back.concat(go(1));
+  }
+  // a few loops over the face for context, fixed in the magnet's frame, computed once
+  var LOOPS = [];
+  [150, 165, 180, 195, 210].forEach(function (phd) {
+    var ph = phd * D; LOOPS.push(streamline3([0.98 * Math.cos(ph), 0.98 * Math.sin(ph), 0.12], 0.03, 700));
+  });
+  // the line through the chip, and four lines around it, in the housing's frame: recomputed each frame,
+  // because the magnet turns under the chip
+  function chipLines(a) {
+    var c = chipPos(), cm = rotZ(c, -a), out = [];
+    out.push({ pts: streamline3(cm, 0.03, 600), main: true });
+    [[0.3, 0, 0], [-0.3, 0, 0], [0, 0.3, 0], [0, -0.3, 0]].forEach(function (o) {
+      var q = [c[0] + o[0], c[1] + o[1], c[2] + o[2]]; if (q[2] <= 0.02) return;
+      out.push({ pts: streamline3(rotZ(q, -a), 0.04, 450), main: false });
+    });
+    return out;
+  }
+
+  // ---- the 3D view ---------------------------------------------------------
+  var DEF = { az: -38 * D, el: 24 * D };
+  var view = { az: DEF.az, el: DEF.el, scale: 100, cx: 0, cy: 0, zoom: 1, px: 0, py: 0 };
+  var V = { right: [1, 0, 0], up: [0, 0, 1], dir: [0, 1, 0] };
+  function basis() {
+    var ca = Math.cos(view.az), sa = Math.sin(view.az), ce = Math.cos(view.el), se = Math.sin(view.el);
+    V.dir   = [ce * sa, ce * ca, -se];                 // from the eye towards the scene
+    V.right = [ca, -sa, 0];
+    V.up    = [-se * sa, -se * ca, -ce];
+    V.up = [-V.up[0], -V.up[1], -V.up[2]];
+  }
+  function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function proj(p) { var k = view.scale * view.zoom; return { x: view.cx + view.px + dot(V.right, p) * k, y: view.cy + view.py - dot(V.up, p) * k }; }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); ctx.restore();
+  }
+  function arrow2(a, b, color, width) {
+    var L = Math.hypot(b.x - a.x, b.y - a.y); if (L < 2) return;
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    var ang = Math.atan2(b.y - a.y, b.x - a.x), h = Math.min(9, L), w = 0.42;
+    ctx.beginPath(); ctx.moveTo(b.x, b.y);
+    ctx.lineTo(b.x - h * Math.cos(ang - w), b.y - h * Math.sin(ang - w));
+    ctx.lineTo(b.x - h * Math.cos(ang + w), b.y - h * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function path3(pts, color, width, closeIt) {
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath();
+    for (var i = 0; i < pts.length; i++) { var q = proj(pts[i]); if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y); }
+    if (closeIt) ctx.closePath();
+    ctx.stroke();
+  }
+  function fill3(pts, color) {
+    ctx.fillStyle = color; ctx.beginPath();
+    for (var i = 0; i < pts.length; i++) { var q = proj(pts[i]); if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y); }
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawScene(x0, y0, w, h) {
+    view.cx = x0 + w / 2; view.cy = y0 + h * 0.5; view.scale = Math.min(w, h) * 0.22;
+    basis();
+    ctx.save();
+    // the shaft
+    path3([[0, 0, -2.2], [0, 0, -TH]], COL.shaft, 3);
+    // the magnet: side band and two faces, the halves coloured by pole, turned by th
+    var n = 48, top = [], bot = [], topN = [], topS = [];
+    for (var i = 0; i <= n; i++) {
+      var ph = i / n * 2 * Math.PI, p = rotZ([Math.cos(ph), Math.sin(ph), 0], th);
+      top.push(p); bot.push([p[0], p[1], -TH]);
+    }
+    // halves of the top face: N where the magnet-frame x < 0
+    for (i = 0; i <= n / 2; i++) { var a1 = Math.PI / 2 + i / (n / 2) * Math.PI; topN.push(rotZ([Math.cos(a1), Math.sin(a1), 0], th)); }
+    for (i = 0; i <= n / 2; i++) { var a2 = -Math.PI / 2 + i / (n / 2) * Math.PI; topS.push(rotZ([Math.cos(a2), Math.sin(a2), 0], th)); }
+    // the side: draw as a band of thin quads, darker for the far half; simple painter's order by depth
+    var side = [];
+    for (i = 0; i < n; i++) {
+      var q = [top[i], top[i + 1], bot[i + 1], bot[i]];
+      var mid = [(top[i][0] + top[i + 1][0]) / 2, (top[i][1] + top[i + 1][1]) / 2, -TH / 2];
+      var pm = rotZ(mid, -th), isN = pm[0] < 0;
+      side.push({ q: q, d: dot(V.dir, mid), col: isN ? COL.Nd : COL.Sd });
+    }
+    side.sort(function (a, b) { return b.d - a.d; });
+    // field lines behind the magnet first, then the magnet, then lines in front (split by depth of each point)
+    var lines = LOOPS.map(function (pts) { return { pts: pts.map(function (p) { return rotZ(p, th); }), col: COL.line, lw: 0.7 }; });
+    chipLines(th).forEach(function (l) {
+      lines.push({ pts: l.pts.map(function (p) { return rotZ(p, th); }), col: l.main ? "rgba(43,108,176,0.95)" : "rgba(43,108,176,0.5)", lw: l.main ? 1.8 : 0.9 });
+    });
+    function drawLines(front) {
+      lines.forEach(function (l) {
+        ctx.strokeStyle = l.col; ctx.lineWidth = l.lw; var pts = l.pts;
+        ctx.beginPath(); var pen = false;
+        for (var i = 0; i < pts.length; i++) {
+          var isFront = dot(V.dir, pts[i]) < 0 || pts[i][2] > 0;
+          if (isFront !== front) { pen = false; continue; }
+          var q = proj(pts[i]); if (!pen) { ctx.moveTo(q.x, q.y); pen = true; } else ctx.lineTo(q.x, q.y);
+        }
+        ctx.stroke();
+      });
+    }
+    drawLines(false);
+    side.forEach(function (s) { fill3(s.q, s.col); });
+    fill3(topN, COL.N); fill3(topS, COL.S);
+    path3(top, COL.edge, 0.8, true);
+    var dv = rotZ([1, 0, 0], th), pN = proj([-0.55 * dv[0], -0.55 * dv[1], 0.01]), pS = proj([0.55 * dv[0], 0.55 * dv[1], 0.01]);
+    text("N", pN.x, pN.y, "#FFFFFF", 13, "center"); text("S", pS.x, pS.y, "#FFFFFF", 13, "center");
+    drawLines(true);
+    // the housing's frame, at the shaft axis on the face
+    arrow2(proj([0, 0, 0]), proj([1.7, 0, 0]), COL.x, 1.2); var lx = proj([1.85, 0, 0]); text("x", lx.x, lx.y, COL.x, 12, "center", true);
+    arrow2(proj([0, 0, 0]), proj([0, 1.7, 0]), COL.y, 1.2); var ly = proj([0, 1.85, 0]); text("y", ly.x, ly.y, COL.y, 12, "center", true);
+    arrow2(proj([0, 0, 0]), proj([0, 0, 1.9]), COL.edge, 1.2); var lz = proj([0, 0, 2.05]); text("z", lz.x, lz.y, COL.edge, 12, "center", true);
+    // the chip: a small square at its position, tilted, with its own x and y
+    var c = chipPos(), ax = chipAxes(), s = 0.28;
+    var corners = [-1, 1].map(function (u) { return [-1, 1].map(function (v) { return [c[0] + s * (u * ax.ex[0] + v * ax.ey[0]), c[1] + s * (u * ax.ex[1] + v * ax.ey[1]), c[2] + s * (u * ax.ex[2] + v * ax.ey[2])]; }); });
+    var sq = [corners[0][0], corners[1][0], corners[1][1], corners[0][1]];
+    ctx.globalAlpha = 0.9; fill3(sq, COL.chip); ctx.globalAlpha = 1; path3(sq, COL.edge, 1, true);
+    // a dashed drop line from the chip to the face, to show height and offset
+    ctx.save(); ctx.setLineDash([3, 3]); path3([c, [c[0], c[1], 0]], COL.edge, 0.8); path3([[c[0], c[1], 0], [0, 0, 0]], COL.edge, 0.8); ctx.restore();
+    var ex1 = [c[0] + 0.55 * ax.ex[0], c[1] + 0.55 * ax.ex[1], c[2] + 0.55 * ax.ex[2]];
+    var ey1 = [c[0] + 0.55 * ax.ey[0], c[1] + 0.55 * ax.ey[1], c[2] + 0.55 * ax.ey[2]];
+    arrow2(proj(c), proj(ex1), COL.x, 1.6); arrow2(proj(c), proj(ey1), COL.y, 1.6);
+    // the field at the chip, to the reference scale
+    var b = fieldH(c, th), bl = 0.9 / BREF;
+    var tip = [c[0] + bl * b[0], c[1] + bl * b[1], c[2] + bl * b[2]];
+    arrow2(proj(c), proj(tip), COL.dark, 2.2); var lb = proj(tip); text("B", lb.x + 10, lb.y - 6, COL.dark, 13, "left", true);
+    text("the magnet turns about z. the chip sits above its face, fixed to the housing", x0 + w / 2, y0 + 12, COL.text, 11, "center");
+    ctx.restore();
+  }
+
+  // ---- the plots -------------------------------------------------------------
+  function drawLissajous(cx, cy, r) {
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - r * 1.3, cy); ctx.lineTo(cx + r * 1.3, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - r * 1.3); ctx.lineTo(cx, cy + r * 1.3); ctx.stroke();
+    text("Bx", cx + r * 1.3 + 4, cy, COL.x, 12, "left", true); text("By", cx, cy - r * 1.3 - 8, COL.y, 12, "center", true);
+    ctx.strokeStyle = COL.ideal; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = COL.dark; ctx.lineWidth = 1.8; ctx.beginPath();
+    for (var i = 0; i < curve.th.length; i++) { var x = cx + r * curve.bx[i], y = cy - r * curve.by[i]; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke();
+    var rn = readings(th), px = cx + r * rn.x, py = cy - r * rn.y;
+    ctx.strokeStyle = COL.err; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke();
+    ctx.fillStyle = COL.err; ctx.beginPath(); ctx.arc(px, py, 4, 0, 2 * Math.PI); ctx.fill();
+    text("what the two Hall elements read, over a turn", cx, cy + r * 1.3 + 16, COL.text, 11, "center");
+    text("dashed: a circle of the reference size", cx, cy + r * 1.3 + 30, COL.text, 10.5, "center");
+    ctx.restore();
+  }
+  function drawTraces(x0, y0, w, h) {
+    var w1 = w * 0.5 - 20, w2 = w * 0.5 - 20, x2 = x0 + w1 + 40;
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, y0 + h / 2); ctx.lineTo(x0 + w1, y0 + h / 2); ctx.stroke();
+    var kA = h / 2 / 1.35;
+    [["x", COL.x], ["y", COL.y]].forEach(function (c) {
+      ctx.strokeStyle = c[1]; ctx.lineWidth = 1.8; ctx.beginPath();
+      for (var i = 0; i < curve.th.length; i++) {
+        var v = c[0] === "x" ? curve.bx[i] : curve.by[i];
+        var x = x0 + w1 * i / (curve.th.length - 1), y = y0 + h / 2 - kA * v;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+    var u = ((th % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI), xm = x0 + w1 * u / (2 * Math.PI);
+    ctx.strokeStyle = COL.err; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(xm, y0); ctx.lineTo(xm, y0 + h); ctx.stroke(); ctx.setLineDash([]);
+    text("the two readings against the true angle, 0 to 360°", x0, y0 - 9, COL.text, 11, "left");
+    text("0°", x0, y0 + h + 9, COL.text, 10.5, "left"); text("360°", x0 + w1, y0 + h + 9, COL.text, 10.5, "right");
+    text("Bx", x0 + w1 + 6, y0 + h * 0.2, COL.x, 12, "left", true); text("By", x0 + w1 + 6, y0 + h * 0.8, COL.y, 12, "left", true);
+    // error
+    var emax = Math.max(1 * D, curve.max * 1.15);
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x2, y0 + h / 2); ctx.lineTo(x2 + w2, y0 + h / 2); ctx.stroke();
+    ctx.strokeStyle = COL.err; ctx.lineWidth = 1.8; ctx.beginPath();
+    for (var i = 0; i < curve.th.length; i++) {
+      var x = x2 + w2 * i / (curve.th.length - 1), y = y0 + h / 2 - (h / 2) * curve.err[i] / emax;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    var rn = readings(th), e = wrap(Math.atan2(rn.y, rn.x) - th);
+    var xe = x2 + w2 * u / (2 * Math.PI), ye = y0 + h / 2 - (h / 2) * Math.max(-1, Math.min(1, e / emax));
+    ctx.fillStyle = COL.err; ctx.beginPath(); ctx.arc(xe, ye, 3.5, 0, 2 * Math.PI); ctx.fill();
+    text("angle error against the true angle", x2, y0 - 9, COL.text, 11, "left");
+    text("+" + fmt(emax / D, 1) + "°", x2 - 4, y0 + 2, COL.text, 10.5, "right");
+    text("−" + fmt(emax / D, 1) + "°", x2 - 4, y0 + h - 2, COL.text, 10.5, "right");
+    text("0°", x2, y0 + h + 9, COL.text, 10.5, "left"); text("360°", x2 + w2, y0 + h + 9, COL.text, 10.5, "right");
+    ctx.restore();
+  }
+
+  // ---- draw -----------------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var panel  = document.getElementById("panel");
+    var panelW = panel.offsetWidth + 16;
+    var RH = Math.max(110, Math.min(160, H * 0.28));
+    var rowTop = H - 34 - RH;
+    var ax0 = panelW, ax1 = W - 10, ay0 = 10, ay1 = rowTop - 14;
+    var sw = (ax1 - ax0) * 0.58;
+    drawScene(ax0, ay0, sw, ay1 - ay0);
+    var r = Math.min((ay1 - ay0) * 0.3, (ax1 - ax0 - sw) * 0.3);
+    drawLissajous(ax0 + sw + (ax1 - ax0 - sw) / 2, (ay0 + ay1) / 2 - 10, r);
+    var bx0 = Math.max(panelW, 48) + 20, bw = W - bx0 - 16;
+    drawTraces(bx0, rowTop + 8, bw, RH - 12);
+
+    var rn = readings(th), est = Math.atan2(rn.y, rn.x);
+    document.getElementById("tB").textContent = fmt(rn.mag, 2);
+    document.getElementById("tth").textContent = fmt(wrap(th) / D, 1);
+    document.getElementById("test").textContent = fmt(wrap(est) / D, 1);
+  }
+
+  function tick(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (playing) th += P.w * D * dt;
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls -------------------------------------------------------------
+  var SPEC = { w: ["sw", "vw", function (v) { return v + " °/s"; }],
+               h: ["sh", "vh", function (v) { return fmt(v, 2) + " r"; }],
+               d: ["sd", "vd", function (v) { return fmt(v, 2) + " r"; }],
+               t: ["st", "vt", function (v) { return v + " °"; }] };
+  function show(key) { document.getElementById(SPEC[key][1]).textContent = SPEC[key][2](P[key]); }
+  Object.keys(SPEC).forEach(function (key) {
+    var el = document.getElementById(SPEC[key][0]);
+    el.addEventListener("input", function () { P[key] = parseFloat(el.value); show(key); if (key !== "w") recompute(); });
+    show(key);
+  });
+  document.getElementById("ideal").addEventListener("click", function () {
+    P.h = 0.25; P.d = 0; P.t = 0;
+    document.getElementById("sh").value = 0.25; document.getElementById("sd").value = 0; document.getElementById("st").value = 0;
+    show("h"); show("d"); show("t"); recompute();
+  });
+  document.getElementById("pause").addEventListener("click", function () { playing = !playing; this.textContent = playing ? "pause" : "play"; });
+
+  // ---- turning, panning and zooming the 3D view -------------------------------
+  var drag = null;
+  stage.addEventListener("contextmenu", function (e) { if (!e.target.closest("#panel")) e.preventDefault(); });
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#panel")) return;
+    var pan = e.shiftKey || e.button === 1 || e.button === 2;
+    drag = { x: e.clientX, y: e.clientY, az: view.az, el: view.el, px: view.px, py: view.py, pan: pan };
+    stage.classList.add(pan ? "panning" : "dragging"); stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (drag.pan) { view.px = drag.px + (e.clientX - drag.x); view.py = drag.py + (e.clientY - drag.y); }
+    else { view.az = drag.az - (e.clientX - drag.x) * 0.008; view.el = Math.max(-1.45, Math.min(1.45, drag.el + (e.clientY - drag.y) * 0.008)); }
+  });
+  function endDrag(e) {
+    if (!drag) return; drag = null;
+    stage.classList.remove("dragging"); stage.classList.remove("panning");
+    if (e && e.pointerId !== undefined) { try { stage.releasePointerCapture(e.pointerId); } catch (err) {} }
+  }
+  stage.addEventListener("pointerup", endDrag); stage.addEventListener("pointercancel", endDrag);
+  stage.addEventListener("wheel", function (e) {
+    if (e.target.closest("#panel")) return;
+    e.preventDefault(); view.zoom = Math.max(0.4, Math.min(3, view.zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+  }, { passive: false });
+  document.getElementById("reset").addEventListener("click", function () { view.az = DEF.az; view.el = DEF.el; view.zoom = 1; view.px = 0; view.py = 0; });
+
+  // URL presets: ?w=30&h=0.25&d=0&t=0
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SPEC).forEach(function (key) {
+      if (!q.has(key)) return;
+      var v = parseFloat(q.get(key)); if (!isFinite(v)) return;
+      var el = document.getElementById(SPEC[key][0]);
+      v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[key] = v; el.value = v; show(key);
+    });
+  })();
+
+  // ---- sizing ---------------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  recompute();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

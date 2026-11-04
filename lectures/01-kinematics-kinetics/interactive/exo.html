@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An exoskeleton strapped to a limb: whose angle does it measure?</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 96px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--charcoal); }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 7.2em; font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .val { display: inline-block; width: 4.4em; text-align: right; font-variant-numeric: tabular-nums; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  label.chk { display: flex !important; align-items: flex-start; margin-top: 3px; }
+  label.chk input { width: 11px; height: 11px; flex: none; margin: 2px 4px 0 0; }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.2em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.h td { color: var(--charcoal); }
+  #tab tr.x td { color: var(--forest); }
+  #tab tr.e td { color: var(--crimson); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the movement</div>
+      <label class="sl"><span class="k">Speed</span>
+        <input type="range" id="sv" min="0.25" max="2" step="0.05" value="1">
+        <span class="val" id="vv">1.00 ×</span></label>
+      <button id="pause">Pause</button><button id="ideal">Aligned</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the exoskeleton's hinge, from the knee</div>
+      <label class="sl"><span class="k">Along the thigh</span>
+        <input type="range" id="sx" min="-0.2" max="0.2" step="0.01" value="0.06">
+        <span class="val" id="vx">0.06 L</span></label>
+      <label class="sl"><span class="k">Across the thigh</span>
+        <input type="range" id="sy" min="-0.2" max="0.2" step="0.01" value="0.08">
+        <span class="val" id="vy">0.08 L</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the strap</div>
+      <label class="sl"><span class="k">Along the shank</span>
+        <input type="range" id="sr" min="0.2" max="0.95" step="0.05" value="0.5">
+        <span class="val" id="vr">0.50 L</span></label>
+      <label class="chk"><input type="checkbox" id="czero" checked><span>Zero the exoskeleton with the leg straight</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the two angles</div>
+      <table id="tab">
+        <tr class="h"><td class="lab">Knee</td><td class="n" id="th">0.0</td><td>&deg;</td></tr>
+        <tr class="x"><td class="lab">Exoskeleton</td><td class="n" id="tx">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Difference now</td><td class="n" id="te">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Largest, last 10 s</td><td class="n" id="tm">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Strap slides by</td><td class="n" id="ts">0.0</td><td>% L</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+  var COL = { limb: "#E2E8F0", limbEdge: "#718096", base: "#CBD5E0", exo: "#2B6CB0", strap: "#D69E2E",
+              human: "#2D3748", exoLine: "#2B6CB0", err: "#A51C30", grid: "#EDF2F7", text: "#718096" };
+  var D = Math.PI / 180;
+
+  // ---- state ---------------------------------------------------------------
+  // World units: shank length L = 1. The knee is at the origin, the thigh lies along -x and is fixed.
+  // Knee flexion theta turns the shank from +x (straight) downwards. The exoskeleton's hinge sits at
+  // (ex, ey) from the knee, ey positive upwards, and its own thigh piece is fixed to the thigh.
+  // Its shank arm must pass through the strap, which is fixed to the human shank at distance r from the knee,
+  // so the arm's angle is set by the strap's position, and the strap slides along the arm as the knee bends.
+  var P = { v: 1, ex: 0.06, ey: 0.08, r: 0.5, zero: true };
+  var playing = true, t = 0, last = performance.now();
+
+  // ---- the movement: a never-ending chain of smooth swings between random knee angles --------
+  var seg = { t0: 0, dur: 1, a0: 10 * D, a1: 60 * D, pause: 0.3 };
+  function minjerk(u) { return 10 * u * u * u - 15 * u * u * u * u + 6 * u * u * u * u * u; }
+  function nextSeg() {
+    var a0 = seg.a1, a1;
+    do { a1 = (5 + 105 * Math.random()) * D; } while (Math.abs(a1 - a0) < 20 * D);
+    seg = { t0: seg.t0 + seg.dur + seg.pause, dur: 0.7 + 0.04 * Math.abs(a1 - a0) / D * 0.3 + 0.5 * Math.random(),
+            a0: a0, a1: a1, pause: 0.15 + 0.5 * Math.random() };
+  }
+  function kneeAt(tt) {
+    while (tt > seg.t0 + seg.dur + seg.pause) nextSeg();
+    var u = Math.max(0, Math.min(1, (tt - seg.t0) / seg.dur));
+    return seg.a0 + (seg.a1 - seg.a0) * minjerk(u);
+  }
+
+  // ---- the exoskeleton's angle --------------------------------------------------------------
+  function strapPoint(th) { return [P.r * Math.cos(th), -P.r * Math.sin(th)]; }
+  function exoRaw(th) { var s = strapPoint(th); return Math.atan2(-(s[1] - P.ey), s[0] - P.ex); }
+  function exoAngle(th) { return exoRaw(th) - (P.zero ? exoRaw(0) : 0); }
+  function strapDist(th) { var s = strapPoint(th); return Math.hypot(s[0] - P.ex, s[1] - P.ey); }
+
+  // ---- traces ---------------------------------------------------------------------------
+  var WIN = 10, TR = 60, trN = WIN * TR, trH = new Float32Array(trN), trX = new Float32Array(trN), trI = 0, trCount = 0, trAcc = 0;
+
+  function fmt(v, n) { if (Math.abs(v) < 5e-4) v = 0; return v.toFixed(n === undefined ? 1 : n); }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); ctx.restore();
+  }
+  function bar(x0, y0, x1, y1, hw, fill, edge) {      // a rounded bar from (x0,y0) to (x1,y1), half width hw, in screen px
+    var a = Math.atan2(y1 - y0, x1 - x0), L = Math.hypot(x1 - x0, y1 - y0);
+    ctx.save(); ctx.translate(x0, y0); ctx.rotate(a);
+    ctx.beginPath(); ctx.roundRect(-hw, -hw, L + 2 * hw, 2 * hw, hw);
+    ctx.fillStyle = fill; ctx.fill(); if (edge) { ctx.strokeStyle = edge; ctx.lineWidth = 1; ctx.stroke(); }
+    ctx.restore();
+  }
+
+  // ---- the scene ------------------------------------------------------------------------
+  function drawScene(x0, y0, w, h, th) {
+    var sc = Math.min(w / 2.1, h / 1.35), kx = x0 + w * 0.48, ky = y0 + h * 0.2;
+    function S(p) { return [kx + sc * p[0], ky - sc * p[1]]; }
+    var hw = 0.07 * sc;
+    // the thigh, fixed to the ground: a flat-ended block from a ground wall to the knee, rounded only at the knee
+    var a = S([-0.8, 0]), k = S([0, 0]), th2 = hw * 1.25;
+    ctx.save();
+    ctx.fillStyle = COL.limb; ctx.strokeStyle = COL.limbEdge; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1] - th2); ctx.lineTo(k[0], k[1] - th2);
+    ctx.arc(k[0], k[1], th2, -Math.PI / 2, Math.PI / 2, false);
+    ctx.lineTo(a[0], a[1] + th2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // the ground: a vertical wall at the thigh's far end, hatched on the far side
+    var gh = th2 * 2.6;
+    ctx.lineWidth = 2; ctx.strokeStyle = COL.limbEdge;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1] - gh); ctx.lineTo(a[0], a[1] + gh); ctx.stroke();
+    ctx.lineWidth = 1;
+    for (var i = 0; i <= 8; i++) { var yy = a[1] - gh + i * (2 * gh / 8); ctx.beginPath(); ctx.moveTo(a[0], yy); ctx.lineTo(a[0] - 9, yy + 9); ctx.stroke(); }
+    ctx.restore();
+    text("Thigh, held still", (a[0] + k[0]) / 2, a[1] - hw * 1.25 - 12, COL.text, 11, "center");
+    // the shank
+    var f = S([Math.cos(th), -Math.sin(th)]);
+    bar(k[0], k[1], f[0], f[1], hw, COL.limb, COL.limbEdge);
+    ctx.fillStyle = COL.limbEdge; ctx.beginPath(); ctx.arc(k[0], k[1], 4, 0, 2 * Math.PI); ctx.fill();
+    // the exoskeleton: its thigh piece along the thigh, its hinge at (ex, ey), its arm through the strap
+    var e = S([P.ex, P.ey]), eA = S([-0.78, P.ey]);
+    var phi = exoRaw(th), armL = Math.max(1.05, strapDist(th) + 0.25);
+    var eF = S([P.ex + armL * Math.cos(phi), P.ey - armL * Math.sin(phi)]);
+    bar(eA[0], eA[1], e[0], e[1], hw * 0.35, "rgba(43,108,176,0.85)");
+    bar(e[0], e[1], eF[0], eF[1], hw * 0.35, "rgba(43,108,176,0.85)");
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = COL.exo; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e[0], e[1], 6, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    // the strap: a band round the shank at r, with the exoskeleton arm passing through it
+    var s = S(strapPoint(th)), ang = Math.atan2(f[1] - k[1], f[0] - k[0]);
+    ctx.save(); ctx.translate(s[0], s[1]); ctx.rotate(ang);
+    ctx.fillStyle = "rgba(214,158,46,0.85)"; ctx.beginPath(); ctx.roundRect(-5, -hw * 1.35, 10, hw * 2.7, 3); ctx.fill();
+    ctx.restore();
+    // the labels: the knee and the hinge, and the two angles as arcs
+    text("Knee", k[0] - 6, k[1] + hw + 14, COL.human, 11, "right");
+    text("Exoskeleton hinge", e[0] + 8, e[1] - 12, COL.exo, 11, "left");
+    var R1 = 0.32 * sc;
+    ctx.save(); ctx.lineWidth = 1.0;
+    ctx.setLineDash([3, 4]); ctx.strokeStyle = COL.human; ctx.beginPath(); ctx.moveTo(k[0], k[1]); ctx.lineTo(k[0] + R1 * 1.4, k[1]); ctx.stroke();
+    ctx.strokeStyle = COL.exo; ctx.beginPath(); ctx.moveTo(e[0], e[1]); ctx.lineTo(e[0] + R1 * 1.6, e[1]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = COL.human; ctx.beginPath(); ctx.arc(k[0], k[1], R1, 0, th, false); ctx.stroke();
+    ctx.strokeStyle = COL.exo; ctx.beginPath(); ctx.arc(e[0], e[1], R1 * 1.35, 0, phi, false); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ---- the plots ------------------------------------------------------------------------
+  function drawPlots(x0, y0, w, h) {
+    // two plots stacked in one column: the angles on top, their difference below
+    var gap = 56, hp = (h - gap) / 2, w1 = w, w2 = w, x2 = x0, y2 = y0 + hp + gap;
+    var hTop = hp;
+    function sample(i) { return (trI - trCount + i + trN) % trN; }
+    ctx.save();
+    // angles, 0 to 120 degrees
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    [0, 30, 60, 90, 120].forEach(function (v) { var y = y0 + hTop * (1 - v / 120); ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w1, y); ctx.stroke(); text(v + "°", x0 - 6, y, COL.text, 10.5, "right"); });
+    [[trH, COL.human, 1.4], [trX, COL.exoLine, 1.1]].forEach(function (c) {
+      ctx.strokeStyle = c[1]; ctx.lineWidth = c[2]; ctx.beginPath();
+      for (var i = 0; i < trCount; i++) { var k = sample(i), x = x0 + w1 * (i + trN - trCount) / (trN - 1), y = y0 + hTop * (1 - c[0][k] / D / 120); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.stroke();
+    });
+    text("Knee (black) and exoskeleton (blue), last 10 s", x0, y0 - 10, COL.text, 11, "left");
+    // difference
+    var emax = 2;
+    for (var i = 0; i < trCount; i++) { var kk = sample(i); emax = Math.max(emax, Math.abs(trX[kk] - trH[kk]) / D); }
+    emax = Math.ceil(emax * 1.15);
+    ctx.strokeStyle = COL.grid;
+    [-1, 0, 1].forEach(function (f) { var y = y2 + hp / 2 - f * hp / 2; ctx.beginPath(); ctx.moveTo(x2, y); ctx.lineTo(x2 + w2, y); ctx.stroke(); text((f > 0 ? "+" : "") + (f * emax) + "°", x2 - 6, y, COL.text, 10.5, "right"); });
+    ctx.strokeStyle = COL.err; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (i = 0; i < trCount; i++) { var k2 = sample(i), x = x2 + w2 * (i + trN - trCount) / (trN - 1), y = y2 + hp / 2 - (hp / 2) * ((trX[k2] - trH[k2]) / D) / emax; if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+    ctx.stroke();
+    text("Exoskeleton minus knee", x2, y2 - 10, COL.text, 11, "left");
+    ctx.restore();
+    return emax;
+  }
+
+  // ---- draw -----------------------------------------------------------------------------
+  var maxErr = 0;
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var panel = document.getElementById("panel"), panelW = panel.offsetWidth + 16;
+    var th = kneeAt(t);
+    var plotW = Math.max(260, (W - panelW) * 0.44), px0 = W - plotW + 30;
+    drawScene(panelW, 10, px0 - 40 - panelW, H - 20, th);
+    drawPlots(px0, 26, plotW - 44, Math.min(H - 48, 300));
+    var phi = exoAngle(th);
+    maxErr = 0; for (var i = 0; i < trCount; i++) { var k = (trI - trCount + i + trN) % trN; maxErr = Math.max(maxErr, Math.abs(trX[k] - trH[k])); }
+    document.getElementById("th").textContent = fmt(th / D);
+    document.getElementById("tx").textContent = fmt(phi / D);
+    document.getElementById("te").textContent = fmt((phi - th) / D);
+    document.getElementById("tm").textContent = fmt(maxErr / D);
+    document.getElementById("ts").textContent = fmt(100 * (strapDist(th) - strapDist(0)), 1);
+  }
+
+  function tick(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (playing) {
+      t += dt * P.v; trAcc += dt;
+      while (trAcc >= 1 / TR) {
+        trAcc -= 1 / TR; var th = kneeAt(t);
+        trH[trI] = th; trX[trI] = exoAngle(th); trI = (trI + 1) % trN; trCount = Math.min(trCount + 1, trN);
+      }
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls ---------------------------------------------------------------------------
+  var SPEC = { v: ["sv", "vv", function (v) { return fmt(v, 2) + " ×"; }],
+               ex: ["sx", "vx", function (v) { return fmt(v, 2) + " L"; }],
+               ey: ["sy", "vy", function (v) { return fmt(v, 2) + " L"; }],
+               r: ["sr", "vr", function (v) { return fmt(v, 2) + " L"; }] };
+  function show(key) { document.getElementById(SPEC[key][1]).textContent = SPEC[key][2](P[key]); }
+  function clearTraces() { trCount = 0; }
+  Object.keys(SPEC).forEach(function (key) {
+    var el = document.getElementById(SPEC[key][0]);
+    el.addEventListener("input", function () { P[key] = parseFloat(el.value); show(key); if (key !== "v") clearTraces(); });
+    show(key);
+  });
+  document.getElementById("czero").addEventListener("change", function (e) { P.zero = e.target.checked; clearTraces(); });
+  document.getElementById("pause").addEventListener("click", function () { playing = !playing; this.textContent = playing ? "Pause" : "Play"; });
+  document.getElementById("ideal").addEventListener("click", function () {
+    P.ex = 0; P.ey = 0; document.getElementById("sx").value = 0; document.getElementById("sy").value = 0; show("ex"); show("ey"); clearTraces();
+  });
+
+  // URL presets: ?ex=0.06&ey=0.08&r=0.5&zero=1
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SPEC).forEach(function (key) {
+      if (!q.has(key)) return; var v = parseFloat(q.get(key)); if (!isFinite(v)) return;
+      var el = document.getElementById(SPEC[key][0]); v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[key] = v; el.value = v; show(key);
+    });
+    if (q.has("zero")) { P.zero = q.get("zero") !== "0"; document.getElementById("czero").checked = P.zero; }
+  })();
+
+  // ---- sizing ---------------------------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1; W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR); draw();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

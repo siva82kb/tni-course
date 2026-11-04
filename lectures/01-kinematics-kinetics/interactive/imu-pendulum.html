@@ -97,40 +97,40 @@
   <div id="panel">
     <div class="grp">
       <div class="hd">the link: random swings from rest</div>
-      <label class="sl"><span class="k">duration <i>T</i></span>
+      <label class="sl"><span class="k">Duration <i>T</i></span>
         <input type="range" id="sT" min="2" max="30" step="1" value="10">
         <span class="val" id="vT">10 s</span></label>
       <label class="sl"><span class="k">IMU at <i>r</i></span>
         <input type="range" id="sr" min="0" max="1" step="0.05" value="0.5">
         <span class="val" id="vr">0.50 <i>L</i></span></label>
-      <button id="pnew">new movement</button>
+      <button id="pnew">New movement</button>
     </div>
 
     <div class="grp">
       <div class="hd">accelerometer</div>
-      <label class="sl"><span class="k">bias</span>
+      <label class="sl"><span class="k">Bias</span>
         <input type="range" id="sba" min="0" max="100" step="5" value="20">
         <span class="val" id="vba">20 mg</span></label>
-      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+      <label class="sl"><span class="k">Noise <i>&sigma;</i></span>
         <input type="range" id="ssa" min="0" max="100" step="5" value="20">
         <span class="val" id="vsa">20 mg</span></label>
-      <label class="cb"><input type="checkbox" id="cca"><span>static calibration, 1 s hanging still</span></label>
+      <label class="cb"><input type="checkbox" id="cca"><span>Static calibration, 1 s hanging still</span></label>
     </div>
 
     <div class="grp">
       <div class="hd">gyroscope</div>
-      <label class="sl"><span class="k">bias</span>
+      <label class="sl"><span class="k">Bias</span>
         <input type="range" id="sbg" min="-5" max="5" step="0.1" value="1">
         <span class="val" id="vbg">1.0 °/s</span></label>
-      <label class="sl"><span class="k">noise <i>&sigma;</i></span>
+      <label class="sl"><span class="k">Noise <i>&sigma;</i></span>
         <input type="range" id="ssg" min="0" max="10" step="0.5" value="1">
         <span class="val" id="vsg">1.0 °/s</span></label>
-      <label class="cb"><input type="checkbox" id="ccg"><span>static calibration, 1 s hanging still</span></label>
+      <label class="cb"><input type="checkbox" id="ccg"><span>Static calibration, 1 s hanging still</span></label>
     </div>
 
     <div class="grp">
       <div class="hd">complementary filter</div>
-      <label class="sl"><span class="k">weight <i>&alpha;</i></span>
+      <label class="sl"><span class="k">Weight <i>&alpha;</i></span>
         <input type="range" id="sal" min="0.90" max="0.999" step="0.001" value="0.98">
         <span class="val" id="val">0.980</span></label>
     </div>
@@ -138,20 +138,20 @@
     <div class="grp">
       <div class="hd">angle error, rms over 50 runs</div>
       <table id="tab">
-        <tr class="a"><td class="lab">accelerometer tilt</td><td class="n" id="ea">0.0</td><td>&deg;</td></tr>
-        <tr class="g"><td class="lab">integrated gyroscope</td><td class="n" id="eg">0.0</td><td>&deg;</td></tr>
-        <tr class="f"><td class="lab">complementary filter</td><td class="n" id="ef">0.0</td><td>&deg;</td></tr>
+        <tr class="a"><td class="lab">Accelerometer tilt</td><td class="n" id="ea">0.0</td><td>&deg;</td></tr>
+        <tr class="g"><td class="lab">Integrated gyroscope</td><td class="n" id="eg">0.0</td><td>&deg;</td></tr>
+        <tr class="f"><td class="lab">Complementary filter</td><td class="n" id="ef">0.0</td><td>&deg;</td></tr>
       </table>
-      <button id="replay">replay</button><button id="pause">pause</button><button id="ideal">ideal sensors</button>
+      <button id="replay">Replay</button><button id="pause">Pause</button><button id="ideal">Ideal sensors</button>
     </div>
   </div>
 
   <div id="legend">
-    <span class="t">true link</span>
-    <span class="a">accelerometer tilt</span>
-    <span class="g">integrated gyroscope</span>
-    <span class="f">complementary filter</span>
-    <span style="color:#718096">arrow: one run; shaded: 10–90% of 50 runs</span>
+    <span class="t">True link</span>
+    <span class="a">Accelerometer tilt</span>
+    <span class="g">Integrated gyroscope</span>
+    <span class="f">Complementary filter</span>
+    <span style="color:#718096">Arrow: one run; shaded: 10–90% of 50 runs</span>
   </div>
 </div>
 
@@ -413,7 +413,7 @@
     }
 
     if (calibrating) {
-      text("static calibration, hanging still…", px, ay1 - 4, COL.gyr, 12, "center", true);
+      text("Static calibration, hanging still…", px, ay1 - 4, COL.gyr, 12, "center", true);
     }
     text("φ = " + fmt(phi / D, 0) + "°", ax1 - 8, ay0 + 10, COL.text, 12, "right");
 
@@ -459,14 +459,14 @@
       text("0", qx0, y1 + 9, COL.text, 10, "center");
       text(fmt(P.T, 0) + " s", qx1, y1 + 9, COL.text, 10, "center");
     }
-    plot(0, "angle of the link (°)",
+    plot(0, "Angle of the link (°)",
          [{ arr: run.t[0], band: run.bandT[0], color: COL.acc, lw: 1.2 },
           { arr: run.t[1], band: run.bandT[1], color: COL.gyr, lw: 1.2 },
           { arr: run.t[2], band: run.bandT[2], color: COL.fus, lw: 1.4 },
           { arr: run.phi, color: "#000000", lw: 1.6 }],
          run.pmin / D, run.pmax / D);
     var eLim = Math.max(2, Math.ceil(run.emax / D));
-    plot(1, "angle error (°)",
+    plot(1, "Angle error (°)",
          [{ arr: run.e[0], band: run.bandE[0], color: COL.acc, lw: 1.2 },
           { arr: run.e[1], band: run.bandE[1], color: COL.gyr, lw: 1.2 },
           { arr: run.e[2], band: run.bandE[2], color: COL.fus, lw: 1.4 }],
@@ -484,12 +484,12 @@
     var s = document.getElementById(SPEC[key][0]);
     s.addEventListener("input", function () { P[key] = parseFloat(s.value); show(key); restart(); });
   });
-  function play() { playing = true; document.getElementById("pause").textContent = "pause"; restart(); }
+  function play() { playing = true; document.getElementById("pause").textContent = "Pause"; restart(); }
   document.getElementById("replay").addEventListener("click", play);
   document.getElementById("pnew").addEventListener("click", function () { newMovement(); play(); });
   document.getElementById("pause").addEventListener("click", function () {
-    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, ((P.cala || P.calg) ? PRE : 0) + P.T); playing = false; this.textContent = "run"; }
-    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "pause"; }
+    if (playing) { pauseAt = Math.min((performance.now() - t0) / 1000, ((P.cala || P.calg) ? PRE : 0) + P.T); playing = false; this.textContent = "Run"; }
+    else { t0 = performance.now() - pauseAt * 1000; playing = true; this.textContent = "Pause"; }
   });
   document.getElementById("ideal").addEventListener("click", function () {
     ["ba", "sa", "bg", "sg"].forEach(function (key) { P[key] = 0; document.getElementById(SPEC[key][0]).value = 0; show(key); });

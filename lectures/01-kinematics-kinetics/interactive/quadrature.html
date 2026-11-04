@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incremental encoder: counting edges</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+    --orange:   #DD6B20;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 110px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--charcoal); }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 5.6em; font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.4em; text-align: right; font-variant-numeric: tabular-nums; }
+  #panel .rad { display: flex; align-items: flex-start; margin: 1px 0; }
+  #panel .rad input { width: 11px; height: 11px; flex: none; margin: 2px 4px 0 0; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.e td { color: var(--crimson); }
+  #tab tr.t td { color: var(--charcoal); }
+
+  #legend {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 18px; font-size: 12.5px; white-space: nowrap;
+  }
+  #legend span::before {
+    content: ""; display: inline-block; width: 18px; height: 0; vertical-align: middle;
+    margin-right: 5px; border-top: 2.4px solid currentColor;
+  }
+  #legend .t { color: var(--amber); }
+  #legend .e { color: #F56565; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">the wheel</div>
+      <label class="sl"><span class="k">Slots <i>N</i></span>
+        <input type="range" id="sN" min="4" max="48" step="2" value="16">
+        <span class="val" id="vN">16</span></label>
+      <label class="sl"><span class="k">Speed <i>&omega;</i></span>
+        <input type="range" id="sw" min="-90" max="90" step="5" value="45">
+        <span class="val" id="vw">45 °/s</span></label>
+      <button id="stop">Stop</button><button id="rev">Reverse</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the counter</div>
+      <label class="rad"><input type="radio" name="mode" value="1"><span>x1: channel A only, one edge per slot</span></label>
+      <label class="rad"><input type="radio" name="mode" value="2"><span>x2: channel A only, both edges</span></label>
+      <label class="rad"><input type="radio" name="mode" value="4" checked><span>x4: channels A and B, every edge, direction known</span></label>
+      <label class="rad" style="margin-top:4px;"><input type="checkbox" id="cz"><span>Reset the count when Z passes</span></label>
+      <button id="drop">Miss one edge</button><button id="zero">Zero the count</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">what the counter knows</div>
+      <table id="tab">
+        <tr class="t"><td class="lab">True angle</td><td class="n" id="tth">0.0</td><td>&deg;</td></tr>
+        <tr class="t"><td class="lab">Count</td><td class="n" id="tc">0</td><td></td></tr>
+        <tr class="t"><td class="lab">One count</td><td class="n" id="tres">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Counted angle</td><td class="n" id="tq">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Error</td><td class="n" id="terr">0.0</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Edges missed</td><td class="n" id="tmiss">0</td><td></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="legend">
+    <span class="t">True angle of the wheel</span>
+    <span class="e">Angle from the count</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  // the palette of the tikz figures
+  var COL = { disc: "#2D3748", slot: "#FFFFFF", hub: "#E2E8F0", edge: "#718096", grid: "#EDF2F7",
+              text: "#718096", det: "#2B6CB0", led: "#DD6B20", off: "#CBD5E0",
+              tru: "#D69E2E", est: "#F56565", amber: "#D69E2E" };   // arrow and plot colours: amber for the true angle, light red for the count
+  var D = Math.PI / 180;
+  var FSIM = 4000;                 // internal steps per second, so the simulation itself misses no edge
+  var WIN  = 10.0;                 // seconds of trace shown
+
+  // ---- state ---------------------------------------------------------
+  var P = { N: 16, w: 45, mode: 4, zres: false };
+  var th = 0;                      // true angle, rad, unwrapped
+  var count = 0, missed = 0, dropPending = 0;
+  var A = 0, B = 0, Z = 0;         // detector states
+  var last = performance.now(), acc = 0;
+  var TR = 200;                    // trace samples per second
+  var trN = Math.round(WIN * TR);
+  var trA = new Float32Array(trN), trB = new Float32Array(trN), trZ = new Float32Array(trN);
+  var trT = new Float32Array(trN), trQ = new Float32Array(trN), trE = new Float32Array(trN), trI = 0, trAcc = 0;
+
+  // ---- the wheel, as in the figures --------------------------------------
+  // Slots are half the pitch wide, so one channel sees a 50 % duty cycle.
+  // The index window on the inner track is also half a pitch wide.
+  // Detector A sits at the reference; B sits one pitch and a quarter further
+  // round, which is electrically the same as a quarter pitch.
+  function pitch() { return 2 * Math.PI / P.N; }
+  function offB() { return 1.25 * pitch(); }
+  function open(angle) {
+    var p = pitch(), u = ((angle % p) + p) % p;
+    return u < p / 2 ? 1 : 0;
+  }
+  function zOpen(angle) {
+    var u = ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    return (u < pitch() / 2) ? 1 : 0;
+  }
+  // The wheel turns anticlockwise as th grows: the track point psi sits at math angle psi + th.
+  // A detector fixed at math angle a therefore sees track angle a - th.
+  function detectors(angle) {
+    return { A: open(-angle), B: open(offB() - angle), Z: zOpen(-angle) };
+  }
+  function countsPerTurn() { return P.mode * P.N; }
+  function resolution() { return 360 / countsPerTurn(); }
+
+  // one simulation step: move, read detectors, update the count on edges
+  function step(dt) {
+    th += P.w * D * dt;
+    var d = detectors(th), dir = 0, edge = false;
+    if (P.mode === 4) {
+      // the quadrature state machine: the order of edges gives the direction
+      if (d.A !== A || d.B !== B) {
+        edge = true;
+        if (d.A !== A) dir = (d.A === d.B) ? -1 : 1;     // A changed
+        else           dir = (d.A === d.B) ? 1 : -1;     // B changed
+      }
+    } else if (P.mode === 2) {
+      if (d.A !== A) { edge = true; dir = 1; }            // both edges of A, direction unknown
+    } else {
+      if (d.A === 1 && A === 0) { edge = true; dir = 1; } // rising edges of A only
+    }
+    if (edge) {
+      if (dropPending > 0) { dropPending--; missed++; }
+      else count += dir;
+    }
+    if (P.zres && d.Z === 1 && Z === 0) count = 0;
+    A = d.A; B = d.B; Z = d.Z;
+  }
+  function countedAngle() { return count * resolution(); }
+
+  function fmt(v, n) { if (Math.abs(v) < 5e-4) v = 0; return v.toFixed(n === undefined ? 1 : n); }
+  function wrapDeg(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
+
+  // ---- drawing helpers -------------------------------------------------
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); ctx.restore();
+  }
+  function arrow(x0, y0, x1, y1, color, width) {
+    var L = Math.hypot(x1 - x0, y1 - y0); if (L < 2) return;
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), h = Math.min(9, L), w = 0.42;
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - h * Math.cos(ang - w), y1 - h * Math.sin(ang - w));
+    ctx.lineTo(x1 - h * Math.cos(ang + w), y1 - h * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  // a ring sector path from canvas angle a0 to a1 (anticlockwise positive, so canvas angles are negated)
+  function sector(cx, cy, r0, r1, a0, a1) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r1, -a0, -a1, true);
+    ctx.arc(cx, cy, r0, -a1, -a0, false);
+    ctx.closePath();
+  }
+
+  function drawWheel(cx, cy, R) {
+    var p = pitch();
+    var Rs = R * 0.84, sw = R * 0.12;        // slot track radius and radial half-length
+    var Rz = R * 0.55, zw = R * 0.08;        // index track
+    // the disc
+    ctx.save();
+    ctx.fillStyle = COL.disc; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.fill();
+    // slots: track angle psi in [k p, k p + p/2) is open; the track point psi sits at canvas angle psi - th
+    ctx.fillStyle = COL.slot;
+    for (var i = 0; i < P.N; i++) { sector(cx, cy, Rs - sw, Rs + sw, i * p + th, i * p + p / 2 + th); ctx.fill(); }
+    // the index window, track angle 0 to p/2
+    sector(cx, cy, Rz - zw, Rz + zw, th, p / 2 + th); ctx.fill();
+    // hub
+    ctx.fillStyle = COL.hub; ctx.beginPath(); ctx.arc(cx, cy, R * 0.25, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = COL.edge; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = COL.edge; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.restore();
+
+    // an LED and detector pair fixed to the housing at canvas angle a on track radius r.
+    // The detector is under the disc: draw it clipped to the open parts of the track,
+    // so it shows only through a slot. The LED is above the disc: draw it on top.
+    function pair(a, r, rd, rl, on, isZ) {
+      var x = cx + r * Math.cos(-a), y = cy + r * Math.sin(-a);
+      var dcol = on ? COL.det : COL.off, lcol = on ? COL.led : COL.off;
+      ctx.save();
+      // clip to the open windows near this detector
+      ctx.beginPath();
+      if (isZ) {
+        ctx.arc(cx, cy, Rz + zw, -th, -(p / 2 + th), true); ctx.arc(cx, cy, Rz - zw, -(p / 2 + th), -th, false); ctx.closePath();
+      } else {
+        var psi = a - th, k = Math.floor(psi / p);
+        for (var j = k - 1; j <= k + 1; j++) {
+          var a0 = j * p + th, a1 = j * p + p / 2 + th;
+          ctx.moveTo(cx + (Rs + sw) * Math.cos(-a0), cy + (Rs + sw) * Math.sin(-a0));
+          ctx.arc(cx, cy, Rs + sw, -a0, -a1, true);
+          ctx.arc(cx, cy, Rs - sw, -a1, -a0, false);
+          ctx.closePath();
+        }
+      }
+      ctx.clip();
+      ctx.fillStyle = dcol; ctx.beginPath(); ctx.arc(x, y, rd, 0, 2 * Math.PI); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = lcol; ctx.beginPath(); ctx.arc(x, y, rl, 0, 2 * Math.PI); ctx.fill();
+      return { x: x, y: y };
+    }
+    var quad = P.mode === 4;
+    var slotW = 2 * Rs * Math.sin(p / 4);                 // width of a slot at the track
+    var rd = Math.min(R * 0.085, 0.45 * slotW), rl = 0.58 * rd;
+    var zW = 2 * Rz * Math.sin(p / 4);
+    var rdz = Math.min(R * 0.07, 0.45 * zW), rlz = 0.58 * rdz;
+    var pA = pair(0, Rs, rd, rl, true, false);
+    var pB = pair(offB(), Rs, rd, rl, quad, false);
+    var pZ = pair(0, Rz, rdz, rlz, true, true);
+    // labels, placed as in the figure
+    ctx.save(); ctx.strokeStyle = COL.det; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pA.x + R * 0.1, pA.y + R * 0.02); ctx.lineTo(pA.x + R * 0.3, pA.y + R * 0.17); ctx.stroke();
+    text("A", pA.x + R * 0.33, pA.y + R * 0.2, COL.det, 13, "left");
+    ctx.strokeStyle = quad ? COL.det : COL.off;
+    ctx.beginPath(); ctx.moveTo(pB.x + R * 0.08, pB.y - R * 0.06); ctx.lineTo(pB.x + R * 0.2, pB.y - R * 0.3); ctx.stroke();
+    text("B", pB.x + R * 0.22, pB.y - R * 0.36, quad ? COL.det : COL.off, 13, "left");
+    ctx.strokeStyle = COL.det;
+    ctx.beginPath(); ctx.moveTo(pZ.x + R * 0.05, pZ.y + R * 0.06); ctx.lineTo(pZ.x + R * 0.25, pZ.y + R * 0.55); ctx.stroke();
+    text("Z", pZ.x + R * 0.27, pZ.y + R * 0.62, COL.det, 13, "left");
+    ctx.restore();
+
+    // true angle arrow from the hub and the counted angle arrow, each on a white halo so they show on the disc
+    var L = R * 0.5, q = countedAngle() * D;
+    arrow(cx, cy, cx + L * Math.cos(-th), cy + L * Math.sin(-th), COL.tru, 2.4);
+    arrow(cx, cy, cx + L * Math.cos(-q), cy + L * Math.sin(-q), COL.est, 1.8);
+    text("Positive turn: anticlockwise", cx, cy + R + 16, COL.text, 11, "center");
+  }
+
+  function drawTraces(x0, y0, w, h) {
+    // three logic traces A, B, Z over the last WIN seconds, newest at the right
+    var quad = P.mode === 4;
+    var rows = [["A", trA, COL.det], ["B", trB, quad ? COL.det : COL.off], ["Z", trZ, COL.det]];
+    var rh = h / 3;
+    ctx.save();
+    for (var r = 0; r < 3; r++) {
+      var yb = y0 + (r + 1) * rh - rh * 0.25, yt = y0 + r * rh + rh * 0.3;
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, yb); ctx.lineTo(x0 + w, yb); ctx.stroke();
+      text(rows[r][0], x0 - 10, (yb + yt) / 2, rows[r][2], 13, "right");
+      ctx.strokeStyle = rows[r][2]; ctx.lineWidth = 1.4; ctx.beginPath();
+      var buf = rows[r][1];
+      for (var i = 0; i < trN; i++) {
+        var k = (trI + i) % trN, x = x0 + w * i / (trN - 1), y = buf[k] ? yt : yb;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    if (!quad) text("B is not used by the counter", x0 + w, y0 + 2 * rh - rh * 0.25 + 12, COL.text, 10.5, "right");
+    text("Last " + WIN + " s", x0 + w, y0 + h + 10, COL.text, 11, "right");
+    ctx.restore();
+  }
+
+  function drawAngles(x0, y0, w, h) {
+    // true angle and counted angle over the same window, wrapped to [-180, 180)
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    [ -180, -90, 0, 90, 180 ].forEach(function (v) {
+      var y = y0 + h * (1 - (v + 180) / 360);
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+      text(v + "°", x0 - 6, y, COL.text, 10.5, "right");
+    });
+    function line(buf, col, width) {
+      ctx.strokeStyle = col; ctx.lineWidth = width; ctx.beginPath();
+      var pen = false, prev = 0;
+      for (var i = 0; i < trN; i++) {
+        var k = (trI + i) % trN, v = wrapDeg(buf[k]);
+        var x = x0 + w * i / (trN - 1), y = y0 + h * (1 - (v + 180) / 360);
+        if (!pen || Math.abs(v - prev) > 180) { ctx.moveTo(x, y); pen = true; } else ctx.lineTo(x, y);
+        prev = v;
+      }
+      ctx.stroke();
+    }
+    line(trT, COL.tru, 2.2);
+    line(trQ, COL.est, 1.6);
+    text("True and counted angle, last " + WIN + " s", x0 + 4, y0 - 9, COL.text, 11, "left");
+    ctx.restore();
+  }
+
+  function drawError(x0, y0, w, h) {
+    // counted minus true, over the same window; the scale is at least one count either side
+    var emax = resolution();
+    for (var i = 0; i < trN; i++) emax = Math.max(emax, Math.abs(trE[i]));
+    emax *= 1.1;
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    [-1, 0, 1].forEach(function (f) {
+      var y = y0 + h / 2 - f * h / 2 / 1.1;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+      text((f > 0 ? "+" : "") + fmt(f * emax / 1.1, 1) + "°", x0 - 6, y, COL.text, 10.5, "right");
+    });
+    ctx.strokeStyle = COL.est; ctx.lineWidth = 1.6; ctx.beginPath();
+    for (i = 0; i < trN; i++) {
+      var k = (trI + i) % trN, x = x0 + w * i / (trN - 1), y = y0 + h / 2 - (h / 2) * trE[k] / emax;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    text("Counted minus true", x0 + 4, y0 - 9, COL.text, 11, "left");
+    text("The count changes only at an edge. Lead or lag depends on where the zero sits between two edges.",
+         x0 + w, y0 + h + 10, COL.text, 10.5, "right");
+    ctx.restore();
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var panel  = document.getElementById("panel");
+    var panelW = panel.offsetWidth + 16;
+    var RH = Math.max(120, Math.min(170, H * 0.3));
+    var rowTop = H - 34 - RH;
+    var ax0 = panelW, ax1 = W - 10, ay0 = 10, ay1 = rowTop - 10;
+    var R = Math.min((ay1 - ay0) * 0.4, (ax1 - ax0) * 0.2);
+    var cx = ax0 + R + 30, cy = (ay0 + ay1) / 2 - 8;
+    drawWheel(cx, cy, R);
+    var tx0 = cx + R + 70, tw = ax1 - tx0 - 10;
+    drawTraces(tx0, ay0 + 10, tw, ay1 - ay0 - 30);
+    var bx0 = 48, bw = W - bx0 - 12, gap = 64;
+    var w1 = Math.round((bw - gap) * 0.55), w2 = bw - gap - w1;
+    drawAngles(bx0, rowTop + 14, w1, RH - 22);
+    drawError(bx0 + w1 + gap, rowTop + 14, w2, RH - 22);
+
+    document.getElementById("tth").textContent = fmt(wrapDeg(th / D));
+    document.getElementById("tc").textContent = count;
+    document.getElementById("tres").textContent = fmt(resolution(), 2);
+    document.getElementById("tq").textContent = fmt(wrapDeg(countedAngle()));
+    document.getElementById("terr").textContent = fmt(wrapDeg(countedAngle() - th / D));
+    document.getElementById("tmiss").textContent = missed;
+  }
+
+  function tick(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    acc += dt;
+    var h = 1 / FSIM;
+    while (acc >= h) {
+      step(h); acc -= h;
+      trAcc += h;
+      if (trAcc >= 1 / TR) {
+        trAcc -= 1 / TR;
+        trA[trI] = A; trB[trI] = B; trZ[trI] = Z; trT[trI] = th / D; trQ[trI] = countedAngle();
+        trE[trI] = wrapDeg(countedAngle() - th / D);
+        trI = (trI + 1) % trN;
+      }
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls ---------------------------------------------------------
+  function reset() { count = 0; missed = 0; th = 0; var d0 = detectors(0); A = d0.A; B = d0.B; Z = d0.Z; }
+  var SPEC = { N: ["sN", "vN", function (v) { return v; }],
+               w: ["sw", "vw", function (v) { return v + " °/s"; }] };
+  function show(key) { document.getElementById(SPEC[key][1]).textContent = SPEC[key][2](P[key]); }
+  Object.keys(SPEC).forEach(function (key) {
+    var el = document.getElementById(SPEC[key][0]);
+    el.addEventListener("input", function () {
+      P[key] = parseFloat(el.value); show(key);
+      if (key === "N") reset();
+    });
+    show(key);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="mode"]'), function (el) {
+    el.addEventListener("change", function () { P.mode = parseInt(el.value, 10); reset(); });
+  });
+  document.getElementById("cz").addEventListener("change", function (e) { P.zres = e.target.checked; });
+  document.getElementById("stop").addEventListener("click", function () { P.w = 0; document.getElementById("sw").value = 0; show("w"); });
+  document.getElementById("rev").addEventListener("click", function () { P.w = -P.w; document.getElementById("sw").value = P.w; show("w"); });
+  document.getElementById("drop").addEventListener("click", function () { dropPending++; });
+  document.getElementById("zero").addEventListener("click", reset);
+
+  // URL presets: ?N=16&w=45&mode=4&z=0
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SPEC).forEach(function (key) {
+      if (!q.has(key)) return;
+      var v = parseFloat(q.get(key)); if (!isFinite(v)) return;
+      var el = document.getElementById(SPEC[key][0]);
+      v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[key] = v; el.value = v; show(key);
+    });
+    if (q.has("mode")) {
+      var m = parseInt(q.get("mode"), 10);
+      if (m === 1 || m === 2 || m === 4) { P.mode = m; document.querySelector('input[name="mode"][value="' + m + '"]').checked = true; }
+    }
+    if (q.has("z")) { P.zres = q.get("z") === "1"; document.getElementById("cz").checked = P.zres; }
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  reset();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

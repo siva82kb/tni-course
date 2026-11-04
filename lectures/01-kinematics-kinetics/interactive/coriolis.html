@@ -102,18 +102,18 @@
     <div class="grp">
       <div class="hd">the mass's displacement</div>
       <table id="tab">
-        <tr><td class="lab">drive, along <i>x</i></td><td class="n" id="dx">0</td><td>&micro;m</td></tr>
-        <tr class="f"><td class="lab">sense, along <i>y</i></td><td class="n" id="dy">0</td><td>&micro;m</td></tr>
-        <tr class="f"><td class="lab">sense amplitude</td><td class="n" id="ay">0</td><td>&micro;m</td></tr>
-        <tr class="f"><td class="lab">phase vs drive</td><td class="n" id="ph">&ndash;</td><td></td></tr>
-        <tr class="f"><td class="lab">rate it implies</td><td class="n" id="wr">0</td><td>&deg;/s</td></tr>
+        <tr><td class="lab">Drive, along <i>x</i></td><td class="n" id="dx">0</td><td>&micro;m</td></tr>
+        <tr class="f"><td class="lab">Sense, along <i>y</i></td><td class="n" id="dy">0</td><td>&micro;m</td></tr>
+        <tr class="f"><td class="lab">Sense amplitude</td><td class="n" id="ay">0</td><td>&micro;m</td></tr>
+        <tr class="f"><td class="lab">Phase vs drive</td><td class="n" id="ph">&ndash;</td><td></td></tr>
+        <tr class="f"><td class="lab">Rate it implies</td><td class="n" id="wr">0</td><td>&deg;/s</td></tr>
       </table>
       <div class="note">The mass is driven along <i>x</i> only. Any motion along <i>y</i> is the Coriolis force. Its amplitude is the size of the rate; its phase against the drive, 0&deg; or 180&deg;, is the sign.</div>
     </div>
   </div>
 
   <div id="legend">
-    <span class="y">the mass's displacement along the sensor's y axis</span>
+    <span class="y">The mass's displacement along the sensor's y axis</span>
   </div>
 </div>
 
@@ -317,8 +317,8 @@
     // ---- traces along the bottom: drive x, sense y, and omega -----------
     var tx0 = panelW + 40, tx1 = W - 12, ty0 = H - 30 - traceH, ty1 = H - 30;
     var rows = [
-      { key: 1, title: "drive x", color: COL.trace.x, lim: 1.15 },
-      { key: 2, title: "sense y", color: COL.trace.y, lim: Math.max(0.3, GAIN * 200 * D * 1.1) },
+      { key: 1, title: "Drive x", color: COL.trace.x, lim: 1.15 },
+      { key: 2, title: "Sense y", color: COL.trace.y, lim: Math.max(0.3, GAIN * 200 * D * 1.1) },
       { key: 3, title: "ω (°/s)", color: COL.trace.w, lim: 100, scale: 1 / D }
     ];
     var rh = (ty1 - ty0) / rows.length;
@@ -338,7 +338,7 @@
       ctx.restore();
       text(r.title, tx0 - 4, ym, r.color, 11, "right");
     });
-    text("last " + HIST_T + " s", tx1, ty1 + 9, COL.text, 10, "right");
+    text("Last " + HIST_T + " s", tx1, ty1 + 9, COL.text, 10, "right");
 
     // readout
     document.getElementById("dx").textContent = fmt(d.x * A0, 1);

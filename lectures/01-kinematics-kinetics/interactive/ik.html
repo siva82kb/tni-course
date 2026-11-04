@@ -90,17 +90,17 @@
   <div id="panel">
     <div class="grp">
       <div class="hd">leg</div>
-      <label><input type="radio" name="mode" value="thigh"> thigh only &rarr; hip angle</label>
-      <label><input type="radio" name="mode" value="leg" checked> thigh + shank &rarr; knee angle</label>
+      <label><input type="radio" name="mode" value="thigh"> Thigh only &rarr; hip angle</label>
+      <label><input type="radio" name="mode" value="leg" checked> Thigh + shank &rarr; knee angle</label>
     </div>
 
     <div class="grp">
       <div class="hd">movement</div>
-      <label><span class="k">speed</span>
+      <label><span class="k">Speed</span>
         <input type="range" id="s_speed" min="0" max="2.5" step="0.05" value="1">
         <span class="val" id="v_speed"></span><span class="unit">&times;</span></label>
       <div class="row">
-        <button id="pause">pause</button><button id="reset">reset</button>
+        <button id="pause">Pause</button><button id="reset">Reset</button>
       </div>
     </div>
 
@@ -127,7 +127,7 @@
 
     <div class="grp">
       <div class="hd">skin: slide with joint angle</div>
-      <label><span class="k">gain</span>
+      <label><span class="k">Gain</span>
         <input type="range" id="s_slide" min="0" max="2" step="0.05" value="0">
         <span class="val" id="v_slide"></span><span class="unit">&times;</span></label>
       <div class="row">1&times; &asymp; 0.15&ndash;0.45 mm per degree</div>
@@ -137,21 +137,21 @@
     <div class="grp">
       <div class="hd">unconstrained IK: frame from</div>
       <label><input type="radio" name="meth" value="two" checked> m<sub>1</sub>, m<sub>2</sub> only (lecture)</label>
-      <label><input type="radio" name="meth" value="fit"> least-squares fit, all three</label>
+      <label><input type="radio" name="meth" value="fit"> Least-squares fit, all three</label>
     </div>
 
     <div class="grp">
       <div class="hd">show</div>
-      <label><input type="checkbox" id="c_true" checked><span class="sw" style="background:#A0AEC0"></span>true leg</label>
-      <label><input type="checkbox" id="c_uik" checked><span class="sw" style="background:var(--crimson)"></span>unconstrained IK</label>
-      <label><input type="checkbox" id="c_cik" checked><span class="sw" style="background:var(--forest)"></span>constrained IK</label>
+      <label><input type="checkbox" id="c_true" checked><span class="sw" style="background:#A0AEC0"></span>True leg</label>
+      <label><input type="checkbox" id="c_uik" checked><span class="sw" style="background:var(--crimson)"></span>Unconstrained IK</label>
+      <label><input type="checkbox" id="c_cik" checked><span class="sw" style="background:var(--forest)"></span>Constrained IK</label>
     </div>
   </div>
 
   <div id="panes">
     <div class="pane" id="leg">
       <canvas id="cl"></canvas>
-      <div class="cap">hip pinned &middot; dots are the <b>measured</b> markers</div>
+      <div class="cap">Hip pinned &middot; dots are the <b>measured</b> markers</div>
     </div>
     <div class="pane" id="charts">
       <canvas id="cc"></canvas>
@@ -159,10 +159,10 @@
   </div>
 
   <div id="readout">
-    <span><span id="r_what">knee angle</span> RMS error, last 8 s:&nbsp; unconstrained <span class="u" id="r_u">&ndash;</span>&deg;
+    <span><span id="r_what">Knee angle</span> RMS error, last 8 s:&nbsp; unconstrained <span class="u" id="r_u">&ndash;</span>&deg;
       &nbsp; constrained <span class="c" id="r_c">&ndash;</span>&deg;</span>
-    <span><span id="r_gapwhat">knee gap</span> in the unconstrained reconstruction: <span class="u" id="r_gap">&ndash;</span> mm</span>
-    <span id="r_hipwrap">hip RMS: <span class="u" id="r_uh">&ndash;</span>&deg; / <span class="c" id="r_ch">&ndash;</span>&deg; &nbsp; unconstrained hip off its pin by <span class="u" id="r_hipgap">&ndash;</span> mm</span>
+    <span><span id="r_gapwhat">Knee gap</span> in the unconstrained reconstruction: <span class="u" id="r_gap">&ndash;</span> mm</span>
+    <span id="r_hipwrap">Hip RMS: <span class="u" id="r_uh">&ndash;</span>&deg; / <span class="c" id="r_ch">&ndash;</span>&deg; &nbsp; unconstrained hip off its pin by <span class="u" id="r_hipgap">&ndash;</span> mm</span>
     <span class="note" id="note"></span>
   </div>
 </div>
@@ -460,7 +460,7 @@
     gl.strokeStyle = C.charcoal; gl.lineWidth = 1.6; gl.beginPath(); gl.arc(kt[0], kt[1], 5.5, 0, 2*Math.PI); gl.stroke();
     gl.fillStyle = C.charcoal; gl.beginPath(); gl.arc(kt[0], kt[1], 1.8, 0, 2*Math.PI); gl.fill();
     gl.font = "12px 'Linux Libertine O', Georgia, serif";
-    gl.fillText("knee", kt[0] + 10, kt[1] - 8);
+    gl.fillText("Knee", kt[0] + 10, kt[1] - 8);
     }
     // the hip
     gl.fillStyle = C.charcoal; gl.beginPath(); gl.arc(ox, oy, 5, 0, 2*Math.PI); gl.fill();
@@ -468,7 +468,7 @@
     gl.beginPath(); gl.moveTo(ox-14, oy-10); gl.lineTo(ox+14, oy-10); gl.stroke();
     for (var i = -12; i <= 12; i += 6) { gl.beginPath(); gl.moveTo(ox+i, oy-10); gl.lineTo(ox+i-5, oy-16); gl.stroke(); }
     gl.font = "12px 'Linux Libertine O', Georgia, serif"; gl.fillStyle = C.charcoal;
-    gl.fillText("hip", ox + 20, oy - 12);
+    gl.fillText("Hip", ox + 20, oy - 12);
   }
 
   // ---- drawing: the charts ----------------------------------------------
@@ -506,7 +506,7 @@
     cc.width = Math.round(w*dpr); cc.height = Math.round(h*dpr);
     gc.setTransform(dpr,0,0,dpr,0,0); gc.clearRect(0,0,w,h);
     var x = 44, cw = w - x - 14, gap = 14, ch = (h - 3*gap - 12)/3, y = 10;
-    var J = mode === "leg" ? 1 : 0, name = mode === "leg" ? "knee" : "hip";
+    var J = mode === "leg" ? 1 : 0, name = mode === "leg" ? "Knee" : "Hip";
     var lo = mode === "leg" ? -10 : -40, hi = mode === "leg" ? 80 : 40;
     strip(gc, x, y, cw, ch, name + " flexion", [
       { f: function (p) { return p.tru[J]/D2R; }, color: "#A0AEC0", width: 2.2 },
@@ -520,13 +520,13 @@
       { f: function (p) { return (p.c[J]-p.tru[J])/D2R; }, color: C.forest, dash: [4,3], alpha: show.cik ? 1 : 0 }
     ], -15, 15, "°");
     y += ch + gap;
-    strip(gc, x, y, cw, ch, (mode === "leg" ? "knee gap" : "hip position error") + " in the unconstrained reconstruction", [
+    strip(gc, x, y, cw, ch, (mode === "leg" ? "Knee gap" : "Hip position error") + " in the unconstrained reconstruction", [
       { f: function (p) { return p.gap*1e3; }, color: C.crimson, alpha: show.uik ? 1 : 0 }
     ], 0, 40, " mm");
     // legend
     gc.font = "11px system-ui, sans-serif";
     var lx = x + cw - 300, ly = 24;
-    [["true", "#A0AEC0", []], ["unconstrained", C.crimson, []], ["constrained", C.forest, [4,3]]].forEach(function (L, i) {
+    [["True", "#A0AEC0", []], ["Unconstrained", C.crimson, []], ["Constrained", C.forest, [4,3]]].forEach(function (L, i) {
       gc.strokeStyle = L[1]; gc.lineWidth = 2; gc.setLineDash(L[2]);
       gc.beginPath(); gc.moveTo(lx + i*105, ly); gc.lineTo(lx + i*105 + 18, ly); gc.stroke(); gc.setLineDash([]);
       gc.fillStyle = C.charcoal; gc.fillText(L[0], lx + i*105 + 22, ly + 4);
@@ -541,8 +541,8 @@
   function drawReadout() {
     function fmt(v) { return isFinite(v) ? v.toFixed(2) : "–"; }
     var J = mode === "leg" ? 1 : 0;
-    document.getElementById("r_what").textContent = mode === "leg" ? "knee angle" : "hip angle";
-    document.getElementById("r_gapwhat").textContent = mode === "leg" ? "knee gap" : "hip position error";
+    document.getElementById("r_what").textContent = mode === "leg" ? "Knee angle" : "Hip angle";
+    document.getElementById("r_gapwhat").textContent = mode === "leg" ? "Knee gap" : "Hip position error";
     document.getElementById("r_hipwrap").style.display = mode === "leg" ? "" : "none";
     document.getElementById("r_u").textContent  = fmt(rms(function (p) { return (p.u[J]-p.tru[J])/D2R; }));
     document.getElementById("r_c").textContent  = fmt(rms(function (p) { return (p.c[J]-p.tru[J])/D2R; }));
@@ -553,11 +553,11 @@
     document.getElementById("r_hipgap").textContent = hist.length ? (hg/hist.length*1e3).toFixed(1) : "–";
     var note = document.getElementById("note");
     if (P.noise === 0 && P.slide === 0 && P.fa >= 25 && P.fx >= 25)
-      note.textContent = "no noise, no artefact: both methods are exact";
+      note.textContent = "No noise, no artefact: both methods are exact";
     else if (P.slide > 0)
-      note.textContent = "skin slide is systematic — averaging over markers cannot remove it";
+      note.textContent = "Skin slide is systematic — averaging over markers cannot remove it";
     else
-      note.textContent = "noise and wobble are zero-mean — the constrained fit averages them over " + (mode === "leg" ? "six" : "three") + " markers";
+      note.textContent = "Noise and wobble are zero-mean — the constrained fit averages them over " + (mode === "leg" ? "six" : "three") + " markers";
   }
 
   function draw() { drawLeg(); drawCharts(); drawReadout(); }
@@ -581,7 +581,7 @@
     document.getElementById(p[0]).addEventListener("change", function () { show[p[1]] = this.checked; });
   });
   document.getElementById("pause").addEventListener("click", function () {
-    paused = !paused; this.textContent = paused ? "play" : "pause";
+    paused = !paused; this.textContent = paused ? "Play" : "Pause";
   });
   document.getElementById("reset").addEventListener("click", restart);
 

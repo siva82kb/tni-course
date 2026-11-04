@@ -122,7 +122,7 @@
   <div id="panel">
     <div class="grp">
       <div class="hd">point, in camera frame</div>
-      <button id="rand" class="primary">random point</button>
+      <button id="rand" class="primary">Random point</button>
       <div class="row pt">(x<sub>P</sub><sup>C</sup>, y<sub>P</sub><sup>C</sup>, z<sub>P</sub><sup>C</sup>) = (<span id="pxc">0</span>, <span id="pyc">0</span>, <span id="pzc">0</span>)</div>
     </div>
 
@@ -155,20 +155,20 @@
       <label class="sl g"><span class="k">λ</span>
         <input type="range" id="s_lam" min="0.25" max="4" step="0.01" value="1">
         <span class="val g" id="v_lam">1.00</span></label>
-      <div class="row">rescales all six at once: f, u, v ×λ; s<sub>x</sub>, s<sub>y</sub>, s<sub>θ</sub> ÷λ</div>
+      <div class="row">Rescales all six at once: f, u, v ×λ; s<sub>x</sub>, s<sub>y</sub>, s<sub>θ</sub> ÷λ</div>
     </div>
 
     <div class="grp">
       <div class="hd">sensor</div>
       <div class="row pt">N<sub>x</sub> × N<sub>y</sub> = 40 × 20 px</div>
-      <div class="row"><button id="reset">reset all</button></div>
+      <div class="row"><button id="reset">Reset all</button></div>
     </div>
   </div>
 
   <div id="panes">
     <div class="pane" id="paneS">
       <canvas id="cS"></canvas>
-      <div class="cap">the sensor, \(N_x \times N_y\) pixels — the blue outline is the physical image plane, \(W \times H\) mm, seen in pixel coordinates</div>
+      <div class="cap">The sensor, \(N_x \times N_y\) pixels — the blue outline is the physical image plane, \(W \times H\) mm, seen in pixel coordinates</div>
     </div>
   </div>
 
@@ -186,7 +186,7 @@
       <span class="item"><span id="uvsym">\((x_p^S, y_p^S) =\)</span>
         (<span class="px" id="ru">0</span>, <span class="px" id="rv">0</span>)</span>
       <span class="arr">→</span>
-      <span class="item">pixel
+      <span class="item">Pixel
         [<span class="pix" id="rcu">0</span>, <span class="pix" id="rcv">0</span>]</span>
     </span>
     <span class="note" id="gaugenote"></span>
@@ -344,7 +344,7 @@
     place("pS", s.x + 16, s.y - 10, true);
     if (!inside) {
       g.save(); g.fillStyle = C.warmgray; g.font = "12px 'Linux Libertine O', Georgia, serif";
-      g.fillText("off the sensor", s.x + 10, s.y + 16); g.restore();
+      g.fillText("Off the sensor", s.x + 10, s.y + 16); g.restore();
     }
 
     // counts
@@ -373,7 +373,7 @@
                     "<b>the five entries of K and (x<sub>p</sub><sup>S</sup>, y<sub>p</sub><sup>S</sup>) did not</b>. " +
                     "The image plane's unit is not something the camera can see.";
     } else {
-      n.innerHTML = "six parameters, <b>five</b> independent entries in K — drag λ to see which combination is invisible";
+      n.innerHTML = "Six parameters, <b>five</b> independent entries in K — drag λ to see which combination is invisible";
     }
   }
 

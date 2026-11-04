@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A goniometer on a knee: what is it measuring?</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; cursor: crosshair; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; right: 8px; width: 262px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif; cursor: default;
+    background: rgba(255,255,255,0.92);
+  }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel ol { margin: 2px 0 0 1.2em; padding: 0; }
+  #panel li { margin: 1px 0; }
+  #panel li.done { color: var(--warmgray); text-decoration: line-through; }
+  #panel li.now { color: var(--crimson); font-weight: 600; }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 3.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.g td { color: #B7791F; }
+  #tab tr.e td { color: var(--crimson); }
+  label.chk { display: flex; align-items: flex-start; margin-top: 4px; }
+  label.chk input { width: 11px; height: 11px; flex: none; margin: 2px 4px 0 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">what the goniometer says</div>
+      <table id="tab">
+        <tr class="g"><td class="lab">Knee flexion, from its arms</td><td class="n" id="tg">–</td><td>&deg;</td></tr>
+      </table>
+      <label class="chk"><input type="checkbox" id="carms" checked><span>Show the goniometer's pivot and arms</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">your estimate: click on the picture</div>
+      <ol id="steps">
+        <li id="s0" class="now">The centre of the knee joint</li>
+        <li id="s1">A point along the femur, towards the hip</li>
+        <li id="s2">A point along the tibia, towards the ankle</li>
+      </ol>
+      <button id="undo">Undo</button><button id="reset">Start again</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">the two answers</div>
+      <table id="tab2" class="">
+        <tr class="e"><td class="lab">Knee flexion, from your lines</td><td class="n" id="ta">–</td><td>&deg;</td></tr>
+        <tr class="e"><td class="lab">Difference</td><td class="n" id="td">–</td><td>&deg;</td></tr>
+        <tr><td class="lab">Joint centre to pivot</td><td class="n" id="tc">–</td><td>px</td></tr>
+        <tr><td class="lab">Femur line to thigh arm</td><td class="n" id="tf">–</td><td>&deg;</td></tr>
+        <tr><td class="lab">Tibia line to shank arm</td><td class="n" id="tt">–</td><td>&deg;</td></tr>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+  var COL = { gon: "#D69E2E", est: "#A51C30", text: "#2D3748" };
+  var D = Math.PI / 180;
+
+  // ---- the picture, and where the goniometer is in it ------------------------
+  // Image coordinates (pixels of figures/gonio-knee.png, 1193 x 896). The pivot and a point
+  // well down each arm were read off the picture; the reading is computed from them.
+  var IMG = new Image();
+  var GON = { pivot: [518, 228], thigh: [322, 455], shank: [692, 472] };
+  IMG.src = "gonio-knee.png";
+  IMG.onload = function () { draw(); };
+
+  // ---- state --------------------------------------------------------------------
+  var pts = [];                 // [knee centre, femur point, tibia point], in image coordinates
+  var showArms = true;
+  var mouse = null;             // the pointer, in image coordinates, while a line is being placed
+
+  function includedFlexion(centre, a, b) {   // knee flexion = 180 minus the angle between the two limb lines at the centre
+    var a1 = Math.atan2(a[1] - centre[1], a[0] - centre[0]), a2 = Math.atan2(b[1] - centre[1], b[0] - centre[0]);
+    var inc = Math.abs(Math.atan2(Math.sin(a1 - a2), Math.cos(a1 - a2)));
+    return 180 - inc / D;
+  }
+  function lineAngle(p, q) { return Math.atan2(q[1] - p[1], q[0] - p[0]); }
+  function angleBetween(a1, a2) { return Math.abs(Math.atan2(Math.sin(a1 - a2), Math.cos(a1 - a2))) / D; }
+  var gonFlex = includedFlexion(GON.pivot, GON.thigh, GON.shank);
+
+  // ---- fitting the picture to the canvas -----------------------------------------
+  var fit = { s: 1, ox: 0, oy: 0 };
+  function computeFit() {
+    // the photo and the panel side by side, the pair centred in the frame, both top aligned
+    var panel = document.getElementById("panel"), panelW = panel.offsetWidth + 16, h = H - 40;   // room for the hint line below the photo
+    var s = Math.min((W - panelW - 16) / IMG.width, h / IMG.height);
+    var total = IMG.width * s + panelW, left = Math.max(8, (W - total) / 2);
+    fit = { s: s, ox: left, oy: 8 };
+    panel.style.left = (left + IMG.width * s + 16) + "px"; panel.style.right = "auto";
+  }
+  function toScreen(p) { return { x: fit.ox + p[0] * fit.s, y: fit.oy + p[1] * fit.s }; }
+  function toImage(x, y) { return [(x - fit.ox) / fit.s, (y - fit.oy) / fit.s]; }
+
+  function fmt(v, n) { return v.toFixed(n === undefined ? 1 : n); }
+  function text(s, x, y, color, size, align) {
+    ctx.save(); ctx.fillStyle = color; ctx.font = (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); ctx.restore();
+  }
+  function haloText(s, x, y, color, size, align) {
+    ctx.save(); ctx.font = (size || 12) + 'px "Linux Libertine O", Georgia, serif'; ctx.textAlign = align || "left"; ctx.textBaseline = "middle";
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.strokeText(s, x, y); ctx.fillStyle = color; ctx.fillText(s, x, y); ctx.restore();
+  }
+  function dot(p, color, r) { var q = toScreen(p); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(q.x, q.y, r || 5, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.stroke(); }
+  function line(p, q, color, width, dash) {
+    var a = toScreen(p), b = toScreen(q);
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; if (dash) ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.restore();
+  }
+  // extend a line from p through q to length L (image px), for drawing the limb lines beyond the clicked point
+  function extend(p, q, L) { var a = lineAngle(p, q); return [p[0] + L * Math.cos(a), p[1] + L * Math.sin(a)]; }
+
+  // the two angles at a joint: the angle between the limb lines (an arc between them) and the flexion,
+  // the angle between the distal limb and the proximal limb continued through the joint (dotted)
+  function drawAngles(centre, prox, dist, color, rIn, rOut, labelSide) {
+    var c = toScreen(centre), aP = lineAngle(centre, prox), aD = lineAngle(centre, dist);
+    var ext = [centre[0] - 260 * Math.cos(aP), centre[1] - 260 * Math.sin(aP)];        // the proximal line continued
+    line(centre, ext, color, 1.4, [3, 4]);
+    var aE = aP + Math.PI;                                                                // its direction
+    function arc(a1, a2, r, lab, labR) {
+      var d = Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1));                            // the short way from a1 to a2
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.beginPath();
+      ctx.arc(c.x, c.y, r, a1, a1 + d, d < 0); ctx.stroke(); ctx.restore();
+      var am = a1 + d / 2;
+      haloText(lab, c.x + labR * Math.cos(am), c.y + labR * Math.sin(am), color, 12, "center");
+    }
+    var flex = 180 - angleBetween(aP, aD);
+    arc(aD, aE, rOut, fmt(flex, 0) + "°", rOut + 18);                                      // flexion: from the continued proximal line
+  }
+
+  // ---- draw ---------------------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (!IMG.complete || !IMG.width) return;
+    computeFit();
+    ctx.drawImage(IMG, fit.ox, fit.oy, IMG.width * fit.s, IMG.height * fit.s);
+
+    if (showArms) {
+      line(GON.pivot, extend(GON.pivot, GON.thigh, 380), COL.gon, 2.5);
+      line(GON.pivot, extend(GON.pivot, GON.shank, 380), COL.gon, 2.5);
+      drawAngles(GON.pivot, GON.thigh, GON.shank, "#B7791F", 46, 70);
+      dot(GON.pivot, COL.gon, 6);
+    }
+    if (pts.length >= 1) {
+      if (pts.length >= 2) line(pts[0], pts[1], COL.est, 2.2);
+      if (pts.length >= 3) line(pts[0], pts[2], COL.est, 2.2);
+      if (pts.length < 3 && mouse) line(pts[0], mouse, COL.est, 1.6, [6, 4]);           // the line being placed follows the pointer
+      dot(pts[0], COL.est, 6);
+      if (pts.length >= 2) dot(pts[1], COL.est, 4);
+      if (pts.length >= 3) dot(pts[2], COL.est, 4);
+      var lc = toScreen(pts[0]);
+      if (pts.length >= 3) drawAngles(pts[0], pts[1], pts[2], COL.est, 34, 96);
+      else haloText("Knee centre", lc.x + 10, lc.y + 14, COL.est, 12, "left");
+    }
+    text("Click in order: knee centre, a femur point, a tibia point", fit.ox, fit.oy + IMG.height * fit.s + 14, "#718096", 11, "left");
+  }
+
+  function update() {
+    document.getElementById("tg").textContent = fmt(gonFlex, 0);
+    for (var i = 0; i < 3; i++) {
+      var li = document.getElementById("s" + i);
+      li.className = i < pts.length ? "done" : (i === pts.length ? "now" : "");
+    }
+    var done = pts.length >= 3;
+    if (done) {
+      var a = includedFlexion(pts[0], pts[1], pts[2]);
+      document.getElementById("ta").textContent = fmt(a, 0);
+      document.getElementById("td").textContent = fmt(a - gonFlex, 0);
+      document.getElementById("tc").textContent = fmt(Math.hypot(pts[0][0] - GON.pivot[0], pts[0][1] - GON.pivot[1]), 0);
+      document.getElementById("tf").textContent = fmt(angleBetween(lineAngle(pts[0], pts[1]), lineAngle(GON.pivot, GON.thigh)), 0);
+      document.getElementById("tt").textContent = fmt(angleBetween(lineAngle(pts[0], pts[2]), lineAngle(GON.pivot, GON.shank)), 0);
+    } else {
+      ["ta", "td", "tc", "tf", "tt"].forEach(function (id) { document.getElementById(id).textContent = "–"; });
+    }
+    draw();
+  }
+
+  // ---- interaction --------------------------------------------------------------
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("#panel")) return;
+    if (pts.length >= 3) return;
+    var p = toImage(e.offsetX, e.offsetY);
+    if (p[0] < 0 || p[1] < 0 || p[0] > IMG.width || p[1] > IMG.height) return;
+    pts.push(p); update();
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (e.target.closest("#panel")) { mouse = null; draw(); return; }
+    if (pts.length >= 1 && pts.length < 3) { mouse = toImage(e.offsetX, e.offsetY); draw(); }
+  });
+  stage.addEventListener("pointerleave", function () { mouse = null; draw(); });
+  document.getElementById("undo").addEventListener("click", function () { pts.pop(); update(); });
+  document.getElementById("reset").addEventListener("click", function () { pts = []; update(); });
+  document.getElementById("carms").addEventListener("change", function (e) { showArms = e.target.checked; draw(); });
+
+  // ---- sizing -------------------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  resize(); update();
+})();
+</script>
+</body>
+</html>

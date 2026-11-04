@@ -105,7 +105,7 @@
       <label><span class="k">f</span>
         <input type="range" id="s_f" min="200" max="1600" step="10" value="800">
         <span class="val" id="v_f">800</span> px</label>
-      <div class="row">sensor 640 x 480 px</div>
+      <div class="row">Sensor 640 x 480 px</div>
     </div>
 
     <div class="grp">
@@ -113,39 +113,39 @@
       <label><span class="k">&lambda;</span>
         <input type="range" id="s_lam" min="0.3" max="17" step="0.05" value="8">
         <span class="val" id="v_lam">8.00</span></label>
-      <div class="row">slides the point along the ray</div>
+      <div class="row">Slides the point along the ray</div>
     </div>
 
     <div class="grp">
       <div class="hd">show</div>
       <div class="row">
-        <button id="clear">clear rays</button>
-        <button id="reset">reset view</button>
+        <button id="clear">Clear rays</button>
+        <button id="reset">Reset view</button>
       </div>
     </div>
 
     <div class="grp">
       <div class="hd">how</div>
-      <div class="row">click anywhere on the image (left) to cast a ray</div>
-      <div class="row">drag the 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
+      <div class="row">Click anywhere on the image (left) to cast a ray</div>
+      <div class="row">Drag the 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
     </div>
   </div>
 
   <div id="panes">
     <div class="pane" id="imgpane">
       <canvas id="ci"></canvas>
-      <div class="cap">the image &mdash; click to choose \(\v{r}_p^S\)</div>
+      <div class="cap">The image &mdash; click to choose \(\v{r}_p^S\)</div>
     </div>
     <div class="pane" id="world">
       <canvas id="cw"></canvas>
-      <div class="cap">the world &mdash; every point on the ray produces that same pixel</div>
+      <div class="cap">The world &mdash; every point on the ray produces that same pixel</div>
     </div>
   </div>
 
   <div id="readout">
     <span id="eq">\(\v{r}_P^W = \lambda\,\v{K}_f^{-1}\,\v{r}_p^S\)</span>
     <span id="numbers"></span>
-    <span class="note" id="note">click the image to cast a ray</span>
+    <span class="note" id="note">Click the image to cast a ray</span>
   </div>
 </div>
 
@@ -245,7 +245,7 @@
   mkLabel("world", "Z",  "\\(z\\)", C.forest);
   mkLabel("world", "X",  "\\(x\\)", C.forest);
   mkLabel("world", "Y",  "\\(y\\)", C.forest);
-  mkLabel("world", "IP", "image plane", C.warmgray);
+  mkLabel("world", "IP", "Image plane", C.warmgray);
   function place(key, p, dx, dy, show) {
     var d = labels[key];
     if (show === false) { d.style.display = "none"; return; }
@@ -425,14 +425,14 @@
   function drawReadout() {
     var el = document.getElementById("numbers"), note = document.getElementById("note");
     var a = rays[rays.length-1];
-    if (!a) { el.textContent = ""; note.innerHTML = "click the image to cast a ray"; return; }
+    if (!a) { el.textContent = ""; note.innerHTML = "Click the image to cast a ray"; return; }
     var P = [a.n[0]*lam, a.n[1]*lam, lam];
     el.innerHTML =
-      '&nbsp;&nbsp;pixel (' + a.u.toFixed(1) + ', ' + a.v.toFixed(1) + ')' +
+      '&nbsp;&nbsp;Pixel (' + a.u.toFixed(1) + ', ' + a.v.toFixed(1) + ')' +
       ' &nbsp;&rarr;&nbsp; direction (' + a.n[0].toFixed(3) + ', ' + a.n[1].toFixed(3) + ', 1)' +
       ' &nbsp;&rarr;&nbsp; <span class="n">(' + P[0].toFixed(2) + ', ' +
       P[1].toFixed(2) + ', ' + P[2].toFixed(2) + ')</span> at &lambda; = ' + lam.toFixed(2);
-    note.innerHTML = "every λ gives a different point in space and the " +
+    note.innerHTML = "Every λ gives a different point in space and the " +
                      "<b>same pixel</b> — one camera cannot choose between them";
   }
 

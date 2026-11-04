@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optical encoder: reading inside a slot</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 110px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--charcoal); }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 5.6em; font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.4em; text-align: right; font-variant-numeric: tabular-nums; }
+  #panel .rad { display: flex; align-items: flex-start; margin: 1px 0; }
+  #panel .rad input { width: 11px; height: 11px; flex: none; margin: 2px 4px 0 0; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.e td { color: var(--crimson); }
+  #tab tr.t td { color: var(--charcoal); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">slot and window, in units of the slot pitch</div>
+      <label class="sl"><span class="k">window width</span>
+        <input type="range" id="sv" min="0.05" max="0.5" step="0.05" value="0.1">
+        <span class="val" id="vv">0.10</span></label>
+      <label class="sl"><span class="k">edge blur</span>
+        <input type="range" id="sb" min="0" max="0.25" step="0.01" value="0">
+        <span class="val" id="vb">0.00</span></label>
+      <label class="sl"><span class="k">speed</span>
+        <input type="range" id="sw" min="0.05" max="1" step="0.05" value="0.25">
+        <span class="val" id="vw">0.25 slot/s</span></label>
+      <button id="pause">pause</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">steps per slot from atan2(B, A)</div>
+      <label class="rad"><input type="radio" name="K" value="4" checked><span>4, the same as counting edges</span></label>
+      <label class="rad"><input type="radio" name="K" value="16"><span>16</span></label>
+      <label class="rad"><input type="radio" name="K" value="64"><span>64</span></label>
+      <label class="rad"><input type="radio" name="K" value="256"><span>256</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">within one slot</div>
+      <table id="tab">
+        <tr class="t"><td class="lab">true position</td><td class="n" id="ttrue">0.000</td><td>slot</td></tr>
+        <tr class="e"><td class="lab">from atan2, then stepped</td><td class="n" id="test">0.000</td><td>slot</td></tr>
+        <tr class="t"><td class="lab">one step</td><td class="n" id="tstep">0.000</td><td>slot</td></tr>
+        <tr class="e"><td class="lab">largest error over a slot</td><td class="n" id="terr">0.000</td><td>slot</td></tr>
+      </table>
+      <div style="margin-top:4px; color:#718096;">For a wheel with <i>N</i> slots, multiply by 360°/<i>N</i>.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { disc: "#2D3748", slot: "#FFFFFF", grid: "#EDF2F7", text: "#718096", lit: "rgba(214,158,46,0.55)",
+              A: "#2B6CB0", B: "#A51C30", tru: "#D69E2E", est: "#F56565", win: "#2B6CB0", off: "#CBD5E0" };
+  var P = { v: 0.1, b: 0, w: 0.25, K: 4 };
+  var x = 0, playing = true, last = performance.now();
+
+  // ---- the physics: lit fraction of a window on a slotted track ----------
+  // Positions are in slot pitches. The slots are open on [k, k + 0.5).
+  // Without blur, the lit fraction is the overlap of the window with the
+  // open set, divided by the window width. Blur smooths the slot edges
+  // over a length b, which stands in for the lens and the finite source.
+  function openFrac(u) {                       // transmission of the track at position u, blurred
+    var f = ((u % 1) + 1) % 1;                 // position within the pitch
+    if (P.b <= 0) return f < 0.5 ? 1 : 0;
+    // smooth edges at 0 and 0.5 with a linear ramp of width b
+    function ramp(d) { return Math.max(0, Math.min(1, 0.5 + d / P.b)); }
+    // distance inside the open half: positive inside
+    var t = ramp(f) * ramp(0.5 - f);           // rising at 0, falling at 0.5
+    // wrap: also the previous pitch's falling edge near f ~ 1
+    t = Math.max(t, ramp(f - 1) * ramp(1.5 - f));
+    return t;
+  }
+  var NS = 24;                                  // sub-samples across the window
+  function litFraction(xc) {                   // window of width v centred at xc
+    var s = 0;
+    for (var i = 0; i < NS; i++) { var u = xc - P.v / 2 + P.v * (i + 0.5) / NS; s += openFrac(u); }
+    return s / NS;
+  }
+  function signals(xc) {                       // A at xc, B a quarter pitch behind; centred on zero
+    return { A: litFraction(xc) - 0.5, B: litFraction(xc - 0.25) - 0.5 };
+  }
+  function fracFromSignals(sg) {               // position within the slot from the arctangent, in [0, 1)
+    var a = Math.atan2(sg.B, sg.A);            // A = cos-like at the slot centre offset; align so that 0 -> 0
+    // At xc = 0.25 (middle of the open half) A is maximal and B is zero rising: that is angle 0 of the circle.
+    var f = a / (2 * Math.PI) + 0.25;
+    return ((f % 1) + 1) % 1;
+  }
+  function stepped(f) { var q = 1 / P.K; return Math.floor(f / q) * q; }
+
+  // the error curve over one slot, for the present settings
+  var curve = { f: [], e: [], max: 0 };
+  function recompute() {
+    var n = 400, fs = [], es = [], mx = 0;
+    for (var i = 0; i < n; i++) {
+      var xc = i / n, f = fracFromSignals(signals(xc));
+      var err = f - xc; err -= Math.round(err);         // wrap to [-0.5, 0.5)
+      // then the stepping
+      var fq = stepped(((f % 1) + 1) % 1), errq = fq - xc; errq -= Math.round(errq);
+      fs.push(xc); es.push([err, errq]); mx = Math.max(mx, Math.abs(errq));
+    }
+    curve = { f: fs, e: es, max: mx };
+    document.getElementById("terr").textContent = mx.toFixed(3);
+    document.getElementById("tstep").textContent = (1 / P.K).toFixed(4);
+  }
+
+  // ---- drawing helpers -------------------------------------------------
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); ctx.restore();
+  }
+
+  // the track, unrolled, moving left past the fixed windows A and B
+  function drawTrack(x0, y0, w, h) {
+    var ppu = w / 4;                                 // pixels per pitch: four pitches across
+    var yT = y0 + h * 0.3, hT = h * 0.4;
+    ctx.save();
+    // blurred transmission drawn as a gradient of thin bars
+    var cols = Math.round(w / 2);
+    for (var i = 0; i < cols; i++) {
+      var u = x + (i + 0.5) / cols * 4 - 2;          // track position under this pixel column
+      var t = openFrac(u);
+      ctx.fillStyle = "rgb(" + Math.round(45 + 210 * t) + "," + Math.round(55 + 200 * t) + "," + Math.round(72 + 183 * t) + ")";
+      ctx.fillRect(x0 + i * 2, yT, 2.2, hT);
+    }
+    // windows A and B, fixed to the housing; A at track position x, B at x - 0.25
+    var xa = x0 + w / 2, xb = xa - 0.25 * ppu, wv = P.v * ppu;
+    [[xa, "A", COL.A], [xb, "B", COL.B]].forEach(function (d) {
+      ctx.strokeStyle = d[2]; ctx.lineWidth = 1.6;
+      ctx.strokeRect(d[0] - wv / 2, yT - 6, wv, hT + 12);
+      text(d[1], d[0], yT - 16, d[2], 13, "center");
+    });
+    text("the slot track, unrolled, moving past two fixed detector windows", x0, y0 + 4, COL.text, 11, "left");
+    text("one pitch = one slot and one bar", x0 + w, yT + hT + 14, COL.text, 10.5, "right");
+    ctx.restore();
+  }
+
+  // A and B against position over two pitches, with the present point
+  function drawSignals(x0, y0, w, h) {
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, y0 + h / 2); ctx.lineTo(x0 + w, y0 + h / 2); ctx.stroke();
+    [["A", COL.A, 0], ["B", COL.B, 0.25]].forEach(function (s) {
+      ctx.strokeStyle = s[1]; ctx.lineWidth = 1.8; ctx.beginPath();
+      for (var i = 0; i <= 200; i++) {
+        var xc = i / 200 * 2, v = litFraction(xc - s[2]) - 0.5;
+        var px = x0 + w * i / 200, py = y0 + h / 2 - v * h * 0.9;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    });
+    var xm = ((x % 2) + 2) % 2, pxm = x0 + w * xm / 2;
+    ctx.strokeStyle = COL.text; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(pxm, y0); ctx.lineTo(pxm, y0 + h); ctx.stroke(); ctx.setLineDash([]);
+    text("A and B against the track position, two pitches", x0, y0 - 9, COL.text, 11, "left");
+    text("A", x0 + w + 6, y0 + h * 0.2, COL.A, 12, "left"); text("B", x0 + w + 6, y0 + h * 0.8, COL.B, 12, "left");
+    ctx.restore();
+  }
+
+  // B against A, and the present point
+  function drawCircle(cx, cy, r) {
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - r * 1.3, cy); ctx.lineTo(cx + r * 1.3, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - r * 1.3); ctx.lineTo(cx, cy + r * 1.3); ctx.stroke();
+    text("A", cx + r * 1.3 + 4, cy, COL.A, 12, "left"); text("B", cx, cy - r * 1.3 - 8, COL.B, 12, "center");
+    ctx.strokeStyle = COL.disc; ctx.lineWidth = 1.6; ctx.beginPath();
+    for (var i = 0; i <= 240; i++) {
+      var sg = signals(i / 240), px = cx + 2 * r * sg.A, py = cy - 2 * r * sg.B;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.stroke();
+    // the K steps
+    ctx.strokeStyle = COL.off;
+    for (var k = 0; k < Math.min(P.K, 64); k++) { var t = 2 * Math.PI * k / Math.min(P.K, 64); ctx.beginPath(); ctx.moveTo(cx + r * 1.05 * Math.cos(t), cy + r * 1.05 * Math.sin(t)); ctx.lineTo(cx + r * 1.15 * Math.cos(t), cy + r * 1.15 * Math.sin(t)); ctx.stroke(); }
+    var s0 = signals(x), px0 = cx + 2 * r * s0.A, py0 = cy - 2 * r * s0.B;
+    ctx.strokeStyle = COL.tru; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px0, py0); ctx.stroke();
+    ctx.fillStyle = COL.tru; ctx.beginPath(); ctx.arc(px0, py0, 3.5, 0, 2 * Math.PI); ctx.fill();
+    text("B against A over one slot", cx, cy + r * 1.3 + 14, COL.text, 11, "center");
+    text(P.K > 64 ? "ticks: 64 of the " + P.K + " steps" : "ticks: the " + P.K + " steps", cx, cy + r * 1.3 + 27, COL.text, 10.5, "center");
+    ctx.restore();
+  }
+
+  // the error within a slot: atan2 position minus true, raw and stepped
+  function drawError(x0, y0, w, h) {
+    var scale = Math.max(curve.max, 1 / P.K) * 1.3;
+    ctx.save();
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1;
+    [-1, 0, 1].forEach(function (f) {
+      var y = y0 + h / 2 - f * h / 2 / 1.3;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+      text((f > 0 ? "+" : "") + (f * scale / 1.3).toFixed(3), x0 - 6, y, COL.text, 10.5, "right");
+    });
+    ctx.strokeStyle = COL.off; ctx.lineWidth = 1.4; ctx.beginPath();
+    for (var i = 0; i < curve.f.length; i++) {
+      var px = x0 + w * curve.f[i], py = y0 + h / 2 - (h / 2) * curve.e[i][0] / scale;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = COL.est; ctx.lineWidth = 1.6; ctx.beginPath();
+    for (i = 0; i < curve.f.length; i++) {
+      px = x0 + w * curve.f[i]; py = y0 + h / 2 - (h / 2) * curve.e[i][1] / scale;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    var xm = ((x % 1) + 1) % 1, pxm = x0 + w * xm;
+    ctx.strokeStyle = COL.text; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(pxm, y0); ctx.lineTo(pxm, y0 + h); ctx.stroke(); ctx.setLineDash([]);
+    text("read minus true, within one slot (grey: before stepping, red: after)", x0, y0 - 9, COL.text, 11, "left");
+    text("0", x0, y0 + h + 10, COL.text, 10.5, "left"); text("1 slot", x0 + w, y0 + h + 10, COL.text, 10.5, "right");
+    ctx.restore();
+  }
+
+  // ---- draw -----------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var panel  = document.getElementById("panel");
+    var panelW = panel.offsetWidth + 16;
+    var ax0 = panelW, ax1 = W - 40, ay0 = 10, ay1 = H - 12;
+    var topH = (ay1 - ay0) * 0.3, midH = (ay1 - ay0) * 0.3;
+    drawTrack(ax0, ay0, ax1 - ax0, topH);
+    drawSignals(ax0, ay0 + topH + 24, (ax1 - ax0) * 0.62, midH - 30);
+    var r = Math.min(midH * 0.32, (ax1 - ax0) * 0.1);
+    drawCircle(ax0 + (ax1 - ax0) * 0.84, ay0 + topH + 24 + (midH - 30) / 2, r);
+    drawError(ax0 + 40, ay0 + topH + midH + 30, ax1 - ax0 - 40, ay1 - (ay0 + topH + midH + 30) - 16);
+
+    var f = ((x % 1) + 1) % 1, fe = fracFromSignals(signals(x));
+    document.getElementById("ttrue").textContent = f.toFixed(3);
+    document.getElementById("test").textContent = stepped(fe).toFixed(3);
+  }
+
+  function tick(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (playing) x += P.w * dt;
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls ---------------------------------------------------------
+  var SPEC = { v: ["sv", "vv", function (v) { return v.toFixed(2); }],
+               b: ["sb", "vb", function (v) { return v.toFixed(2); }],
+               w: ["sw", "vw", function (v) { return v.toFixed(2) + " slot/s"; }] };
+  function show(key) { document.getElementById(SPEC[key][1]).textContent = SPEC[key][2](P[key]); }
+  Object.keys(SPEC).forEach(function (key) {
+    var el = document.getElementById(SPEC[key][0]);
+    el.addEventListener("input", function () { P[key] = parseFloat(el.value); show(key); recompute(); });
+    show(key);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="K"]'), function (el) {
+    el.addEventListener("change", function () { P.K = parseInt(el.value, 10); recompute(); });
+  });
+  document.getElementById("pause").addEventListener("click", function () { playing = !playing; this.textContent = playing ? "pause" : "play"; });
+
+  // URL presets: ?v=0.1&b=0&w=0.25&K=4
+  (function () {
+    var q = new URLSearchParams(location.search);
+    Object.keys(SPEC).forEach(function (key) {
+      if (!q.has(key)) return;
+      var v = parseFloat(q.get(key)); if (!isFinite(v)) return;
+      var el = document.getElementById(SPEC[key][0]);
+      v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), v));
+      P[key] = v; el.value = v; show(key);
+    });
+    if (q.has("K")) {
+      var k = parseInt(q.get("K"), 10);
+      if ([4, 16, 64, 256].indexOf(k) >= 0) { P.K = k; document.querySelector('input[name="K"][value="' + k + '"]').checked = true; }
+    }
+  })();
+
+  // ---- sizing ---------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  recompute();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

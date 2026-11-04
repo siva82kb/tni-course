@@ -230,7 +230,7 @@ function plotInit() {
     legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
               bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' } },
     xaxis: { ...axStyle, range: [-WIN, 0],
-      title: { text: 'time (s)', font: { size: 11, color: '#4A5568' } } },
+      title: { text: 'Time (s)', font: { size: 11, color: '#4A5568' } } },
     yaxis: { ...axStyle, range: [-1.2, 1.2] },
   }, cfg);
   initialized = true;
@@ -264,7 +264,7 @@ function plotUpdate() {
     legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 0.98, yanchor: 'top',
               bgcolor: 'rgba(0,0,0,0)', font: { size: 10, color: '#4A5568' } },
     xaxis: { ...axStyle, range: [tEnd - WIN, tEnd],
-      title: { text: 'time (s)', font: { size: 11, color: '#4A5568' } } },
+      title: { text: 'Time (s)', font: { size: 11, color: '#4A5568' } } },
     yaxis: { ...axStyle, range: yRange },
   }, cfg);
 }

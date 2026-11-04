@@ -112,18 +112,18 @@
 <div id="panel">
     <div class="grp">
       <div class="hd">sensor orientation R<sub>S</sub><sup>E</sup></div>
-      <label class="sl free" id="slp"><span class="k">roll</span>
+      <label class="sl free" id="slp"><span class="k">Roll</span>
         <input type="range" id="sp" min="-180" max="180" step="5" value="0">
         <span class="val" id="vp">0&deg;</span></label>
-      <div class="sub" id="subp">about the sensor's x axis, along the field: the magnetometer cannot see it</div>
-      <label class="sl"><span class="k">pitch</span>
+      <div class="sub" id="subp">About the sensor's x axis, along the field: the magnetometer cannot see it</div>
+      <label class="sl"><span class="k">Pitch</span>
         <input type="range" id="sr" min="-180" max="180" step="5" value="0">
         <span class="val" id="vr">0&deg;</span></label>
-      <div class="sub">about the sensor's z axis</div>
-      <label class="sl free" id="sly"><span class="k">yaw</span>
+      <div class="sub">About the sensor's z axis</div>
+      <label class="sl free" id="sly"><span class="k">Yaw</span>
         <input type="range" id="sy" min="-180" max="180" step="5" value="0">
         <span class="val" id="vy">0&deg;</span></label>
-      <div class="sub" id="suby">about the vertical, along gravity: the accelerometer cannot see it</div>
+      <div class="sub" id="suby">About the vertical, along gravity: the accelerometer cannot see it</div>
     </div>
 
     <div class="grp">
@@ -133,8 +133,8 @@
         <div class="row"><span class="k">y</span><span class="track"><span class="fill" id="bay"></span></span><span class="n" id="nay">9.81</span><span class="u"></span></div>
         <div class="row"><span class="k">z</span><span class="track"><span class="fill" id="baz"></span></span><span class="n" id="naz">0</span><span class="u"></span></div>
       </div>
-      <button id="zero">zero angles</button><button id="reset">reset view</button>
-      <div class="hint">drag &middot; shift-drag pans &middot; scroll</div>
+      <button id="zero">Zero angles</button><button id="reset">Reset view</button>
+      <div class="hint">Drag &middot; shift-drag pans &middot; scroll</div>
     </div>
 
     <div class="grp">
@@ -153,7 +153,7 @@
   <div id="legend">
     <span class="g">&minus;g, up: what the accelerometer reads</span>
     <span class="m">Earth's field: what the magnetometer reads</span>
-    <span class="s">components along the sensor's axes</span>
+    <span class="s">Components along the sensor's axes</span>
   </div>
 </div>
 
@@ -280,7 +280,7 @@
   KEYS.forEach(function (a) { mkLabel("S" + a, "<b>" + a + "</b><sub>S</sub>", COL.S[a]); });
   mkLabel("g", "&minus;<b>g</b><sup>E</sup>", COL.g);
   mkLabel("m", "<b>m</b><sup>E</sup>", COL.m);
-  mkLabel("N", "north", COL.E);
+  mkLabel("N", "North", COL.E);
   function placeLabel(key, p, dx, dy, show) {
     var d = labels[key];
     if (show === false) { d.style.display = "none"; return; }
@@ -378,8 +378,8 @@
     // roll is along the field only while yaw is zero
     document.getElementById("slp").className = "sl" + (ANG.yaw === 0 ? " free" : "");
     document.getElementById("subp").textContent = ANG.yaw === 0
-      ? "about the sensor's x axis, along the field: the magnetometer cannot see it"
-      : "about the sensor's x axis, no longer along the field";
+      ? "About the sensor's x axis, along the field: the magnetometer cannot see it"
+      : "About the sensor's x axis, no longer along the field";
   }
 
   // ---- interaction ----------------------------------------------------

@@ -228,7 +228,7 @@ function redraw() {
   const coplbl   = copmean  !== null ? `COP  ${copmean.toFixed(1)} ± ${copstd.toFixed(1)} cm`    : 'COP  —';
   const ftotlbl  = ftotmean !== null ? `ΣF  ${ftotmean.toFixed(1)} ± ${ftotstd.toFixed(1)} N`   : 'ΣF  —';
   const errlbl   = Math.abs(d) < 0.25 ? '÷0 error'
-                 : errmean !== null ? `err  ${errmean.toFixed(1)} ± ${errstd.toFixed(1)} %` : 'err  —';
+                 : errmean !== null ? `Err  ${errmean.toFixed(1)} ± ${errstd.toFixed(1)} %` : 'Err  —';
   const errcol   = Math.abs(d) < 0.25 ? '#DC2626' : C_COP;
 
   // True-value dashed lines (full width of plot)

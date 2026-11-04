@@ -100,10 +100,10 @@
   <div id="panel">
     <div class="grp">
       <div class="hd">the truth</div>
-      <label class="sl"><span class="k">tilt &theta;</span>
+      <label class="sl"><span class="k">Tilt &theta;</span>
         <input type="range" id="sth" min="-90" max="90" step="1" value="30">
         <span class="val" id="vth">30&deg;</span></label>
-      <label class="sl"><span class="k">noise &sigma;</span>
+      <label class="sl"><span class="k">Noise &sigma;</span>
         <input type="range" id="ssg" min="0" max="10" step="0.25" value="1">
         <span class="val" id="vsg">1% g</span></label>
     </div>
@@ -119,14 +119,14 @@
         <tr class="two"><td class="lab">atan2(a<sub>x</sub>, a<sub>y</sub>)</td>
             <td class="n" id="t2">0</td><td class="n" id="e2">0</td><td class="n" id="r2">0</td></tr>
       </table>
-      <button id="run">pause</button><button id="clear">clear rms</button>
+      <button id="run">Pause</button><button id="clear">Clear rms</button>
     </div>
   </div>
 
   <div id="legend">
-    <span class="t">true sensor</span>
-    <span class="one">one axis, arcsin</span>
-    <span class="two">both axes, atan2</span>
+    <span class="t">True sensor</span>
+    <span class="one">One axis, arcsin</span>
+    <span class="two">Both axes, atan2</span>
   </div>
 </div>
 
@@ -302,7 +302,7 @@
   });
   document.getElementById("run").addEventListener("click", function () {
     running = !running;
-    this.textContent = running ? "pause" : "run";
+    this.textContent = running ? "Pause" : "Run";
   });
   document.getElementById("clear").addEventListener("click", function () {
     resetErrs(); sample(); draw();

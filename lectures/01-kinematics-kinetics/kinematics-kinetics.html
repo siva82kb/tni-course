@@ -32,7 +32,7 @@
       vertical-align: middle;
     }
   </style>
-  <link rel="stylesheet" href="kinematics-kinetics_files/libs/revealjs/dist/theme/quarto-0c8ff9882eab04b3ed064306cf6f228b.css">
+  <link rel="stylesheet" href="kinematics-kinetics_files/libs/revealjs/dist/theme/quarto-b8d87771e97f577391282b9941c6ae86.css">
   <link href="kinematics-kinetics_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="kinematics-kinetics_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="kinematics-kinetics_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -2681,6 +2681,396 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 </div></div>
 <div style="font-size: 0.7em; margin-top: 0.25em;">
 <p><span class="deemph">InvenSense, MPU-9250 Product Specification, rev. 1.0, 2014, section 3.1, table 1.</span></p>
+</div>
+</section>
+<section id="encoders" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Joint angles: one body measured against the next</span></p>
+<div class="columns" style="margin-top: -0.5em;">
+<div class="column" style="width: 36%;">
+<div style="position:relative; width:fit-content; margin:0 auto;">
+<div class="r-stack">
+<p><img data-src="figures/fullbody-base.svg" style="height:270px; width:auto; max-height:none; display:block;"></p>
+<p><img data-src="figures/fullbody-frames.svg" class="fragment" style="height:270px; width:auto; max-height:none; display:block;" data-fragment-index="1"></p>
+</div>
+</div>
+<div style="position:relative; width:fit-content; margin:0 auto;">
+<div class="r-stack">
+<p><img data-src="figures/robot.png" style="height:250px; width:auto; max-height:none; display:block; border-radius:6px;"></p>
+<p><img data-src="figures/robot-frames.svg" class="fragment" style="height:250px; width:auto; max-height:none; display:block;" data-fragment-index="1"></p>
+</div>
+</div>
+</div><div class="column" style="width: 62%; font-size: 0.85em; padding-left: 0.75em;">
+<p>A joint angle is one number. It tells how one body is turned with respect to the body next to it.</p>
+<p>The human body is a kinematic chain. So is a robot arm. Each body is measured against the body it is joined to. That is usually the body nearer the trunk. The knee angle is the turn of the shank with respect to the thigh.</p>
+<p>A human joint can have up to three angles. A clinician usually wants one or two of them.</p>
+<p>Robots, exoskeletons and rehabilitation devices have joints with one or more degrees of freedom. Each angle must be measured. The device must know its joint angles before it moves.</p>
+<p><span class="red">This section is about sensors that sit on the joint and read the angle directly.</span></p>
+</div></div>
+</section>
+<section id="encoders-1" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">A joint angle measured at the hinge</span></p>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p>The joint is a hinge. The angle is the turn of one limb about the hinge axis, relative to the other limb. A sensor on the hinge reads a shaft on that axis against a housing on one limb.</p>
+<p>A camera measures a marker against the camera frame. An IMU measures its own case against gravity and inertia. An <span class="highlight">encoder</span> measures a shaft against its housing.</p>
+<div class="fragment">
+<p>Fix the shaft to the distal limb, on the joint axis. Fix the housing to the proximal limb. The reverse works too. The encoder then reads the joint angle directly. <span class="highlight">There is no drift and no line of sight.</span></p>
+<p>One calibration remains. The encoder’s zero is where the shaft was fitted, not where the joint is straight. Hold the limb straight once and record the offset. That is one number.</p>
+</div>
+<div class="fragment">
+<p>The price is a <span class="red">frame</span>. Something rigid must hold the shaft on the joint axis. In our field that frame is a device the patient wears or holds.</p>
+<ul>
+<li>an electrogoniometer strapped across the knee or the elbow</li>
+<li>a rehabilitation robot or an exoskeleton, one encoder per joint</li>
+<li>an isokinetic dynamometer</li>
+</ul>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p><span class="red">This section asks two questions. How does a turning shaft become a number? What can go wrong on the way?</span></p>
+</div>
+</div>
+</section>
+<section id="encoders-2" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">What the device must tell us</span></p>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p>Four things describe a turning shaft. <span class="highlight">(1)</span> How far it has turned. <span class="highlight">(2)</span> How fast. <span class="highlight">(3)</span> Which way. <span class="highlight">(4)</span> Where it is now.</p>
+<div class="fragment">
+<ul>
+<li><p>The first three are <span class="highlight">relative</span>. They are changes since some earlier moment.</p></li>
+<li><p>The last is <span class="highlight">absolute</span>. It is a position measured from a fixed zero on the housing.</p></li>
+</ul>
+</div>
+<div class="fragment">
+<p><span class="highlight">The difference matters at switch-on.</span></p>
+<ul>
+<li>A relative encoder wakes up knowing nothing.</li>
+<li>An absolute encoder wakes up knowing the angle.</li>
+</ul>
+<div class="deemph" style="font-size: 0.85em; margin-top: -1.0em;">
+<p>A <strong>rehabilitation robot</strong> must know the angle before its first move. So it needs an absolute encoder, or it must first search slowly for a home position.</p>
+</div>
+<div class="deemph" style="font-size: 0.85em; margin-top: -1.0em;">
+<p>Similarly a <strong>electrogoniometer</strong> requires well defined zero, so that it can be used for measruing range of motion without any ambiguity. A relative encoder can be used, but it must be zeroed at the start of each measurement.</p>
+</div>
+</div>
+<div class="fragment">
+<p>The oldest encoder is a <span class="highlight">potentiometer</span> on the joint axis. The resistance between the wiper and one end is proportional to the angle. It is absolute, cheap and simple. But the wiper rubs on the track. The track wears and the contact is noisy. The two encoders that follow replace the rubbing contact with light or with a magnetic field.</p>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.5em;">
+<p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, parts 1 to 3.</span></p>
+</div>
+</section>
+<section id="encoders-3" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Optical encoder: a slotted wheel between a lamp and a detector</span></p>
+
+<img data-src="figures/encoder-optical.svg" class="quarto-figure quarto-figure-center r-stretch" style="margin-top: -0.5em; margin-bottom: 0;;width:100.0%"><div style="font-size: 0.85em; margin-top: 0.25em;">
+<div class="fragment">
+<p>An LED on one side, a photodetector on the other, and a <span class="highlight">code wheel</span> with <span class="math inline">\(N\)</span> slots on the shaft between them. Each slot that passes lets light through. The detector output is a pulse train.</p>
+</div>
+<div class="fragment">
+<p>Count the pulses and you know the angle turned. Count pulses per second and you know the speed.</p>
+<p>There are two ways to count. Count one edge per slot and the step is <span class="math inline">\(360^\circ/N\)</span>. Count both edges, the rise and the fall, and the step is <span class="math inline">\(360^\circ/2N\)</span>. Decoders call these x1 and x2. <span class="deemph">The x2 step is even only if the slot is exactly half the pitch.</span></p>
+</div>
+<div class="fragment">
+<p>Two layouts exist. <span class="highlight">Transmissive</span>: lamp and detector on opposite sides of the wheel. <span class="highlight">Reflective</span>: both on the same side, and the wheel carries reflecting and dark patches. The reflective kind is thinner and cheaper to assemble.</p>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, part 4.</span></p>
+</div>
+</section>
+<section id="encoders-4" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Optical encoder: direction and resolution from a second detector</span></p>
+
+<img data-src="figures/encoder-quadrature.svg" class="quarto-figure quarto-figure-center r-stretch" style="margin-top: -0.5em; margin-bottom: 0;;width:100.0%"><div style="font-size: 0.85em; margin-top: 0.25em;">
+<div class="fragment">
+<p>One detector cannot tell the two directions apart. The pulse train looks the same either way.</p>
+</div>
+<div class="fragment">
+<p>Put a second detector a <span class="highlight">quarter of a slot pitch</span> further round the track. Its signal B is a quarter cycle behind A in one direction and a quarter cycle ahead in the other. The order of the edges gives the direction. This is <span class="highlight">quadrature</span>.</p>
+</div>
+<div class="fragment">
+<p>Two channels give four edges per slot. Counting all of them, x4, the step is <span class="math inline">\(\Delta\theta = 360^\circ / 4N\)</span>. A wheel with 500 slots gives 2000 counts per turn, <span class="math inline">\(0.18^\circ\)</span> each. <span class="deemph">The x4 steps are even only if B sits exactly a quarter pitch behind A.</span></p>
+</div>
+<div class="fragment">
+<p>A third detector on an inner track with one window gives one pulse per turn, the <span class="highlight">index Z</span>. It marks a home position, so a relative encoder can find its zero after one turn.</p>
+</div>
+</div>
+</section>
+<section id="encoders-5" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Counting edges: what a quadrature counter knows</span></p>
+<iframe data-src="interactive/quadrature.html?N=16&amp;w=45" style="width:100%; height:600px; border:0; display:block;" title="An incremental encoder: slotted wheel, two detectors, an up-down counter">
+</iframe>
+</section>
+<section id="encoders-6" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Optical encoder: absolute</span></p>
+<div style="font-size: 0.85em; margin-top: 0.25em;">
+<p>Instead of one track, the wheel carries several concentric tracks, one per bit. A row of detectors reads them all at once. With <span class="math inline">\(n\)</span> tracks there are <span class="math inline">\(2^n\)</span> positions. Four tracks give 16, as drawn. Twelve give 4096. The angle is there the moment the power comes on.</p>
+<div class="fragment">
+<p>The tracks use a <span class="highlight">Gray code</span>, not plain binary, so that only one bit changes between neighbouring sectors. In plain binary, sector 7 is 0111 and sector 8 is 1000. All four bits change at once. If the detectors do not switch at exactly the same instant, the reading passes through wrong codes. In Gray code, sector 7 is 0100 and sector 8 is 1100. A late detector gives one neighbour or the other, never a third sector.</p>
+</div>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="figures/encoder-absolute.svg" class="quarto-figure quarto-figure-center" style="margin-top: -0.5em; margin-bottom: 0;;width:80.0%"></p>
+</figure>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, parts 3 and 4.</span></p>
+</div>
+</section>
+<section id="encoders-7" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Optical encoder: reading inside a slot</span></p>
+
+<img data-src="figures/encoder-interp.svg" class="quarto-figure quarto-figure-center r-stretch" style="margin-top: -0.5em; margin-bottom: 0;;width:100.0%"><div style="font-size: 0.75em; margin-top: 0.25em;">
+<div class="fragment" style="margin-top: -0.5em;">
+<p>Two sizes matter: (a) Slot size <span class="math inline">\(W_s\)</span>, and (b) Detector size <span class="math inline">\(W_d\)</span>.</p>
+<ul>
+<li><span class="math inline">\(W_s \gg W_d\)</span>: Detector fully lit or fully dark. The output is a square wave and only the edges provide the relevant information.</li>
+<li><span class="math inline">\(W_s \approx W_d\)</span>: Output varies continuously with slot movement. A real light spot is soft, bright in the middle and fading at the sides, so the output is a wave close to a sine. A and B together act like cosine and sine of the position within the slot. <span class="math inline">\(\operatorname{atan2}(B, A)\)</span> gives the position.</li>
+</ul>
+</div>
+<div class="fragment" style="margin-top: -0.5em;">
+<p><span class="math inline">\(\operatorname{atan2}(B, A)\)</span> is rounded to the nearest <span class="math inline">\(1/K\)</span>, and <span class="math inline">\(K\)</span> sets the resolution within a slot. The step of the whole encoder is then <span class="math inline">\(360^\circ / (N K)\)</span>. This is <span class="highlight">interpolation</span>. The maker chooses <span class="math inline">\(K \approx 100-1000\)</span>.</p>
+<p><span class="deemph"><span class="math inline">\(K\)</span> limited by noise in A and B channels. A and B are never a perfect cosine/sine pair, so computed position is slightly off. Steps finer than these two effects are empty digits.</span></p>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, part 4.</span></p>
+</div>
+</section>
+<section id="encoders-8" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Optical encoder: resolution is not accuracy</span></p>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p>An encoder datasheet gives two numbers. They mean different things.</p>
+<div class="fragment">
+<p><span class="highlight">Resolution</span> is the size of one step. It comes from the slots and from the interpolation of the last slide. The step is <span class="math inline">\(360^\circ/(NK)\)</span>. The maker can make it as small as they like.</p>
+</div>
+<div class="fragment">
+<p><span class="highlight">Accuracy</span> is how far the reported angle can be from the true angle. It comes from the wheel and its mounting. A wheel centred <span class="math inline">\(0.05\)</span> mm off its shaft, on a <span class="math inline">\(10\)</span> mm track, reads <span class="math inline">\(0.3^\circ\)</span> wrong once per turn, whatever the step size.</p>
+</div>
+<div class="fragment">
+<p><span class="red">Ask for both numbers. A 2000-count encoder with a <span class="math inline">\(0.3^\circ\)</span> wheel error has a resolution of <span class="math inline">\(0.18^\circ\)</span> and an accuracy of <span class="math inline">\(0.3^\circ\)</span>.</span> <span class="deemph">The maker centres the wheel and sets <span class="math inline">\(K\)</span>. You read the datasheet.</span></p>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.5em;">
+<p><span class="deemph">The <span class="math inline">\(0.3^\circ\)</span> is the offset over the track radius, <span class="math inline">\(e/r\)</span>, our estimate.</span></p>
+</div>
+</section>
+<section id="encoders-9" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Magnetic encoder: a magnet, two Hall elements and an arctangent</span></p>
+
+<img data-src="figures/encoder-magnetic.svg" class="quarto-figure quarto-figure-center r-stretch" style="margin-top: -0.5em; margin-bottom: 0;;width:100.0%"><div style="font-size: 0.85em; margin-top: 0.25em;">
+<div class="fragment">
+<p>A small disc magnet on the end of the shaft, magnetised across its diameter. A sensor chip on the axis just below it. As the shaft turns, the field at the chip turns with it, at constant strength.</p>
+</div>
+<div class="fragment">
+<p>A <span class="highlight">Hall element</span> gives a voltage proportional to the field component along one axis. <span class="deemph">We take that as given here and meet the Hall effect properly in flow measurement.</span> Two of them at right angles give <span class="math inline">\(B_x = B\cos\theta\)</span> and <span class="math inline">\(B_y = B\sin\theta\)</span>.</p>
+</div>
+<div class="fragment">
+<p>Then <span class="math inline">\(\theta = \operatorname{atan2}(B_y, B_x)\)</span>. One calculation, an absolute angle, no slots, no contact, no light path to keep clean. The chip does the arctangent and sends the angle out as a number, or as A, B and Z pulses if you prefer.</p>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, part 5.</span></p>
+</div>
+</section>
+<section id="encoders-10" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Magnetic encoder: the measurement model</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>The two readings follow the same form as every sensor in this course. A gain matrix, a rotation, an offset, and noise:</p>
+<div style="margin-top: -0.5em;">
+<p><span class="math display">\[\m{\tilde{B}_x \\ \tilde{B}_y} = \v{G}\,\m{\cos\theta &amp; -\sin\theta \\ \sin\theta &amp; \cos\theta}\m{B \\ 0} + \v{b} + \v{e}\]</span></p>
+</div>
+<div class="fragment" style="margin-top: -0.25em;">
+<p>With <span class="math inline">\(\v{G} = \v{I}\)</span> and <span class="math inline">\(\v{b} = \v{0}\)</span> the readings trace a circle and the arctangent is exact. Each departure has a cause, and each cause has a <span class="highlight">signature</span> in the error plotted against the angle:</p>
+</div>
+<div class="fragment fit" style="font-size: 0.9em;">
+<table class="caption-top">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 30%">
+<col style="width: 52%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Cause</th>
+<th style="text-align: left;">The circle</th>
+<th style="text-align: left;">Error pattern against angle</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Stray field, or sensor offset</td>
+<td style="text-align: left;">Shifted centre</td>
+<td style="text-align: left;">Once per turn, <span class="math inline">\(\approx b/B\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Gain mismatch</td>
+<td style="text-align: left;">Ellipse</td>
+<td style="text-align: left;">Twice per turn</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Elements not at right angles</td>
+<td style="text-align: left;">Tilted ellipse</td>
+<td style="text-align: left;">Twice per turn, plus a constant</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Chip tilted</td>
+<td style="text-align: left;">Ellipse</td>
+<td style="text-align: left;">Twice per turn; once per turn too if the chip is off the axis</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Magnet off centre or tilted</td>
+<td style="text-align: left;">Smaller circle</td>
+<td style="text-align: left;">None, but noise matters more</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Noise</td>
+<td style="text-align: left;">Thicker line</td>
+<td style="text-align: left;">Random, <span class="math inline">\(\approx \sigma/B\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="fragment">
+<p><span class="red">The stray-field error is <span class="math inline">\(b/B\)</span>: a stray field of 1 % of the magnet’s field is <span class="math inline">\(0.6^\circ\)</span>. A stronger magnet shrinks every one of these.</span></p>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.25em;">
+<p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, part 6. The form of the model and the signatures are ours; the simulation on the next slide checks them.</span></p>
+</div>
+</section>
+<section id="encoders-11" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Magnetic encoder: what spoils the circle</span></p>
+<iframe data-src="interactive/magenc.html?w=30&amp;s=0&amp;g=0&amp;q=0&amp;n=0" style="width:100%; height:600px; border:0; display:block;" title="A magnetic encoder: the Lissajous circle, and the angle error from stray field, gain mismatch, skew and noise">
+</iframe>
+</section>
+<section id="encoders-12" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Magnetic encoder: keeping the circle round</span></p>
+<div style="font-size: 0.9em; margin-top: -0.5em;">
+<p>Each cause in the table is kept out or calibrated out.</p>
+<div class="fragment">
+<ul>
+<li><span class="highlight">Keep magnets and steel away.</span> A steel shaft or screw near the chip bends the field. Use non-magnetic parts there. A ring of magnetic material around the sensor keeps outside fields away.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><span class="highlight">Make the field strong.</span> The Hall element’s noise does not grow with the field. A stronger magnet, closer to the chip, raises the signal. Every error in the table shrinks with it.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><span class="highlight">The two elements sit on one chip.</span> They are made side by side on the same silicon. So they have nearly equal gain and drift together with temperature. The square package centres itself in the solder when it melts. That removes most of the mounting misalignment.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><span class="highlight">Calibrate the rest.</span> Turn the shaft through one full turn. Fit a circle to the readings. Correct the centre and the ellipse.</li>
+</ul>
+</div>
+</div>
+<div style="font-size: 0.7em; margin-top: 0.5em;">
+<p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, part 6.</span></p>
+</div>
+</section>
+<section id="encoders-13" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Optical or magnetic</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<div class="fit">
+<table class="caption-top">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 40%">
+<col style="width: 45%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: left;">Optical</th>
+<th style="text-align: left;">Magnetic</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Resolution</td>
+<td style="text-align: left;">Highest. Thousands of slots, then interpolation.</td>
+<td style="text-align: left;">12 to 14 bits from the arctangent, 4096 to 16384 per turn.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Accuracy</td>
+<td style="text-align: left;">Set by the wheel’s centring.</td>
+<td style="text-align: left;">Set by stray fields and the chip’s two gains.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dust, oil, water</td>
+<td style="text-align: left;">Blocks the light path.</td>
+<td style="text-align: left;">No effect.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Nearby magnets and steel</td>
+<td style="text-align: left;">No effect.</td>
+<td style="text-align: left;">Bends the field, shifts the angle.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Size</td>
+<td style="text-align: left;">A wheel, a lamp, a detector.</td>
+<td style="text-align: left;">One chip and a magnet the size of a lentil.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Absolute angle</td>
+<td style="text-align: left;">Needs a multi-track wheel.</td>
+<td style="text-align: left;">Comes free from the arctangent.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Cost</td>
+<td style="text-align: left;">Higher for the absolute kind.</td>
+<td style="text-align: left;">Low.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="fragment" style="margin-top: 0.5em;">
+<p><span class="highlight">For a joint in a rehabilitation robot</span>, magnetic. It is small, absolute, and the joint is sealed from dust. Keep the motor’s steel and magnets away from the chip, or shield it.</p>
+<p><span class="highlight">For a strap-on goniometer</span>, either, and the limiting error is not the encoder at all. It is how well the strap keeps the shaft on the joint axis, which moves under the skin as the joint flexes.</p>
+</div>
+</div>
+</section>
+<section id="encoders-14" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">A goniometer on a knee: what is it measuring?</span></p>
+<iframe data-src="interactive/gonio.html" style="width:80%; height:460px; border:0; display:block; margin:0 auto;" title="A photograph of a goniometer held on a knee: click the joint centre, a femur point and a tibia point, and compare the angles">
+</iframe>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>With goniometry, the variations from the measurement procedure will be larger than the sensor’s error.</p>
+</div>
+</section>
+<section id="encoders-15" class="slide level2">
+<h2>Encoders</h2>
+<p><span class="framesub">Exoskeletons have a similar issue with joint axis misalignment</span></p>
+<iframe data-src="interactive/exo.html?ex=0.06&amp;ey=0.08&amp;r=0.5&amp;zero=1" style="width:100%; height:380px; border:0; display:block;" title="An exoskeleton strapped to a moving shank, its hinge off the knee: the knee angle and the exoskeleton's angle over time">
+</iframe>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>Exactly the same as goniometer-based joint angle measurement problem.</p>
+<p>Joint offset will change as the subject moves depending on the strap tension and the joint angle. <span class="math display">\[ \theta_{robot} \neq \theta_{human} \]</span></p>
+<p>Apart from safety, this is another reason why joint axes alignment is important in exoskeletons. <span class="deemph" style="font-size: 0.85em;">The misalignment will cause the exoskeleton to apply unwanted torques on the human joints, which can lead to discomfort or injury.</span></p>
 </div>
 
 </section></section>

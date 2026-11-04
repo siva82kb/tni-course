@@ -125,86 +125,86 @@
         <span class="val" id="v_z"></span></label>
       <label><span class="k">d</span>
         <input type="range" id="s_d" min="0.02" max="0.3" step="0.005" value="0.1">
-        <span class="val" id="v_d"></span> m <span style="color:var(--warmgray)">true side</span></label>
+        <span class="val" id="v_d"></span> m <span style="color:var(--warmgray)">True side</span></label>
     </div>
 
     <div class="grp">
       <div class="hd">tag orientation</div>
-      <label><span class="k">pan</span>
+      <label><span class="k">Pan</span>
         <input type="range" id="s_yaw" min="-85" max="85" step="0.5" value="30">
-        <span class="val" id="v_yaw"></span>&deg; <span style="color:var(--warmgray)">about y</span></label>
-      <label><span class="k">tilt</span>
+        <span class="val" id="v_yaw"></span>&deg; <span style="color:var(--warmgray)">About y</span></label>
+      <label><span class="k">Tilt</span>
         <input type="range" id="s_pitch" min="-85" max="85" step="0.5" value="-20">
-        <span class="val" id="v_pitch"></span>&deg; <span style="color:var(--warmgray)">about x</span></label>
-      <label><span class="k">roll</span>
+        <span class="val" id="v_pitch"></span>&deg; <span style="color:var(--warmgray)">About x</span></label>
+      <label><span class="k">Roll</span>
         <input type="range" id="s_roll" min="-180" max="180" step="0.5" value="10">
-        <span class="val" id="v_roll"></span>&deg; <span style="color:var(--warmgray)">about z</span></label>
+        <span class="val" id="v_roll"></span>&deg; <span style="color:var(--warmgray)">About z</span></label>
     </div>
 
     <div class="grp">
       <div class="hd">the measurement</div>
-      <label><span class="k">noise</span>
+      <label><span class="k">Noise</span>
         <input type="range" id="s_noise" min="0" max="3" step="0.1" value="0">
         <span class="val" id="v_noise"></span> px</label>
       <label><span class="k">d&#770;</span>
         <input type="range" id="s_dhat" min="0.02" max="0.3" step="0.005" value="0.1">
-        <span class="val" id="v_dhat"></span> m <span style="color:var(--warmgray)">side the solver assumes</span></label>
+        <span class="val" id="v_dhat"></span> m <span style="color:var(--warmgray)">Side the solver assumes</span></label>
       <div class="row">
-        <button id="redraw">redraw noise</button>
-        <label style="display:inline"><input type="checkbox" id="c_place">place the corners by clicking</label>
-        <button id="clear">clear</button>
+        <button id="redraw">Redraw noise</button>
+        <label style="display:inline"><input type="checkbox" id="c_place">Place the corners by clicking</label>
+        <button id="clear">Clear</button>
       </div>
     </div>
 
     <div class="grp">
       <div class="hd">presets</div>
       <div class="row">
-        <button class="preset" data-p="square">square-on</button>
-        <button class="preset" data-p="oblique">oblique</button>
-        <button class="preset" data-p="far">far</button>
-        <button class="preset" data-p="default">default</button>
+        <button class="preset" data-p="square">Square-on</button>
+        <button class="preset" data-p="oblique">Oblique</button>
+        <button class="preset" data-p="far">Far</button>
+        <button class="preset" data-p="default">Default</button>
       </div>
       <div class="row">
-        <label style="display:inline"><input type="checkbox" id="c_closed" checked>show closed-form</label>
-        <label style="display:inline"><input type="checkbox" id="c_refined" checked>show refined</label>
+        <label style="display:inline"><input type="checkbox" id="c_closed" checked>Show closed-form</label>
+        <label style="display:inline"><input type="checkbox" id="c_refined" checked>Show refined</label>
       </div>
-      <div class="row"><button id="reset">reset view</button> drag 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
+      <div class="row"><button id="reset">Reset view</button> Drag 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
     </div>
   </div>
 
   <div id="panes">
     <div class="pane" id="image">
       <canvas id="ci"></canvas>
-      <div class="cap top"><span style="color:var(--forest)">the image</span> &middot; <span id="imgcap">the four corners, in order</span></div>
+      <div class="cap top"><span style="color:var(--forest)">The image</span> &middot; <span id="imgcap">the four corners, in order</span></div>
     </div>
     <div class="pane" id="world">
       <canvas id="cw"></canvas>
-      <div class="cap">camera at the origin &middot; <span style="color:var(--charcoal)">true tag</span> &middot;
-        <span style="color:var(--crimson)">closed form</span> &middot; <span style="color:var(--forest)">refined</span></div>
+      <div class="cap">Camera at the origin &middot; <span style="color:var(--charcoal)">True tag</span> &middot;
+        <span style="color:var(--crimson)">Closed form</span> &middot; <span style="color:var(--forest)">Refined</span></div>
     </div>
     <div id="steps">
       <div class="step" id="st1">
-        <div class="t"><span class="n">1</span>the corners <span class="ref">§3–4</span></div>
+        <div class="t"><span class="n">1</span>The corners <span class="ref">§3–4</span></div>
         <div class="body" id="b1"></div>
       </div>
       <div class="step" id="st2">
-        <div class="t"><span class="n">2</span>build A, 8&times;9, and take its null vector <span class="ref">§5</span>
-          <label><input type="checkbox" id="k_lambda" checked>keep &lambda;</label></div>
+        <div class="t"><span class="n">2</span>Build A, 8&times;9, and take its null vector <span class="ref">§5</span>
+          <label><input type="checkbox" id="k_lambda" checked>Keep &lambda;</label></div>
         <div class="body" id="b2"></div>
       </div>
       <div class="step" id="st3">
         <div class="t"><span class="n">3</span>M = K<sub>f</sub><sup>&minus;1</sup>H: scale and sign <span class="ref">§6.1–2</span>
-          <label><input type="checkbox" id="k_sign" checked>fix the sign</label></div>
+          <label><input type="checkbox" id="k_sign" checked>Fix the sign</label></div>
         <div class="body" id="b3"></div>
       </div>
       <div class="step" id="st4">
         <div class="t"><span class="n">4</span>r<sub>3</sub> = r<sub>1</sub>&times;r<sub>2</sub>, nearest rotation <span class="ref">§6.3–4</span>
-          <label><input type="checkbox" id="k_snap" checked>snap to a rotation</label></div>
+          <label><input type="checkbox" id="k_snap" checked>Snap to a rotation</label></div>
         <div class="body" id="b4"></div>
       </div>
       <div class="step" id="st5">
-        <div class="t"><span class="n">5</span>refine on the reprojection error <span class="ref">§7</span>
-          <label><input type="checkbox" id="k_refine" checked>refine</label></div>
+        <div class="t"><span class="n">5</span>Refine on the reprojection error <span class="ref">§7</span>
+          <label><input type="checkbox" id="k_refine" checked>Refine</label></div>
         <div class="body" id="b5"></div>
       </div>
     </div>
@@ -706,8 +706,8 @@
     ["lambda","sign","snap","refine"].forEach(function (k, i) {
       document.getElementById("st" + (i+2)).classList.toggle("off", !keep[k]); });
     if (!st.m.ok) {
-      setBody(1, placing ? "<span class='warn'>click the four corners of the tag in the image, in the order 0, 1, 2, 3 (" + st.m.pts.length + " of 4 placed)</span>"
-                         : "<span class='warn'>a corner is off the sensor or behind the camera</span>");
+      setBody(1, placing ? "<span class='warn'>Click the four corners of the tag in the image, in the order 0, 1, 2, 3 (" + st.m.pts.length + " of 4 placed)</span>"
+                         : "<span class='warn'>A corner is off the sensor or behind the camera</span>");
       [2,3,4,5].forEach(function (i) { setBody(i, ""); });
       return;
     }
@@ -716,7 +716,7 @@
     for (var i = 0; i < 4; i++)
       s += "<tr><td>" + i + "</td><td>(" + f(CORN[i][0]*dhat/2, 3) + ", " + f(CORN[i][1]*dhat/2, 3) + ")</td><td>" +
            f(st.m.pts[i][0], 1) + ", " + f(st.m.pts[i][1], 1) + "</td><td>" +
-           (keep.lambda ? f(st.s.lam[i], 3) : "<span class='warn'>dropped</span>") + "</td></tr>";
+           (keep.lambda ? f(st.s.lam[i], 3) : "<span class='warn'>Dropped</span>") + "</td></tr>";
     s += "</table>";
     s += "<span class='ref'>q<sub>i</sub> uses the assumed side d&#770; = " + f(dhat, 3) + " m" + (placing ? " &middot; corners are your clicks" : (noise > 0 ? " &middot; corners carry " + f(noise, 1) + " px of noise" : " &middot; corners are exact")) + "</span>";
     setBody(1, s);
@@ -724,14 +724,14 @@
     s = "";
     if (keep.lambda) {
       var mx = Math.max.apply(null, st.h.sv);
-      s += "singular values of A (rescaled coordinates)<div class='bars'>";
+      s += "Singular values of A (rescaled coordinates)<div class='bars'>";
       st.h.sv.forEach(function (v) { s += "<div style='height:" + Math.max(1, 24*v/mx) + "px'></div>"; });
       s += "<div class='z' style='height:1px'></div></div>";
-      s += "<span class='ref'>eight nonzero, the ninth (red) is zero: A h = 0 has exactly one direction of solution</span>";
+      s += "<span class='ref'>Eight nonzero, the ninth (red) is zero: A h = 0 has exactly one direction of solution</span>";
     } else {
       s += "<span class='warn'>&lambda; dropped: x<sub>i</sub> = h&#771;<sub>1</sub>&middot;q<sub>i</sub>, y<sub>i</sub> = h&#771;<sub>2</sub>&middot;q<sub>i</sub>, an affine camera. 8 equations, 6 unknowns, least squares; the third row is set to (0, 0, 1).</span>";
     }
-    s += "<div class='mono'>H = \n" + mat(st.h.H, 4, 8) + "</div><span class='ref'>unit Frobenius norm; the scale is free (§5)</span>";
+    s += "<div class='mono'>H = \n" + mat(st.h.H, 4, 8) + "</div><span class='ref'>Unit Frobenius norm; the scale is free (§5)</span>";
     setBody(2, s);
     // 3
     var S = st.s;
@@ -742,49 +742,49 @@
          "m<sub>1</sub>&middot;m<sub>2</sub> / (&#8214;m<sub>1</sub>&#8214;&#8214;m<sub>2</sub>&#8214;) = <span class='" + (Math.abs(S.dotp) < 0.01 ? "good" : "warn") + "'>" + f(S.dotp, 4) + "</span> &nbsp; <span class='ref'>(0 for a rigid square)</span><br>" +
          "c = " + f(S.c, 5) + " &nbsp;&rarr;&nbsp; o<sub>W</sub><sup>C</sup> = " + vec(S.o, 3) + " m";
     if (keep.sign) s += " <span class='good'>o<sub>z</sub> &gt; 0, in front</span>";
-    else s += " <span class='warn'>the other root: o<sub>z</sub> &lt; 0, the mirror tag behind the camera also satisfies A h = 0</span>";
+    else s += " <span class='warn'>The other root: o<sub>z</sub> &lt; 0, the mirror tag behind the camera also satisfies A h = 0</span>";
     setBody(3, s);
     // 4
     var Q = st.q;
     s = "<div class='mono'>R'<sup>T</sup>R' (before) = \n" + mat(Q.G, 4, 8) + "</div>";
     if (Q.snapped) s += "<div class='mono'>R<sub>W</sub><sup>C</sup> (nearest rotation) = \n" + mat(Q.R, 4, 8) + "</div>";
-    else s += "<span class='warn'>not snapped: the frame drawn in red is [r<sub>1</sub> r<sub>2</sub> r<sub>1</sub>&times;r<sub>2</sub>] as it came, not a rotation</span>";
+    else s += "<span class='warn'>Not snapped: the frame drawn in red is [r<sub>1</sub> r<sub>2</sub> r<sub>1</sub>&times;r<sub>2</sub>] as it came, not a rotation</span>";
     var ec = st.errClosed, cr = st.closedRe;
-    s += "<br>closed form vs truth: <span class='" + (isNaN(ec.ang) ? "warn" : "") + "'>" + (isNaN(ec.ang) ? "not a rotation" : f(ec.ang, 2) + "&deg;") + "</span>, " +
+    s += "<br>Closed form vs truth: <span class='" + (isNaN(ec.ang) ? "warn" : "") + "'>" + (isNaN(ec.ang) ? "not a rotation" : f(ec.ang, 2) + "&deg;") + "</span>, " +
          f(1000*ec.pos, 1) + " mm &nbsp;&middot;&nbsp; reprojection " + (cr ? f(cr.rms, 2) + " px RMS" : "&mdash;");
     setBody(4, s);
     // 5
-    if (!keep.refine) s = "<span class='warn'>not refined: the closed form is the final answer</span>";
-    else if (!Q.snapped) s = "<span class='warn'>refinement needs a rotation to start from: snap first</span>";
+    if (!keep.refine) s = "<span class='warn'>Not refined: the closed form is the final answer</span>";
+    else if (!Q.snapped) s = "<span class='warn'>Refinement needs a rotation to start from: snap first</span>";
     else {
       var er = st.errRefined, rr = st.refinedRe;
       s = "Gauss&ndash;Newton, " + st.refined.iters + " iterations" + (st.refined.ok ? "" : " <span class='warn'>(stopped: a corner left the image)</span>") +
           "<div class='mono'>R<sub>W</sub><sup>C</sup> = \n" + mat(st.refined.R, 4, 8) + "</div>" +
           "o<sub>W</sub><sup>C</sup> = " + vec(st.refined.o, 3) + " m<br>" +
-          "refined vs truth: " + f(er.ang, 2) + "&deg;, " + f(1000*er.pos, 1) + " mm &nbsp;&middot;&nbsp; reprojection " + (rr ? f(rr.rms, 2) + " px RMS" : "&mdash;");
+          "Refined vs truth: " + f(er.ang, 2) + "&deg;, " + f(1000*er.pos, 1) + " mm &nbsp;&middot;&nbsp; reprojection " + (rr ? f(rr.rms, 2) + " px RMS" : "&mdash;");
     }
     setBody(5, s);
   }
 
   function drawReadout(st) {
     var el = document.getElementById("numbers"), note = document.getElementById("note");
-    if (!st.m.ok) { el.innerHTML = ""; note.innerHTML = placing ? "place four corners to run the pipeline" : "move the tag back into view"; return; }
+    if (!st.m.ok) { el.innerHTML = ""; note.innerHTML = placing ? "Place four corners to run the pipeline" : "Move the tag back into view"; return; }
     var T = st.T;
-    var s = "true: " + f(pose.yaw, 0) + "&deg;, " + f(pose.pitch, 0) + "&deg;, " + f(pose.roll, 0) + "&deg; at " + vec(T.o, 2) + " m";
+    var s = "True: " + f(pose.yaw, 0) + "&deg;, " + f(pose.pitch, 0) + "&deg;, " + f(pose.roll, 0) + "&deg; at " + vec(T.o, 2) + " m";
     var ec = st.errClosed;
-    s += " &nbsp; <span class='r'>closed form off by " + (isNaN(ec.ang) ? "?" : f(ec.ang, 2) + "&deg;") + ", " + f(1000*ec.pos, 1) + " mm</span>";
-    if (st.refined) { var er = st.errRefined; s += " &nbsp; <span class='b'>refined off by " + f(er.ang, 2) + "&deg;, " + f(1000*er.pos, 1) + " mm</span>"; }
+    s += " &nbsp; <span class='r'>Closed form off by " + (isNaN(ec.ang) ? "?" : f(ec.ang, 2) + "&deg;") + ", " + f(1000*ec.pos, 1) + " mm</span>";
+    if (st.refined) { var er = st.errRefined; s += " &nbsp; <span class='b'>Refined off by " + f(er.ang, 2) + "&deg;, " + f(1000*er.pos, 1) + " mm</span>"; }
     el.innerHTML = s;
     var msg = "";
-    if (!keep.lambda) msg = "<b>no depth division</b> &mdash; the affine camera cannot see foreshortening, so tilt and distance are guessed";
-    else if (!keep.sign) msg = "<b>wrong root</b> &mdash; the pixels are the same for a mirrored tag behind the camera; the equations cannot tell";
-    else if (!keep.snap) msg = "<b>not a rotation</b> &mdash; the red frame is sheared and scaled by whatever the noise did";
-    else if (Math.abs(dhat - D) > 1e-6) msg = "<b>wrong size assumed</b> &mdash; the pose slides along the rays: a " + (dhat > D ? "bigger" : "smaller") + " tag must be " + (dhat > D ? "farther" : "nearer") + " to look the same";
+    if (!keep.lambda) msg = "<b>No depth division</b> &mdash; the affine camera cannot see foreshortening, so tilt and distance are guessed";
+    else if (!keep.sign) msg = "<b>Wrong root</b> &mdash; the pixels are the same for a mirrored tag behind the camera; the equations cannot tell";
+    else if (!keep.snap) msg = "<b>Not a rotation</b> &mdash; the red frame is sheared and scaled by whatever the noise did";
+    else if (Math.abs(dhat - D) > 1e-6) msg = "<b>Wrong size assumed</b> &mdash; the pose slides along the rays: a " + (dhat > D ? "bigger" : "smaller") + " tag must be " + (dhat > D ? "farther" : "nearer") + " to look the same";
     else if (!st.m.ok) msg = "";
-    else if (placing) msg = "your clicks are the measurement; the pose error is yours";
-    else if (noise === 0) msg = "exact corners: the closed form is exact and refinement has nothing to do";
-    else if (!keep.refine) msg = "with noise, the closed form fits the corners exactly but with the wrong kind of H; snapping then loses the fit";
-    else msg = "closed form, then refined on the reprojection error";
+    else if (placing) msg = "Your clicks are the measurement; the pose error is yours";
+    else if (noise === 0) msg = "Exact corners: the closed form is exact and refinement has nothing to do";
+    else if (!keep.refine) msg = "With noise, the closed form fits the corners exactly but with the wrong kind of H; snapping then loses the fit";
+    else msg = "Closed form, then refined on the reprojection error";
     note.innerHTML = msg;
   }
 

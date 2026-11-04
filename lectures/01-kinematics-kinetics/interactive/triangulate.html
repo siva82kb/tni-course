@@ -145,15 +145,15 @@
 
     <div class="grp">
       <div class="hd b">camera B orientation, in A</div>
-      <label><span class="k">pan</span>
+      <label><span class="k">Pan</span>
         <input type="range" id="s_yaw" min="-60" max="60" step="0.5" value="-16">
-        <span class="val" id="v_yaw"></span>&deg; <span style="color:var(--warmgray)">about y</span></label>
-      <label><span class="k">tilt</span>
+        <span class="val" id="v_yaw"></span>&deg; <span style="color:var(--warmgray)">About y</span></label>
+      <label><span class="k">Tilt</span>
         <input type="range" id="s_pitch" min="-40" max="40" step="0.5" value="-8">
-        <span class="val" id="v_pitch"></span>&deg; <span style="color:var(--warmgray)">about x</span></label>
-      <label><span class="k">roll</span>
+        <span class="val" id="v_pitch"></span>&deg; <span style="color:var(--warmgray)">About x</span></label>
+      <label><span class="k">Roll</span>
         <input type="range" id="s_roll" min="-45" max="45" step="0.5" value="0">
-        <span class="val" id="v_roll"></span>&deg; <span style="color:var(--warmgray)">about z</span></label>
+        <span class="val" id="v_roll"></span>&deg; <span style="color:var(--warmgray)">About z</span></label>
     </div>
 
     <div class="grp">
@@ -166,19 +166,19 @@
 
     <div class="grp">
       <div class="hd">controls</div>
-      <label><span class="k">snap</span>
+      <label><span class="k">Snap</span>
         <input type="range" id="s_tol" min="0" max="40" step="1" value="12">
         <span class="val" id="v_tol"></span> px</label>
       <div class="row">
-        <button id="clear">clear images</button>
-        <button id="resetcam">reset cameras</button>
-        <button id="reset">reset view</button>
+        <button id="clear">Clear images</button>
+        <button id="resetcam">Reset cameras</button>
+        <button id="reset">Reset view</button>
       </div>
       <div class="row">
-        <label style="display:inline"><input type="checkbox" id="c_cube">cube</label> &nbsp;
-        <label style="display:inline"><input type="checkbox" id="c_mark">principal point &amp; epipole</label>
+        <label style="display:inline"><input type="checkbox" id="c_cube">Cube</label> &nbsp;
+        <label style="display:inline"><input type="checkbox" id="c_mark">Principal point &amp; epipole</label>
       </div>
-      <div class="row">drag 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
+      <div class="row">Drag 3D view to orbit &middot; shift-drag pans &middot; scroll zooms</div>
     </div>
   </div>
 
@@ -186,18 +186,18 @@
     <div id="left">
       <div class="pane img" id="paneA">
         <canvas id="cA"></canvas>
-        <div class="cap top"><span style="color:var(--forest)">camera A &mdash; the world frame</span>
+        <div class="cap top"><span style="color:var(--forest)">Camera A &mdash; the world frame</span>
           &middot; click to choose \(\v{r}_p^{S_A}\)</div>
       </div>
       <div class="pane img" id="paneB">
         <canvas id="cB"></canvas>
-        <div class="cap top"><span style="color:var(--seagreen)">camera B</span>
+        <div class="cap top"><span style="color:var(--seagreen)">Camera B</span>
           &middot; click to choose \(\v{r}_p^{S_B}\)</div>
       </div>
     </div>
     <div class="pane" id="world">
       <canvas id="cw"></canvas>
-      <div class="cap">the world &mdash; two rays, one point</div>
+      <div class="cap">The world &mdash; two rays, one point</div>
     </div>
   </div>
 
@@ -656,18 +656,18 @@
     var el = document.getElementById("numbers"), note = document.getElementById("note");
     if (!first) {
       el.innerHTML = "";
-      note.innerHTML = "click either image to cast a ray";
+      note.innerHTML = "Click either image to cast a ray";
       return;
     }
     if (!st.L) {
       el.innerHTML = "";
-      note.innerHTML = "the camera centres <b>coincide</b> &mdash; no baseline, no " +
+      note.innerHTML = "The camera centres <b>coincide</b> &mdash; no baseline, no " +
                        "epipolar line, and the second ray cannot pin down the depth";
       return;
     }
     if (!second) {
       el.innerHTML = "r<sub>p</sub><sup>S<sub>" + first.cam + "</sub></sup> = " + pxs(first);
-      note.innerHTML = "the ray from camera " + first.cam + " appears in image " +
+      note.innerHTML = "The ray from camera " + first.cam + " appears in image " +
                        other(first.cam) + " as the <b>epipolar line</b> &mdash; " +
                        "the matching point must lie on it (clear images to change image " +
                        first.cam + ")";
@@ -678,28 +678,28 @@
             " &nbsp; r<sub>p</sub><sup>S<sub>B</sub></sup> = " + pxs(st.pb);
     if (!r.ok) {
       el.innerHTML = s;
-      note.innerHTML = "the two rays are <b>parallel</b> &mdash; they never meet";
+      note.innerHTML = "The two rays are <b>parallel</b> &mdash; they never meet";
       return;
     }
     if (!st.on) {
-      el.innerHTML = s + " &nbsp; off the epipolar line by <span class='n'>" +
-                     st.off.toFixed(1) + " px</span> &nbsp; rays miss by " + r.gap.toFixed(2);
-      note.innerHTML = "<b>no 3D point</b> &mdash; the rays never meet";
+      el.innerHTML = s + " &nbsp; Off the epipolar line by <span class='n'>" +
+                     st.off.toFixed(1) + " px</span> &nbsp; Rays miss by " + r.gap.toFixed(2);
+      note.innerHTML = "<b>No 3D point</b> &mdash; the rays never meet";
       return;
     }
     el.innerHTML = s + " &nbsp;&rarr;&nbsp; r<sub>P</sub><sup>W</sup> = <span class='n'>" + vec(r.P) +
                    "</span> &nbsp; &lambda;<sub>a</sub> = " + f2(r.s) +
                    " &nbsp; &lambda;<sub>b</sub> = " + f2(r.t) +
-                   " &nbsp; ray angle " + r.ang.toFixed(1) + "&deg;";
+                   " &nbsp; Ray angle " + r.ang.toFixed(1) + "&deg;";
     if (r.s <= 0 || r.t <= 0) {
-      note.innerHTML = "the rays meet <b>behind a camera</b> &mdash; not a point either camera could see";
+      note.innerHTML = "The rays meet <b>behind a camera</b> &mdash; not a point either camera could see";
       return;
     }
     var best = null, bd = Infinity;
     CV.forEach(function (q) { var dd = len(sub(q, r.P)); if (dd < bd) { bd = dd; best = q; } });
     var msg = show.cube && bd < 0.3
-      ? "cube corner " + vec(best) + ", error " + bd.toFixed(3)
-      : "the rays meet &mdash; this is the point both pixels saw";
+      ? "Cube corner " + vec(best) + ", error " + bd.toFixed(3)
+      : "The rays meet &mdash; this is the point both pixels saw";
     if (r.ang < 5) msg += " &middot; <b>rays nearly parallel</b>: depth is fragile";
     note.innerHTML = msg;
   }

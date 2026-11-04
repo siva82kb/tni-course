@@ -118,7 +118,7 @@
   <canvas id="cv"></canvas>
 
   <div id="panel">
-    <div class="row title">position of <span class="k" style="width:auto">O<sub>B</sub></span> in A</div>
+    <div class="row title">Position of <span class="k" style="width:auto">O<sub>B</sub></span> in A</div>
     <label class="slider"><span class="k">x</span>
       <input type="range" id="sx" min="-4" max="4" step="0.1" value="-2.5"><span class="val" id="vx">-2.5</span></label>
     <label class="slider"><span class="k">y</span>
@@ -126,7 +126,7 @@
     <label class="slider"><span class="k">z</span>
       <input type="range" id="sz" min="-4" max="4" step="0.1" value="1"><span class="val" id="vz">1</span></label>
 
-    <div class="row sep title">orientation of B in A (degrees)</div>
+    <div class="row sep title">Orientation of B in A (degrees)</div>
     <label class="slider rot"><span class="k">α</span>
       <input type="range" id="sa" min="-180" max="180" step="5" value="0"><span class="val" id="va">0</span></label>
     <label class="slider rot"><span class="k">β</span>
@@ -136,15 +136,15 @@
     <div class="row">α about x<sub>A</sub>, then β about y<sub>A</sub>, then γ about z<sub>A</sub></div>
     <div class="row warn" id="gimbal" hidden>β = ±90°: α and γ now do the same thing</div>
 
-    <div class="row sep title">try</div>
+    <div class="row sep title">Try</div>
     <div class="row">
-      <button data-try="xz">α = 90°, γ = 90°</button><button data-try="gimbal">β = 90°</button><button data-try="reset">reset pose</button>
+      <button data-try="xz">α = 90°, γ = 90°</button><button data-try="gimbal">β = 90°</button><button data-try="reset">Reset pose</button>
     </div>
     <div class="row sep">
-      <label><input type="checkbox" id="cvec" checked> position vectors of P</label>
-      <label><input type="checkbox" id="cgrid" checked> grid</label>
+      <label><input type="checkbox" id="cvec" checked> Position vectors of P</label>
+      <label><input type="checkbox" id="cgrid" checked> Grid</label>
     </div>
-    <div class="row"><button id="resetview">reset view</button></div>
+    <div class="row"><button id="resetview">Reset view</button></div>
   </div>
 
   <div id="readout">
@@ -159,7 +159,7 @@
     <span class="bmat B" id="rB"><span></span><span></span><span></span></span>
     <span class="fixed">(fixed)</span>
   </div>
-  <div id="hint">drag orbits &middot; shift-drag pans &middot; wheel zooms</div>
+  <div id="hint">Drag orbits &middot; shift-drag pans &middot; wheel zooms</div>
 </div>
 
 <script>
