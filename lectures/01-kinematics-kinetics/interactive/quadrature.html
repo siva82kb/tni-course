@@ -22,6 +22,9 @@
     overflow: hidden;
   }
   #stage { position: relative; width: 100%; height: 100%; }
+  #stage.grab { cursor: grab; }
+  #stage.grabbing { cursor: grabbing; }
+  #panel input[type=range]:disabled { opacity: 0.35; cursor: default; }
   canvas { display: block; width: 100%; height: 100%; }
 
   #panel {
@@ -85,9 +88,14 @@
       <label class="sl"><span class="k">Slots <i>N</i></span>
         <input type="range" id="sN" min="4" max="48" step="2" value="16">
         <span class="val" id="vN">16</span></label>
+      <label class="rad"><input type="radio" name="drive" value="motor" checked><span>Motor: turns at a set speed</span></label>
+      <label class="rad"><input type="radio" name="drive" value="hand"><span>By hand: drag the wheel or use the angle slider</span></label>
       <label class="sl"><span class="k">Speed <i>&omega;</i></span>
         <input type="range" id="sw" min="-90" max="90" step="5" value="45">
         <span class="val" id="vw">45 °/s</span></label>
+      <label class="sl"><span class="k">Angle <i>&theta;</i></span>
+        <input type="range" id="sp" min="-720" max="720" step="0.5" value="0" disabled>
+        <span class="val" id="vp">0.0 °</span></label>
       <button id="stop">Stop</button><button id="rev">Reverse</button>
     </div>
 
@@ -138,6 +146,8 @@
   // ---- state ---------------------------------------------------------
   var P = { N: 16, w: 45, mode: 4, zres: false };
   var th = 0;                      // true angle, rad, unwrapped
+  var drive = "motor", thT = 0;     // by hand: the angle the wheel is being moved to
+  var wheel = { cx: 0, cy: 0, R: 1 }, grab = null;
   var count = 0, missed = 0, dropPending = 0;
   var A = 0, B = 0, Z = 0;         // detector states
   var last = performance.now(), acc = 0;
@@ -170,8 +180,9 @@
   function resolution() { return 360 / countsPerTurn(); }
 
   // one simulation step: move, read detectors, update the count on edges
-  function step(dt) {
-    th += P.w * D * dt;
+  function step(dt) { advance(P.w * D * dt); }
+  function advance(dth) {
+    th += dth;
     var d = detectors(th), dir = 0, edge = false;
     if (P.mode === 4) {
       // the quadrature state machine: the order of edges gives the direction
@@ -377,7 +388,7 @@
     var ax0 = panelW, ax1 = W - 10, ay0 = 10, ay1 = rowTop - 10;
     var R = Math.min((ay1 - ay0) * 0.4, (ax1 - ax0) * 0.2);
     var cx = ax0 + R + 30, cy = (ay0 + ay1) / 2 - 8;
-    drawWheel(cx, cy, R);
+    drawWheel(cx, cy, R); wheel = { cx: cx, cy: cy, R: R };
     var tx0 = cx + R + 70, tw = ax1 - tx0 - 10;
     drawTraces(tx0, ay0 + 10, tw, ay1 - ay0 - 30);
     var bx0 = 48, bw = W - bx0 - 12, gap = 64;
@@ -393,26 +404,50 @@
     document.getElementById("tmiss").textContent = missed;
   }
 
+  function record(h) {
+    trAcc += h;
+    if (trAcc >= 1 / TR) {
+      trAcc -= 1 / TR;
+      trA[trI] = A; trB[trI] = B; trZ[trI] = Z; trT[trI] = th / D; trQ[trI] = countedAngle();
+      trE[trI] = wrapDeg(countedAngle() - th / D);
+      trI = (trI + 1) % trN;
+    }
+  }
   function tick(now) {
     var dt = Math.min(0.1, (now - last) / 1000); last = now;
-    acc += dt;
     var h = 1 / FSIM;
-    while (acc >= h) {
-      step(h); acc -= h;
-      trAcc += h;
-      if (trAcc >= 1 / TR) {
-        trAcc -= 1 / TR;
-        trA[trI] = A; trB[trI] = B; trZ[trI] = Z; trT[trI] = th / D; trQ[trI] = countedAngle();
-        trE[trI] = wrapDeg(countedAngle() - th / D);
-        trI = (trI + 1) % trN;
+    if (drive === "motor") {
+      acc += dt;
+      while (acc >= h) { step(h); acc -= h; record(h); }
+    } else {
+      // by hand: move to the target in small angle steps, so no edge is skipped however fast the drag;
+      // the time axis advances only over this frame, and only if the wheel moved
+      var dth = thT - th;
+      if (Math.abs(dth) > 1e-6) {
+        var maxStep = (2 * Math.PI / P.N) / 40, n = Math.max(Math.ceil(Math.abs(dth) / maxStep), Math.round(dt * FSIM), 1);
+        var th0 = th;
+        for (var i = 1; i <= n; i++) { advance(th0 + dth * i / n - th); record(dt / n); }   // lands exactly on the target
       }
+      acc = 0;
     }
     draw();
     requestAnimationFrame(tick);
   }
 
   // ---- controls ---------------------------------------------------------
-  function reset() { count = 0; missed = 0; th = 0; var d0 = detectors(0); A = d0.A; B = d0.B; Z = d0.Z; }
+  function reset() { count = 0; missed = 0; th = 0; thT = 0; setPosSlider(0); var d0 = detectors(0); A = d0.A; B = d0.B; Z = d0.Z; }
+  function setPosSlider(a) {
+    var el = document.getElementById("sp"), v = Math.max(-720, Math.min(720, a / D));
+    el.value = v; document.getElementById("vp").textContent = fmt(a / D) + " °";
+  }
+  function setDrive(dv) {
+    drive = dv;
+    var hand = dv === "hand";
+    if (hand) { th = Math.atan2(Math.sin(th), Math.cos(th)); thT = th; setPosSlider(th); }
+    document.getElementById("sp").disabled = !hand;
+    document.getElementById("sw").disabled = hand;
+    document.getElementById("stop").disabled = hand; document.getElementById("rev").disabled = hand;
+  }
   var SPEC = { N: ["sN", "vN", function (v) { return v; }],
                w: ["sw", "vw", function (v) { return v + " °/s"; }] };
   function show(key) { document.getElementById(SPEC[key][1]).textContent = SPEC[key][2](P[key]); }
@@ -428,6 +463,35 @@
     el.addEventListener("change", function () { P.mode = parseInt(el.value, 10); reset(); });
   });
   document.getElementById("cz").addEventListener("change", function (e) { P.zres = e.target.checked; });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="drive"]'), function (el) {
+    el.addEventListener("change", function () { setDrive(el.value); });
+  });
+  document.getElementById("sp").addEventListener("input", function (e) {
+    thT = parseFloat(e.target.value) * D; document.getElementById("vp").textContent = fmt(thT / D) + " °";
+  });
+  function pointerAngle(e) {
+    var r = stage.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    return { a: Math.atan2(-(y - wheel.cy), x - wheel.cx), d: Math.hypot(x - wheel.cx, y - wheel.cy) };
+  }
+  stage.addEventListener("pointerdown", function (e) {
+    if (drive !== "hand" || e.target.closest("#panel")) return;
+    var p = pointerAngle(e); if (p.d > wheel.R * 1.05) return;
+    grab = { a: p.a }; stage.classList.add("grabbing"); stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    var p = pointerAngle(e);
+    if (!grab) {
+      stage.classList.toggle("grab", drive === "hand" && !e.target.closest("#panel") && p.d <= wheel.R * 1.05);
+      return;
+    }
+    var da = Math.atan2(Math.sin(p.a - grab.a), Math.cos(p.a - grab.a));   // the turn since the last move, the short way
+    grab.a = p.a; thT += da; setPosSlider(thT);
+  });
+  function release(e) {
+    if (!grab) return; grab = null; stage.classList.remove("grabbing");
+    try { stage.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  stage.addEventListener("pointerup", release); stage.addEventListener("pointercancel", release);
   document.getElementById("stop").addEventListener("click", function () { P.w = 0; document.getElementById("sw").value = 0; show("w"); });
   document.getElementById("rev").addEventListener("click", function () { P.w = -P.w; document.getElementById("sw").value = P.w; show("w"); });
   document.getElementById("drop").addEventListener("click", function () { dropPending++; });
@@ -447,6 +511,7 @@
       var m = parseInt(q.get("mode"), 10);
       if (m === 1 || m === 2 || m === 4) { P.mode = m; document.querySelector('input[name="mode"][value="' + m + '"]').checked = true; }
     }
+    if (q.get("drive") === "hand") { document.querySelector('input[name="drive"][value="hand"]').checked = true; setTimeout(function () { setDrive("hand"); }, 0); }
     if (q.has("z")) { P.zres = q.get("z") === "1"; document.getElementById("cz").checked = P.zres; }
   })();
 

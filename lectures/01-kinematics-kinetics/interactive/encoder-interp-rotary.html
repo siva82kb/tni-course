@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interpolation on a rotary encoder, live</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+    --orange:   #DD6B20;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  #stage.grab { cursor: grab; }
+  #stage.grabbing { cursor: grabbing; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 5px; padding-top: 4px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 2px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 110px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]:disabled { opacity: 0.35; cursor: default; }
+  #panel input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--charcoal); }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 5.6em; font-family: "Linux Libertine O", Georgia, serif; font-size: 11px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.6em; text-align: right; font-variant-numeric: tabular-nums; }
+  #panel .rad { display: flex; align-items: flex-start; margin: 1px 0; }
+  #panel .rad input { width: 11px; height: 11px; flex: none; margin: 2px 4px 0 0; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel button:disabled { opacity: 0.35; cursor: default; }
+  #tab { border-collapse: collapse; margin-top: 2px; }
+  #tab td { padding: 0 7px 0 0; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.45; }
+  #tab td.n { text-align: right; min-width: 4.6em; }
+  #tab td.lab { font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #tab tr.bad td { color: var(--crimson); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">The wheel</div>
+      <label class="sl"><span class="k">Slots <i>N</i></span>
+        <input type="range" id="sN" min="8" max="64" step="4" value="16">
+        <span class="val" id="vN">16</span></label>
+      <label class="rad"><input type="radio" name="drive" value="motor" checked><span>Motor: turns at a set speed</span></label>
+      <label class="rad"><input type="radio" name="drive" value="hand"><span>By hand: drag the wheel or use the angle slider</span></label>
+      <label class="sl"><span class="k">Speed <i>&omega;</i></span>
+        <input type="range" id="sv" min="-90" max="90" step="1" value="10">
+        <span class="val" id="vv">10 °/s</span></label>
+      <label class="sl"><span class="k">Angle <i>&theta;</i></span>
+        <input type="range" id="sx" min="-360" max="360" step="0.1" value="5" disabled>
+        <span class="val" id="vx">5.0 °</span></label>
+      <button id="stop">Stop</button><button id="rev">Reverse</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">The interpolator</div>
+      <label class="sl"><span class="k">Steps <i>K</i></span>
+        <input type="range" id="sK" min="2" max="7" step="1" value="4">
+        <span class="val" id="vK">16</span></label>
+      <label class="sl"><span class="k">Sample rate</span>
+        <input type="range" id="sf" min="2" max="200" step="1" value="50">
+        <span class="val" id="vf">50 Hz</span></label>
+      <label class="sl"><span class="k">Noise</span>
+        <input type="range" id="sn" min="0" max="0.3" step="0.01" value="0">
+        <span class="val" id="vn">0.00</span></label>
+      <button id="zero">Reset to θ = 5°</button>
+    </div>
+
+    <div class="grp">
+      <div class="hd">What the interpolator knows</div>
+      <table id="tab">
+        <tr><td class="lab">True angle</td><td class="n" id="tx">0.0</td><td>°</td></tr>
+        <tr><td class="lab">Encoder angle</td><td class="n" id="te">0.0</td><td>°</td></tr>
+        <tr id="rd"><td class="lab">Difference at the last sample</td><td class="n" id="td">0.0</td><td>°</td></tr>
+        <tr><td class="lab">One slot, 360°/<i>N</i></td><td class="n" id="tp">0.0</td><td>°</td></tr>
+        <tr><td class="lab">One step, 360°/(<i>NK</i>)</td><td class="n" id="ts">0.0</td><td>°</td></tr>
+        <tr><td class="lab">Slot count <i>n</i></td><td class="n" id="tn">0</td><td></td></tr>
+        <tr><td class="lab">Fine step <i>k</i></td><td class="n" id="tk">0</td><td></td></tr>
+        <tr id="rm"><td class="lab">Moved per sample</td><td class="n" id="tm">0.00</td><td>slot</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+
+  var COL = { disc: "#2D3748", text: "#718096", grid: "#EDF2F7", line: "#CBD5E0",
+              det: "#2B6CB0", fwd: "#2B6CB0", back: "#DD6B20", tru: "#D69E2E", est: "#F56565",
+              crimson: "#A51C30", amber: "#D69E2E", led: "#DD6B20" };
+  var D = Math.PI / 180;
+  // ---- the wheel and the detectors ---------------------------------------------
+  // The wheel carries N slots on one track. A slot lights the detector with a soft spot,
+  // so the light a detector sees varies as a cosine of angle. The wheel turns
+  // anticlockwise as theta grows: the track point psi sits at housing angle psi + theta,
+  // and a detector at housing angle a sees the track point a - theta. With the offset
+  // removed, its output is cos(N (a - theta)). Detector A sits half a slot round from the
+  // reference and B a slot and a quarter further, so
+  //   A = -cos(N theta),  B = -sin(N theta),  atan2(B, A) = N theta - 180°.
+  // atan2 runs from -180° to +180° once per slot, and starts each slot at -180°.
+  function pitch() { return 360 / P.N; }                      // degrees per slot
+  function aA() { return 0.5 * pitch(); }
+  function aB() { return 1.75 * pitch(); }
+  function light(a) { return Math.cos(P.N * a * D); }         // a: track angle, degrees
+  function sigA(th) { return light(aA() - th); }
+  function sigB(th) { return light(aB() - th); }
+
+  // ---- state ----------------------------------------------------------------
+  var P = { N: 16, v: 10, K: 16, fs: 50, noise: 0 };
+  var x = 5;                         // true angle, degrees, unwrapped
+  var drive = "motor", xT = 5, grab = null;
+  var n = 0, k = 0, phi = 0, phiPrev = 0, A = 0, B = 0, xSampPrev = 5, xSamp = 5, moved = 0;
+  var wrap = null;                   // the last slot crossing: { dir: +1 or -1, t }
+  var S = { A: 0, B: 0, phi: 0, prev: 0, dphi: 0, n: 0, k: 0 };   // the numbers of the last sample, for the algorithm
+  var trail = [];                    // recent samples on the circle
+  var sAcc = 0, last = performance.now();
+  var WIN = 8.0, TR = 200, tSim = 0, trAcc = 0;          // seconds shown, trace points per second
+  var trN = Math.round(WIN * TR) + 50, trA = new Float32Array(trN), trB = new Float32Array(trN), trT = new Float64Array(trN), trI = 0;
+  var marks = [];                                        // samples: { t, A, B, dir }
+  var wheel = { cx: 0, cy: 0, R: 1 };
+
+  function gauss() { var u = 0, v = 0; while (u === 0) u = Math.random(); v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  function stepSize() { return pitch() / P.K; }
+  function reading() { return n * pitch() + k * stepSize(); }
+
+  // one sample: read the detectors and run the algorithm on the right of the screen
+  function sample() {
+    A = sigA(x) + P.noise * gauss();
+    B = sigB(x) + P.noise * gauss();
+    phi = Math.atan2(B, A) / D;                               // -180 to +180
+    var dphi = phi - phiPrev;
+    if (dphi < -180) { n += 1; wrap = { dir: 1, t: performance.now() }; }      // +180 to -180: forward into the next slot
+    else if (dphi > 180) { n -= 1; wrap = { dir: -1, t: performance.now() }; } // -180 to +180: back into the last slot
+    k = Math.min(P.K - 1, Math.floor(P.K * (phi + 180) / 360));
+    S = { A: A, B: B, phi: phi, prev: phiPrev, dphi: dphi, n: n, k: k };
+    phiPrev = phi;
+    moved = Math.abs(x - xSampPrev) / pitch(); xSampPrev = x; xSamp = x;
+    trail.push([A, B]); if (trail.length > 40) trail.shift();
+    marks.push({ t: tSim, A: A, B: B, dir: dphi < -180 ? 1 : (dphi > 180 ? -1 : 0) });
+    while (marks.length && marks[0].t < tSim - WIN) marks.shift();
+  }
+  function reset() {
+    x = xT = 5; n = 0;
+    phiPrev = Math.atan2(sigB(x), sigA(x)) / D;
+    xSampPrev = x; trail = []; wrap = null; marks = [];
+    for (var i = 0; i < trN; i++) { trA[i] = sigA(x); trB[i] = sigB(x); trT[i] = tSim - WIN * (1 - i / trN); }
+    trI = 0;
+    sample(); setPosSlider(x);
+  }
+
+  // ---- drawing helpers ------------------------------------------------------
+  function fmt(v, d) { var s = v.toFixed(d === undefined ? 1 : d); return /^-0\.?0*$/.test(s) ? s.slice(1) : s; }
+  function text(s, x0, y0, color, size, align, font) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.font = (size || 12) + "px " + (font || '"Linux Libertine O", Georgia, serif');
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x0, y0); ctx.restore();
+  }
+  function tri(x0, y0, size, up, color) {
+    ctx.fillStyle = color; ctx.beginPath();
+    ctx.moveTo(x0, y0); ctx.lineTo(x0 - size, y0 + (up ? size * 1.4 : -size * 1.4)); ctx.lineTo(x0 + size, y0 + (up ? size * 1.4 : -size * 1.4));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function wrapDeg(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
+  function arrow(x0, y0, x1, y1, color, width) {
+    var L = Math.hypot(x1 - x0, y1 - y0); if (L < 2) return;
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    var ang = Math.atan2(y1 - y0, x1 - x0), h = Math.min(9, L), w = 0.42;
+    ctx.beginPath(); ctx.moveTo(x1, y1);
+    ctx.lineTo(x1 - h * Math.cos(ang - w), y1 - h * Math.sin(ang - w));
+    ctx.lineTo(x1 - h * Math.cos(ang + w), y1 - h * Math.sin(ang + w));
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+
+  // ---- the wheel: a soft spot at each slot, the two detectors, the two angles ----------
+  function drawWheel(cx, cy, R) {
+    wheel = { cx: cx, cy: cy, R: R };
+    var r0 = R * 0.66, r1 = R * 0.9, M = Math.max(360, P.N * 24);
+    ctx.fillStyle = COL.disc; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.fill();
+    // the track: housing angle a shows the track point a - theta
+    for (var i = 0; i < M; i++) {
+      var a = 360 * i / M, t = 0.5 + 0.5 * light(a + 180 / M - x);
+      var g = Math.round(45 + 210 * Math.pow(t, 1.6));
+      ctx.fillStyle = "rgb(" + g + "," + g + "," + Math.round(g * 0.97 + 8) + ")";
+      ctx.beginPath(); ctx.arc(cx, cy, r1, -a * D, -(a + 360 / M + 0.3) * D, true); ctx.arc(cx, cy, r0, -(a + 360 / M + 0.3) * D, -a * D, false); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = "#E2E8F0"; ctx.beginPath(); ctx.arc(cx, cy, R * 0.22, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = COL.text; ctx.lineWidth = 1; ctx.stroke();
+    // the reference on the housing, at 0°
+    ctx.strokeStyle = COL.text; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(cx + R * 1.02, cy); ctx.lineTo(cx + R * 1.22, cy); ctx.stroke(); ctx.setLineDash([]);
+    text("0°", cx + R * 1.25, cy, COL.text, 11, "left");
+    // the detectors, outside the rim, each shaded by the light it sees
+    [[aA(), "A", A], [aB(), "B", B]].forEach(function (d) {
+      var a = d[0] * D, px = cx + (R + 11) * Math.cos(a), py = cy - (R + 11) * Math.sin(a), sig = d[2];
+      var lit = Math.max(0, Math.min(1, (sig + 1) / 2));
+      ctx.fillStyle = COL.det; ctx.globalAlpha = 0.25 + 0.75 * lit; ctx.fillRect(px - 7, py - 7, 14, 14); ctx.globalAlpha = 1;
+      ctx.strokeStyle = COL.det; ctx.lineWidth = 1; ctx.strokeRect(px - 6.5, py - 6.5, 13, 13);
+      var lx = cx + (R + 30) * Math.cos(a), ly = cy - (R + 30) * Math.sin(a);
+      text(d[1] + " " + (sig >= 0 ? "+" : "−") + fmt(Math.abs(sig), 2), lx, ly, COL.det, 12, "left");
+    });
+    // the true angle and the encoder angle, from the hub
+    var L = R * 0.6;
+    arrow(cx, cy, cx + L * Math.cos(x * D), cy - L * Math.sin(x * D), COL.tru, 2.4);
+    arrow(cx, cy, cx + L * Math.cos(reading() * D), cy - L * Math.sin(reading() * D), COL.est, 1.8);
+    text("Positive turn: anticlockwise", cx, cy + R + 14, COL.text, 11, "center");
+  }
+
+  // ---- the magnified view: the slots around the current angle, unrolled, with K steps in each ----
+  function drawZoom(x0, x1, y0) {
+    var w = x1 - x0, span = 2.6 * pitch(), s = w / span, ry = y0 + 46;
+    function rx(X) { return x0 + w / 2 + (X - x) * s; }
+    text("Magnified: the slots around the current angle, unrolled", x0, y0, COL.text, 11, "left");
+    text("One slot = 360°/N = " + fmt(pitch(), 2) + "°.  One step = 360°/(NK) = " + fmt(stepSize(), stepSize() < 0.1 ? 4 : 3) + "°", x0, y0 + 16, COL.text, 11, "left");
+    ctx.strokeStyle = COL.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, ry); ctx.lineTo(x1, ry); ctx.stroke();
+    var e0 = rx(reading()), e1 = rx(reading() + stepSize());
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, ry - 12, w, 24); ctx.clip();
+    ctx.fillStyle = "rgba(245,101,101,0.22)"; ctx.fillRect(e0, ry - 9, Math.max(1.5, e1 - e0), 18);
+    ctx.restore();
+    var dpx = stepSize() * s, xl = x - span / 2, xr = x + span / 2;
+    for (var m = Math.floor(xl / pitch()) - 1; m <= Math.ceil(xr / pitch()) + 1; m++) {
+      var X = m * pitch(), p0 = rx(X);
+      if (p0 > x0 - 2 && p0 < x1 + 2) {
+        ctx.strokeStyle = COL.disc; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(p0, ry - 10); ctx.lineTo(p0, ry + 10); ctx.stroke();
+        text("n = " + m, p0, ry + 20, COL.disc, 11.5, "center");
+        text(num(X, pitch() % 1 ? 2 : 1) + "°", p0, ry + 34, COL.text, 10.5, "center");
+      }
+      if (dpx >= 3) {
+        ctx.strokeStyle = COL.text; ctx.lineWidth = 0.8;
+        for (var j = 1; j < P.K; j++) {
+          var pj = p0 + j * dpx; if (pj < x0 || pj > x1) continue;
+          ctx.beginPath(); ctx.moveTo(pj, ry - 4); ctx.lineTo(pj, ry + 4); ctx.stroke();
+        }
+      }
+    }
+    tri(rx(x), ry - 11, 6, false, COL.tru);
+    text("True", rx(x) - 10, ry - 17, COL.tru, 11.5, "right");
+    if (dpx < 3) text("Steps too fine to draw", x1, ry - 18, COL.text, 11, "right");
+    if (e0 < x0 || e0 > x1) {
+      var left = e0 < x0;
+      text((left ? "← " : "") + "Encoder angle is off the view" + (left ? "" : " →"), left ? x0 + 4 : x1 - 4, ry + 50, COL.est, 11.5, left ? "left" : "right");
+    } else {
+      tri(e0, ry + 11, 6, true, COL.est);
+      text("Encoder", e0 + 10, ry + 50, COL.est, 11.5, "left");
+    }
+  }
+
+  // ---- the (A, B) circle with K sectors ------------------------------------------
+  function drawCircle(cx, cy, R) {
+    var now = performance.now();
+    // the K sectors, starting at -180°; the current one shaded
+    var a0 = (-180 + k * 360 / P.K) * D, a1 = (-180 + (k + 1) * 360 / P.K) * D;
+    ctx.fillStyle = "rgba(245,101,101,0.18)";
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, -a0, -a1, true); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = COL.line; ctx.lineWidth = 1;
+    for (var j = 0; j < P.K; j++) {
+      var a = (-180 + j * 360 / P.K) * D;
+      ctx.beginPath(); ctx.moveTo(cx + R * 0.82 * Math.cos(a), cy - R * 0.82 * Math.sin(a)); ctx.lineTo(cx + R * Math.cos(a), cy - R * Math.sin(a)); ctx.stroke();
+    }
+    ctx.strokeStyle = COL.disc; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 2 * Math.PI); ctx.stroke();
+    // axes
+    ctx.strokeStyle = COL.line; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - R * 1.25, cy); ctx.lineTo(cx + R * 1.25, cy); ctx.moveTo(cx, cy + R * 1.25); ctx.lineTo(cx, cy - R * 1.25); ctx.stroke();
+    text("A", cx + R * 1.3, cy, COL.det, 13, "left");
+    text("B", cx, cy - R * 1.32, COL.det, 13, "center");
+    // the slot boundary at ±180°, flashing on a crossing
+    var fl = wrap ? Math.max(0, 1 - (now - wrap.t) / 1200) : 0;
+    ctx.strokeStyle = fl > 0 ? (wrap.dir > 0 ? COL.fwd : COL.back) : COL.crimson;
+    ctx.lineWidth = 2 + 3 * fl;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - R * 1.12, cy); ctx.stroke();
+    text("Slot boundary", cx - R * 1.08, cy - 22, COL.crimson, 11.5, "right");
+    text("φ = ±180°", cx - R * 1.08, cy - 8, COL.crimson, 11.5, "right");
+    // recent samples, then the current one with its angle
+    for (var i = 0; i < trail.length; i++) {
+      ctx.fillStyle = "rgba(45,55,72," + (0.08 + 0.3 * i / trail.length) + ")";
+      ctx.beginPath(); ctx.arc(cx + R * trail[i][0], cy - R * trail[i][1], 2, 0, 2 * Math.PI); ctx.fill();
+    }
+    ctx.strokeStyle = COL.disc; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + R * A, cy - R * B); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = COL.disc; ctx.beginPath(); ctx.arc(cx + R * A, cy - R * B, 4.5, 0, 2 * Math.PI); ctx.fill();
+    text("φ = atan2(B, A) = " + fmt(phi) + "°", cx, cy + R * 1.45, COL.disc, 13, "center");
+    text("Shaded: step k = " + k + " of K = " + P.K, cx, cy + R * 1.45 + 17, COL.est, 11.5, "center");
+  }
+
+  // ---- the algorithm, with the line that just ran lit --------------------------
+  // wrap a list of paragraphs to a width, and draw them from (x0, y0) down
+  function wrapText(paras, x0, y0, w, color, size, align) {
+    ctx.save(); ctx.font = size + 'px "Linux Libertine O", Georgia, serif';
+    var lines = [];
+    paras.forEach(function (para) {
+      var cur = "";
+      para.split(" ").forEach(function (wd) {
+        var t = cur ? cur + " " + wd : wd;
+        if (ctx.measureText(t).width > w && cur) { lines.push(cur); cur = wd; } else cur = t;
+      });
+      lines.push(cur);
+    });
+    ctx.restore();
+    for (var q = 0; q < lines.length; q++) text(lines[q], x0, y0 + q * (size + 4.5), color, size, align || "left");
+  }
+  function num(v, d) { return fmt(v, d).replace("-", "−"); }
+  function par(v, d) { return v < 0 ? "(" + num(v, d) + ")" : num(v, d); }
+
+  // ---- the algorithm: each statement, and under it the numbers from the last sample ----
+  function drawAlgo(x0, y0, w) {
+    var now = performance.now(), fl = wrap ? Math.max(0, 1 - (now - wrap.t) / 1200) : 0;
+    var mono = 'Menlo, Consolas, "DejaVu Sans Mono", monospace';
+    var fwd = S.dphi < -180, back = S.dphi > 180, st = pitch() / P.K;
+    var L = [
+      ["A, B ← read the detectors",
+       "A = " + num(S.A, 2) + ",  B = " + num(S.B, 2), 0],
+      ["φ ← atan2(B, A)",
+       "atan2(" + num(S.B, 2) + ", " + num(S.A, 2) + ") = " + num(S.phi) + "°", 0],
+      ["Δφ ← φ − φprev",
+       num(S.phi) + " − " + par(S.prev) + " = " + num(S.dphi) + "°", 0],
+      ["if Δφ < −180°:  n ← n + 1",
+       num(S.dphi) + " < −180?  " + (fwd ? "Yes. n = " + S.n : "No. n stays " + S.n), 1],
+      ["if Δφ > +180°:  n ← n − 1",
+       num(S.dphi) + " > +180?  " + (back ? "Yes. n = " + S.n : "No. n stays " + S.n), -1],
+      ["k ← floor(K(φ + 180°)/360°)",
+       P.K + " × " + num(S.phi + 180) + " / 360 = " + fmt(P.K * (S.phi + 180) / 360, 2) + " → " + S.k, 0],
+      ["θ ← n 360°/N + k 360°/(NK)",
+       par(S.n, 0) + " × " + fmt(pitch(), pitch() % 1 ? 2 : 1) + " + " + S.k + " × " + fmt(st, st < 0.1 ? 4 : 3) + " = " + num(S.n * pitch() + S.k * st) + "°", 0],
+      ["φprev ← φ",
+       num(S.phi) + "°", 0]
+    ];
+    // fit the two columns, code and numbers, to the width: shrink the font if needed
+    var ind = 1, gap = 2, fs = 12;
+    ctx.save(); ctx.font = fs + "px " + mono;
+    var cw = 0, vw = 0, ch = ctx.measureText("0").width;
+    for (var i = 0; i < L.length; i++) { cw = Math.max(cw, ctx.measureText(L[i][0]).width); vw = Math.max(vw, ctx.measureText(L[i][1]).width); }
+    ctx.restore();
+    var need = ch * (ind + gap) + cw + vw;
+    if (need > w - 6) fs = Math.max(9, fs * (w - 6) / need);
+    var sc = fs / 12, xc = x0 + ind * ch * sc, xv = xc + cw * sc + gap * ch * sc, lh = Math.max(17, fs + 7);
+    text("The algorithm. On the right: the numbers from the last sample.", x0, y0, COL.text, 11.5, "left");
+    text("Every sample:", x0, y0 + 22, COL.disc, fs, "left", mono);
+    for (var i = 0; i < L.length; i++) {
+      var y = y0 + 22 + (i + 1) * lh, dir = L[i][2];
+      var lit = dir !== 0 && ((dir > 0 && fwd) || (dir < 0 && back));
+      var c = lit ? (dir > 0 ? COL.fwd : COL.back) : COL.disc;
+      if (lit) {
+        ctx.fillStyle = (dir > 0 ? "rgba(43,108,176," : "rgba(221,107,32,") + (0.1 + 0.15 * fl) + ")";
+        ctx.fillRect(x0 - 4, y - lh / 2, w, lh);
+      }
+      text(L[i][0], xc, y, c, fs, "left", mono);
+      text(L[i][1], xv, y, lit ? c : COL.text, fs, "left", mono);
+    }
+  }
+
+  // ---- A and B against time: the light each detector sees, and the samples the interpolator takes ----
+  function drawTraces(x0, y0, w, h) {
+    var rows = [["A", trA, "A"], ["B", trB, "B"]], rh = (h - 18) / 2;
+    text("A and B against time. Dots: samples. Ticks: slot crossings.", x0, y0 + 2, COL.text, 11, "left");
+    var xNow = x0 + w * 0.92;
+    function tx(t) { return xNow - (xNow - x0) * (tSim - t) / WIN; }
+    ctx.save(); ctx.strokeStyle = COL.disc; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(xNow, y0 + 14); ctx.lineTo(xNow, y0 + h); ctx.stroke(); ctx.restore();
+    text("Now", xNow + 5, y0 + 20, COL.disc, 11, "left");
+    text("−" + WIN + " s", x0, y0 + h + 4, COL.text, 10.5, "left");
+    for (var r = 0; r < 2; r++) {
+      var yc = y0 + 18 + r * rh + rh / 2, amp = rh * 0.38;
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, yc); ctx.lineTo(x0 + w, yc); ctx.stroke();
+      text(rows[r][0], x0 - 8, yc, COL.det, 13, "right");
+      ctx.strokeStyle = COL.det; ctx.lineWidth = 1.4; ctx.beginPath();
+      var started = false;
+      for (var i = 0; i < trN; i++) {
+        var kk = (trI + i) % trN, xx = tx(trT[kk]), yy = yc - amp * rows[r][1][kk];
+        if (xx < x0) continue;
+        if (!started) { ctx.moveTo(xx, yy); started = true; } else ctx.lineTo(xx, yy);
+      }
+      ctx.stroke();
+      for (var j = 0; j < marks.length; j++) {
+        var m = marks[j], mx = tx(m.t); if (mx < x0) continue;
+        if (r === 0 && m.dir) {
+          ctx.strokeStyle = m.dir > 0 ? COL.fwd : COL.back; ctx.lineWidth = 1.6;
+          ctx.beginPath(); ctx.moveTo(mx, y0 + 16); ctx.lineTo(mx, y0 + h); ctx.stroke();
+        }
+        ctx.fillStyle = COL.disc; ctx.beginPath(); ctx.arc(mx, yc - amp * (r === 0 ? m.A : m.B), 1.3, 0, 2 * Math.PI); ctx.fill();
+      }
+    }
+  }
+
+  // ---- draw -------------------------------------------------------------------
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var panelW = document.getElementById("panel").offsetWidth + 18;
+    var x0 = panelW, x1 = W - 14;
+    // left column: the wheel, then the (A, B) circle. Right column: the magnified view, the time plot, the algorithm.
+    var Rw = Math.max(55, Math.min(85, H * 0.15)), wcx = x0 + 20 + Rw, wcy = 16 + Rw;
+    var colX = wcx + Rw + 110;
+    drawWheel(wcx, wcy, Rw);
+    drawZoom(colX, x1, 14);
+    var yb = wcy + Rw + 26;
+    var R = Math.max(45, Math.min((H - yb - 90) / 2.85, (colX - x0 - 100) / 2.75));
+    var ccx = x0 + 95 + R * 1.15, ccy = yb + 14 + R * 1.35;
+    drawCircle(ccx, ccy, R);
+    var TH = Math.max(85, Math.min(110, H * 0.18));
+    drawTraces(colX + 16, 132, x1 - colX - 16, TH);
+    drawAlgo(colX, 132 + TH + 34, x1 - colX);
+    wrapText(["A jump from +180° to −180° means forward into the next slot. A jump from −180° to +180° means back into the last one.",
+              "This works only if the wheel turns less than half a slot between samples."],
+             x0 + 10, ccy + R * 1.45 + 42, colX - x0 - 40, COL.text, 11.5, "left");
+
+    // the difference against the position at the last sample, so the wait between samples does not count
+    var diff = reading() - xSamp, st = stepSize();
+    document.getElementById("tx").textContent = fmt(x);
+    document.getElementById("te").textContent = fmt(reading());
+    document.getElementById("td").textContent = fmt(diff);
+    document.getElementById("ts").textContent = fmt(st, st < 0.1 ? 4 : 3);
+    document.getElementById("tp").textContent = fmt(pitch(), 2);
+    document.getElementById("tn").textContent = n;
+    document.getElementById("tk").textContent = k;
+    document.getElementById("tm").textContent = fmt(moved, 2);
+    document.getElementById("rd").className = Math.abs(diff) > st + 1e-6 ? "bad" : "";
+    document.getElementById("rm").className = moved > 0.5 ? "bad" : "";
+  }
+
+  function tick(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (drive === "motor") { x += P.v * dt; setPosSlider(x); }
+    else x = xT;
+    var ts = 1 / P.fs, steps = Math.max(1, Math.round(dt * TR));
+    for (var i = 0; i < steps; i++) {                       // advance time in small steps, sampling when due
+      tSim += dt / steps; sAcc += dt / steps;
+      if (sAcc >= ts) { sAcc -= ts; sample(); }
+      trA[trI] = sigA(x); trB[trI] = sigB(x); trT[trI] = tSim; trI = (trI + 1) % trN;
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // ---- controls ---------------------------------------------------------------
+  function setPosSlider(v) {
+    var el = document.getElementById("sx");
+    el.value = Math.max(-360, Math.min(360, v));
+    document.getElementById("vx").textContent = fmt(v) + " °";
+  }
+  function setDrive(dv) {
+    drive = dv;
+    var hand = dv === "hand";
+    if (hand) { xT = x; setPosSlider(x); }
+    document.getElementById("sx").disabled = !hand;
+    document.getElementById("sv").disabled = hand;
+    document.getElementById("stop").disabled = hand; document.getElementById("rev").disabled = hand;
+  }
+  var SPEC = {
+    N:     ["sN", "vN", function (v) { return v; },            function (v) { return "" + v; }],
+    v:     ["sv", "vv", function (v) { return v; },            function (v) { return v + " °/s"; }],
+    K:     ["sK", "vK", function (v) { return Math.pow(2, v); }, function (v) { return "" + v; }],
+    fs:    ["sf", "vf", function (v) { return v; },            function (v) { return v + " Hz"; }],
+    noise: ["sn", "vn", function (v) { return v; },            function (v) { return v.toFixed(2); }]
+  };
+  function show(key) { document.getElementById(SPEC[key][1]).textContent = SPEC[key][3](P[key]); }
+  Object.keys(SPEC).forEach(function (key) {
+    var el = document.getElementById(SPEC[key][0]);
+    el.addEventListener("input", function () { P[key] = SPEC[key][2](parseFloat(el.value)); show(key); if (key === "N") reset(); });
+    show(key);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="drive"]'), function (el) {
+    el.addEventListener("change", function () { setDrive(el.value); });
+  });
+  document.getElementById("sx").addEventListener("input", function (e) {
+    xT = parseFloat(e.target.value); document.getElementById("vx").textContent = fmt(xT) + " °";
+  });
+  document.getElementById("stop").addEventListener("click", function () { P.v = 0; document.getElementById("sv").value = 0; show("v"); });
+  document.getElementById("rev").addEventListener("click", function () { P.v = -P.v; document.getElementById("sv").value = P.v; show("v"); });
+  document.getElementById("zero").addEventListener("click", reset);
+
+  // drag the wheel by hand: the angle follows the pointer round the hub
+  function pointerAngle(e) {
+    var r = stage.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    return { a: Math.atan2(-(py - wheel.cy), px - wheel.cx) / D, d: Math.hypot(px - wheel.cx, py - wheel.cy) };
+  }
+  stage.addEventListener("pointerdown", function (e) {
+    if (drive !== "hand" || e.target.closest("#panel")) return;
+    var p = pointerAngle(e); if (p.d > wheel.R * 1.05) return;
+    grab = { a: p.a }; stage.classList.add("grabbing"); stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    var p = pointerAngle(e);
+    if (!grab) { stage.classList.toggle("grab", drive === "hand" && !e.target.closest("#panel") && p.d <= wheel.R * 1.05); return; }
+    xT += wrapDeg(p.a - grab.a); grab.a = p.a; setPosSlider(xT);
+  });
+  function release(e) {
+    if (!grab) return; grab = null; stage.classList.remove("grabbing");
+    try { stage.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  stage.addEventListener("pointerup", release); stage.addEventListener("pointercancel", release);
+
+  // URL presets: ?N=16&v=10&K=16&fs=50&noise=0&drive=hand  (K as a power of two: 4 to 128)
+  (function () {
+    var q = new URLSearchParams(location.search);
+    function set(key, raw) {
+      var el = document.getElementById(SPEC[key][0]);
+      var v = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), raw));
+      el.value = v; P[key] = SPEC[key][2](v); show(key);
+    }
+    if (q.has("N")) { set("N", parseFloat(q.get("N"))); }
+    if (q.has("v")) set("v", parseFloat(q.get("v")));
+    if (q.has("K")) set("K", Math.round(Math.log2(parseFloat(q.get("K")))));
+    if (q.has("fs")) set("fs", parseFloat(q.get("fs")));
+    if (q.has("noise")) set("noise", parseFloat(q.get("noise")));
+    if (q.get("drive") === "hand") { document.querySelector('input[name="drive"][value="hand"]').checked = true; setTimeout(function () { setDrive("hand"); }, 0); }
+  })();
+
+  // ---- sizing -------------------------------------------------------------------
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    draw();
+  }
+  window.addEventListener("resize", resize);
+  reset();
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

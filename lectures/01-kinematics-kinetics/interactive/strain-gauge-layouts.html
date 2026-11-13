@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What each gauge layout reads</title>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']] },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+  };
+</script>
+<!-- Vendored, not CDN: this has to work in a lecture hall with no network. -->
+<script id="MathJax-script" defer src="vendor/tex-svg.js"></script>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 6px; padding-top: 5px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 105px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]:disabled { opacity: 0.35; cursor: default; }
+  #panel input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--charcoal); }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 5.2em; font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .k i { font-style: italic; }
+  #panel .val { display: inline-block; width: 4.8em; text-align: right; font-variant-numeric: tabular-nums; }
+  #panel .chk { display: flex; align-items: flex-start; margin: 2px 0; }
+  #panel .chk input { width: 11px; height: 11px; flex: none; margin: 2px 4px 0 0; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel .note { color: var(--warmgray); margin-top: 4px; }
+  /* the readings and the formulas of each layout, laid over the canvas */
+  .blk { position: absolute; font-size: 15px; line-height: 1.2; color: var(--charcoal); pointer-events: none; }
+  .blk.grid { display: grid; grid-template-columns: max-content max-content; column-gap: 12px; row-gap: 3px; align-items: center; }
+  .blk.grid .hd, .blk.grid .note { grid-column: 1 / span 2; width: 0; }   /* width 0: notes do not widen the columns */
+  .blk .tex { min-width: 0; }
+  .blk .num { font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 13.5px; white-space: pre; }
+  .blk .hd { font-size: 12px; color: var(--warmgray); margin-bottom: 2px; white-space: nowrap; }
+  .blk .line { font-size: 15px; white-space: nowrap; margin: 2px 0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">The strain in the element</div>
+      <label class="sl"><span class="k">Stretch <i>&epsilon;<sub>x</sub></i></span>
+        <input type="range" id="sx" min="-1000" max="1000" step="10" value="1000">
+        <span class="val" id="vx">1000 µε</span></label>
+      <label class="sl"><span class="k">Stretch <i>&epsilon;<sub>y</sub></i></span>
+        <input type="range" id="sy" min="-1000" max="1000" step="10" value="-300">
+        <span class="val" id="vy">−300 µε</span></label>
+      <label class="sl"><span class="k">Shear <i>&gamma;<sub>xy</sub></i></span>
+        <input type="range" id="sg" min="-2000" max="2000" step="10" value="0">
+        <span class="val" id="vg">0 µε</span></label>
+      <label class="chk"><input type="checkbox" id="cp"><span>Link &epsilon;<sub>y</sub> to &epsilon;<sub>x</sub> by Poisson's ratio, &epsilon;<sub>y</sub> = &minus;0.3 &epsilon;<sub>x</sub></span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">Try these</div>
+      <button data-p="none">No strain</button>
+      <button data-p="pull">Pull along x</button>
+      <button data-p="shear">Pure shear</button>
+      <button data-p="pull30">Pull at 30°</button>
+      <button data-p="equal">Equal stretch</button>
+      <div class="note">Equal stretch in every direction is what a temperature rise does to a free element.</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">Key</div>
+      <div class="note">Red grid: stretched. Blue grid: shortened. Grey: no strain. Dotted: the element before the load. Deformation exaggerated 150 times.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+  var COL = { disc: "#2D3748", text: "#718096", line: "#CBD5E0", el: "#E2E8F0", elEdge: "#A0AEC0",
+              back: "#F0D8A8", backEdge: "#B7791F", tens: [165, 28, 48], comp: [43, 108, 176], ink: "#2D3748" };
+  var D = Math.PI / 180, MU = 1e-6, EXAG = 150;
+
+  var P = { ex: 1000, ey: -300, g: 0, poisson: false };
+
+  // the strain a grid at angle th (degrees) reads, in µε
+  function eps(th) {
+    var c = Math.cos(th * D), s = Math.sin(th * D);
+    return P.ex * c * c + P.ey * s * s + P.g * s * c;
+  }
+  // the deformed position of an element point (x, y), element half-size 1, drawn exaggerated
+  function map(x, y) {
+    var k = EXAG * MU;
+    return [x + k * (P.ex * x + 0.5 * P.g * y), y + k * (0.5 * P.g * x + P.ey * y)];
+  }
+
+  function fmt(v) { var s = Math.round(v).toString(); return s.replace("-", "−"); }
+  function text(s, x, y, color, size, align, italic) {
+    ctx.save(); ctx.fillStyle = color;
+    ctx.font = (italic ? "italic " : "") + (size || 12) + 'px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); ctx.restore();
+  }
+  // the colour for a strain: red when stretched, blue when shortened, stronger for larger strain
+  function strainCol(e) {
+    if (Math.abs(e) < 20) return "#718096";                // no strain: grey
+    var a = Math.min(1, Math.abs(e) / 1000), base = e >= 0 ? COL.tens : COL.comp;
+    var mix = function (c) { return Math.round(160 + (c - 160) * (0.25 + 0.75 * a)); };
+    return "rgb(" + mix(base[0]) + "," + mix(base[1]) + "," + mix(base[2]) + ")";
+  }
+
+  // ---- one panel: the element, its layout of grids, and what they read -----------------
+  // grids: [{ th, cx, cy, len }] in element coordinates (half-size 1)
+  function panel(x0, y0, w, h, title, grids, key) {
+    var S = Math.min(w * 0.17, (h - 120) / 2.5);          // px per element unit
+    var cx = x0 + 14 + S * 1.2, cy = y0 + 30 + S * 1.25;
+    function sc(p) { return [cx + S * p[0], cy - S * p[1]]; }
+    ctx.save(); ctx.fillStyle = COL.disc; ctx.font = 'bold 17px "Linux Libertine O", Georgia, serif';
+    ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(title, x0 + 6, y0 + 10); ctx.restore();
+    // the element: unloaded dotted, loaded filled
+    var corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+    ctx.fillStyle = COL.el; ctx.strokeStyle = COL.elEdge; ctx.lineWidth = 1;
+    ctx.beginPath(); corners.forEach(function (c, i) { var q = sc(map(c[0], c[1])); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.strokeStyle = COL.disc; ctx.lineWidth = 1; ctx.setLineDash([1.5, 3]); ctx.lineCap = "round";
+    ctx.beginPath(); corners.forEach(function (c, i) { var q = sc(c); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+    ctx.closePath(); ctx.stroke(); ctx.restore();
+    // the backing under the grids
+    var bx = 0, by = 0, bxs = [], bys = [];
+    grids.forEach(function (gd) {
+      var hl = gd.len / 2 + 0.12, hw = 0.2, c = Math.cos(gd.th * D), s = Math.sin(gd.th * D);
+      [[-hl, -hw], [hl, -hw], [hl, hw], [-hl, hw]].forEach(function (q) { bxs.push(gd.cx + q[0] * c - q[1] * s); bys.push(gd.cy + q[0] * s + q[1] * c); });
+    });
+    var bx0 = Math.min.apply(null, bxs) - 0.06, bx1 = Math.max.apply(null, bxs) + 0.06, by0 = Math.min.apply(null, bys) - 0.06, by1 = Math.max.apply(null, bys) + 0.06;
+    ctx.fillStyle = COL.back; ctx.strokeStyle = COL.backEdge; ctx.lineWidth = 0.8;
+    ctx.beginPath(); [[bx0, by0], [bx1, by0], [bx1, by1], [bx0, by1]].forEach(function (c, i) { var q = sc(map(c[0], c[1])); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // each grid: six runs along its angle, joined by end loops, mapped through the deformation
+    grids.forEach(function (gd) {
+      var e = eps(gd.th), col = strainCol(e), c = Math.cos(gd.th * D), s = Math.sin(gd.th * D);
+      var L = gd.len / 2, sp = 0.055, nr = 6;
+      function at(u, v) { return sc(map(gd.cx + u * c - v * s, gd.cy + u * s + v * c)); }
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.lineCap = "butt"; ctx.lineJoin = "miter";
+      ctx.beginPath();
+      for (var i = 0; i < nr; i++) {
+        var v = (i - (nr - 1) / 2) * sp, a = at(i % 2 ? L : -L, v), b = at(i % 2 ? -L : L, v);
+        if (i === 0) { var t0 = at(-L - 0.1, v); ctx.moveTo(t0[0], t0[1]); }
+        ctx.lineTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+        if (i < nr - 1) { var b2 = at(i % 2 ? -L : L, v + sp); ctx.lineTo(b2[0], b2[1]); }
+      }
+      var tl = at(-L - 0.1, (nr - 1) / 2 * sp); ctx.lineTo(tl[0], tl[1]);
+      ctx.stroke();
+      // its name at its far end
+      var lab = at(L + 0.2, 0);
+      text(gd.name, lab[0], lab[1], col, 13.5, "center");
+    });
+    // what the layout tells us, on the right
+    // the readings to the right of the element, the formulas under it
+    var rb = BLK[key].reads, eb = BLK[key].eqs;
+    rb.style.left = (cx + S * 1.6) + "px"; rb.style.top = (y0 + 26) + "px";
+    eb.style.left = (x0 + 12) + "px"; eb.style.top = (cy + S * 1.3 + 6) + "px";
+    grids.forEach(function (gd, i) {
+      var e = eps(gd.th), n = rb.querySelectorAll(".num")[i];
+      n.textContent = fmt(e).padStart(6) + " µε"; n.style.color = strainCol(e);
+    });
+  }
+
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var panelW = document.getElementById("panel").offsetWidth + 18;
+    var x0 = panelW, w = (W - x0 - 10) / 2, h = (H - 16) / 2, h2 = h;
+
+    var e0 = eps(0), e90 = eps(90), e45 = eps(45), em45 = eps(-45);
+    // the rosette recovers the whole strain state
+    var gx = e0, gy = e90, gg = 2 * e45 - e0 - e90;
+    var cen = (gx + gy) / 2, rad = Math.hypot((gx - gy) / 2, gg / 2);
+    var thp = 0.5 * Math.atan2(gg, gx - gy) / D;
+
+    panel(x0, 8, w, h, "Linear", [{ th: 0, cx: 0, cy: 0, len: 1.1, name: "0°" }], "lin");
+    panel(x0 + w, 8, w, h, "Tee, 0° and 90°",
+      [{ th: 0, cx: -0.3, cy: -0.55, len: 0.85, name: "0°" }, { th: 90, cx: 0.5, cy: 0.2, len: 0.85, name: "90°" }], "tee");
+    panel(x0, 8 + h, w, h2, "Shear, ±45°",
+      [{ th: 45, cx: -0.42, cy: -0.1, len: 0.75, name: "+45°" }, { th: -45, cx: 0.42, cy: -0.1, len: 0.75, name: "−45°" }], "shr");
+    panel(x0 + w, 8 + h, w, h2, "Rosette, 0°, 45°, 90°",
+      [{ th: 0, cx: 0.05, cy: -0.62, len: 0.75, name: "0°" }, { th: 90, cx: -0.62, cy: 0.05, len: 0.75, name: "90°" },
+       { th: 45, cx: 0.2, cy: 0.2, len: 0.75, name: "45°" }], "ros");
+
+    // the numbers in the sentences
+    var put = function (id, v) { document.getElementById(id).textContent = v; };
+    put("q-shr-g", fmt(e45 - em45) + " µε");
+    put("q-ros-1", fmt(cen + rad) + " µε"); put("q-ros-2", fmt(cen - rad) + " µε");
+    put("q-ros-th", (Math.round(thp * 10) / 10).toFixed(1).replace("-", "−") + "°");
+  }
+
+  // ---- the HTML blocks: readings and formulas, typeset once by MathJax ----------------
+  // each row: [tex, id of its number] or a note: ["note", html with \( \) maths]
+  var SPEC_BLK = {
+    lin: { reads: ["\\varepsilon_{0}"],
+           eqs: [["Reads the strain in one direction only."], ["It misses the strain across the grid,", 1], ["and it misses shear.", 1]] },
+    tee: { reads: ["\\varepsilon_{0}", "\\varepsilon_{90}"],
+           eqs: [["Reads the strain along and across."], ["It misses shear.", 1]] },
+    shr: { reads: ["\\varepsilon_{+45}", "\\varepsilon_{-45}"],
+           eqs: [['Their difference is the shear: <span class="num" id="q-shr-g"></span>'],
+                 ["An equal stretch in every direction cancels.", 1]] },
+    ros: { reads: ["\\varepsilon_{0}", "\\varepsilon_{90}", "\\varepsilon_{45}"],
+           eqs: [["Three readings give the strain in every direction."],
+                 ['Largest stretch <span class="num" id="q-ros-1"></span>, at <span class="num" id="q-ros-th"></span> from <i>x</i>.', 2],
+                 ['Smallest <span class="num" id="q-ros-2"></span>.', 1]] }
+  };
+  var BLK = {};
+  Object.keys(SPEC_BLK).forEach(function (k) {
+    var sp = SPEC_BLK[k], rb = document.createElement("div"), eb = document.createElement("div");
+    rb.className = "blk grid"; eb.className = "blk grid";
+    rb.innerHTML = '<div class="hd">Grid readings</div>' + sp.reads.map(function (t) {
+      return '<span class="tex">\\(' + t + ' =\\)</span><span class="num"></span>'; }).join("");
+    eb.className = "blk";
+    eb.innerHTML = sp.eqs.map(function (r) {
+      var col = r[1] === 1 ? "var(--warmgray)" : (r[1] === 2 ? "var(--crimson)" : "var(--charcoal)");
+      return '<div class="line" style="color:' + col + '">' + r[0] + '</div>';
+    }).join("");
+    stage.appendChild(rb); stage.appendChild(eb);
+    BLK[k] = { reads: rb, eqs: eb };
+  });
+  // typeset once; without MathJax, show the formulas as plain text with subscripts
+  var typeset = false;
+  function plain(t) {
+    return t.replace(/\\varepsilon/g, "ε").replace(/\\gamma/g, "γ").replace(/\\theta/g, "θ").replace(/\\nu/g, "ν")
+      .replace(/\\pm/g, "±").replace(/\\tfrac\{([^}]*)\}\{([^}]*)\}/g, "($1)/($2)").replace(/\\sqrt/g, "√")
+      .replace(/\\left|\\right|\\mathrm|\\,|\\ /g, "").replace(/\^2/g, "²")
+      .replace(/_\{([^}]*)\}/g, "<sub>$1</sub>").replace(/_(\w)/g, "<sub>$1</sub>").replace(/[{}]/g, "");
+  }
+  function useFallback() {
+    if (typeset) return; typeset = true;
+    Array.prototype.forEach.call(document.querySelectorAll(".blk .tex, .blk .note"), function (el) {
+      el.innerHTML = el.innerHTML.replace(/\\\(([\s\S]*?)\\\)/g, function (m, t) { return "<i>" + plain(t) + "</i>"; });
+    });
+    draw();
+  }
+  function typesetOnce() {
+    if (typeset || !window.MathJax || !window.MathJax.typesetPromise) return;
+    typeset = true;
+    window.MathJax.typesetPromise(Array.prototype.slice.call(document.querySelectorAll(".blk"))).then(draw)
+      .catch(function () { typeset = false; useFallback(); });
+  }
+  function whenReady() { if (window.MathJax && window.MathJax.startup) window.MathJax.startup.promise.then(typesetOnce).catch(useFallback); }
+  document.getElementById("MathJax-script").addEventListener("load", whenReady);
+  document.getElementById("MathJax-script").addEventListener("error", useFallback);
+  setTimeout(useFallback, 2500);
+
+  // ---- controls ---------------------------------------------------------------
+  function show() {
+    document.getElementById("vx").textContent = fmt(P.ex) + " µε";
+    document.getElementById("vy").textContent = fmt(P.ey) + " µε";
+    document.getElementById("vg").textContent = fmt(P.g) + " µε";
+    document.getElementById("sx").value = P.ex; document.getElementById("sy").value = P.ey; document.getElementById("sg").value = P.g;
+    document.getElementById("sy").disabled = P.poisson;
+    draw();
+  }
+  function link() { if (P.poisson) P.ey = Math.round(-0.3 * P.ex / 10) * 10; }
+  document.getElementById("sx").addEventListener("input", function (e) { P.ex = parseFloat(e.target.value); link(); show(); });
+  document.getElementById("sy").addEventListener("input", function (e) { P.ey = parseFloat(e.target.value); show(); });
+  document.getElementById("sg").addEventListener("input", function (e) { P.g = parseFloat(e.target.value); show(); });
+  document.getElementById("cp").addEventListener("change", function (e) { P.poisson = e.target.checked; link(); show(); });
+  // presets: a pull along x, pure shear, a pull along 30° (with Poisson contraction across it), equal stretch
+  var PRE = {
+    none:  function () { return [0, 0, 0]; },
+    pull:  function () { return [1000, -300, 0]; },
+    shear: function () { return [0, 0, 1000]; },
+    pull30: function () {
+      var e1 = 1000, e2 = -300, c = Math.cos(30 * D), s = Math.sin(30 * D);
+      return [e1 * c * c + e2 * s * s, e1 * s * s + e2 * c * c, 2 * (e1 - e2) * s * c];
+    },
+    equal: function () { return [500, 500, 0]; }
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-p]"), function (b) {
+    b.addEventListener("click", function () {
+      var v = PRE[b.getAttribute("data-p")]();
+      P.poisson = false; document.getElementById("cp").checked = false;
+      P.ex = Math.round(v[0] / 10) * 10; P.ey = Math.round(v[1] / 10) * 10; P.g = Math.round(v[2] / 10) * 10; show();
+    });
+  });
+  // URL presets: ?p=none|pull|shear|pull30|equal
+  (function () {
+    var q = new URLSearchParams(location.search), p = q.get("p");
+    if (p && PRE[p]) { var v = PRE[p](); P.ex = Math.round(v[0] / 10) * 10; P.ey = Math.round(v[1] / 10) * 10; P.g = Math.round(v[2] / 10) * 10; }
+  })();
+
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1; W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR); show();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+})();
+</script>
+</body>
+</html>
