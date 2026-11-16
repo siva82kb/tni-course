@@ -3292,1372 +3292,553 @@ An encoder datasheet gives two numbers. They mean different things.
 <div class="fragment" style="font-size: 0.8em; margin-top: -0.5em;">
 <p><span class="red">The gauge reads the full strain only if <span class="math inline">\(k_{glue} \gg k_{gauge}\)</span>. Keep the glue layer thin. Use the glue the maker specifies.</span></p>
 </div>
-<!-- ## Kinetic measurands
-
-[What clinicians want]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-::: {.fit}
-| Measurand | Clinical use | Typical device |
-|:----------|:-------------|:---------------|
-| Muscle force | Muscle strength after stroke, surgery or disuse | Isokinetic dynamometer, hand-held dynamometer |
-| Grip force | Frailty, sarcopenia, hand function | Grip dynamometer |
-| Ground reaction force and centre of pressure | Balance, gait, fall risk | Force plate, balance board |
-| Interface pressure | Prosthetic sockets, seating, the diabetic foot | Pressure mats, instrumented insoles |
-| Interaction force | Rehabilitation robots, exoskeletons | Load cells, force/torque sensors |
-:::
-
-::: {.fragment}
-[The clinician rarely wants a force. They want a moment about a joint, or a point under the feet. The sensor gives a force somewhere else.]{.red}
-:::
-:::
-
-
-
-
-## Kinetic measurands
-
-[Two numbers for one patient]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-::: {.block}
-**Do now.** Two physiotherapists test the same patient's knee extension strength. They use the same hand-held dynamometer on the same morning. One records 180 N. The other records 240 N.
-
-Which number is right? What would you need to know to decide?
-:::
-
-::: {.fragment}
-Suppose the load cell inside the dynamometer is calibrated and accurate to 1 %. That accounts for about 2 N. The other 58 N came from somewhere else.
-:::
-
-::: {.fragment}
-[This section is about where that gap comes from. We return to these two numbers at the end.]{.red}
-:::
-:::
-
-
-## Kinetic measurands
-
-[What the clinician actually wants]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-::: {.fit}
-| Measurand | Clinical use | Typical device |
-|:----------|:-------------|:---------------|
-| Joint moment | Muscle strength after stroke, surgery or disuse | Isokinetic dynamometer, hand-held dynamometer |
-| Grip force | Frailty, sarcopenia, hand function | Grip dynamometer |
-| Ground reaction force and centre of pressure | Balance, gait, fall risk | Force plate, balance board |
-| Interface pressure | Prosthetic sockets, seating, the diabetic foot | Pressure mats, instrumented insoles |
-| Interaction force | Rehabilitation robots, exoskeletons | Load cells, force/torque sensors |
-:::
-
-::: {.fragment}
-[The clinician rarely wants a force. They want a moment about a joint, or a point under the feet. The sensor gives a force somewhere else.]{.red}
-:::
-:::
-
-
-## Kinetic measurands
-
-[Joint moment]{.framesub}
-
-
-
-
-## Kinetic measurands
-
-[Force is not moment]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A force $\mathbf{F}$ applied at a point $\mathbf{r}$ from an axis produces a moment about that axis,
-
-$$\mathbf{M} = \mathbf{r} \times \mathbf{F}$$
-
-The vectors are expressed in the frames from the kinematics section.
-
-::: {.fragment}
-A dynamometer measures a force at its pad, or a torque about its own shaft. The number it reports is a moment about the dynamometer's axis. The clinician wants the moment about the knee. The two axes are never exactly the same.
-:::
-
-::: {.fragment}
-A kinetic measurement passes three gaps on its way to a decision.
-
-1. [Transducer to load path.]{.highlight} The sensor sits in the load path and changes what it measures.
-2. [Device to body.]{.highlight} The device measures in its own geometry, not the body's.
-3. [Number to decision.]{.highlight} The person, the protocol and the examiner vary from day to day.
-:::
-
-::: {.fragment}
-[The transducer is usually the most accurate link in the chain. Most of the error lives in the gaps.]{.red}
-:::
-:::
-
-
-## A sensor in the load path
-
-[The sensor is part of the system it measures]{.framesub}
-
-:::: {.columns style="margin-top: -0.5em;"}
-
-::: {.column style="width: 40%;"}
-[Figure to be redrawn from old Module 04, slide 2. A force $f$ on a mass $M$, without and with a sensor of mass $m$.]{.red}
-:::
-
-::: {.column style="width: 58%; font-size: 0.85em; padding-left: 0.5em;"}
-Push a mass $M$ with a force $f$. It accelerates at $a = f/M$.
-
-::: {.fragment}
-Put a force sensor between your hand and the mass. The sensor has its own mass $m$. Now $a = f/(M+m)$. The sensor changed the motion it was meant to measure.
-:::
-
-::: {.fragment}
-The sensor also deforms. A force sensor measures force by measuring how far a spring inside it deflects. A sensor that does not deform cannot measure force.
-:::
-
-::: {.fragment}
-[Module 1 said loading happens in every domain. This is the mechanical case. The sensor adds mass and compliance to the load path.]{.red}
-:::
-:::
-
-::::
-
-
-## A sensor in the load path
-
-[Demo: tap the load cell]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-::: {.block}
-**Demo.** Put a mass on the load cell. Tap the cell and watch the live plot. Double the mass and tap again.
-:::
-
-::: {.fragment}
-The reading rings and dies away. With more mass it rings more slowly. The spring in the sensor and the mass on it form a resonator,
-
-$$f_n = \frac{1}{2\pi}\sqrt{\frac{k}{m}}$$
-:::
-
-::: {.fragment}
-The sensor follows forces that change well below $f_n$. Near $f_n$ it rings and misreports them. This is the dynamic characterisation from Module 1. Here the sensor's stiffness and the load's mass set the bandwidth.
-:::
-
-::: {.fragment}
-This has two consequences in our field.
-
-- A force plate must be stiff. Its natural frequency must sit far above the frequencies in a heel strike.
-- A strap or a soft pad adds compliance. During an "isometric" contraction the limb then moves. We meet this again on the dynamometer.
-:::
-:::
-
-
-## A sensor in the load path
-
-[The reading includes everything on the far side]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-Stand on a bathroom scale and it reads your weight. Bend your knees quickly and the reading drops, then overshoots.
-
-::: {.fragment}
-The scale reads the force on its top plate. For a mass $m$ accelerating upward at $a$, that force is
-
-$$F = m\,(g + a)$$
-
-The reading equals the weight only when $a = 0$.
-:::
-
-::: {.fragment}
-Everything between the sensor and the person adds to the reading. A robot handle, a footplate and a dynamometer arm each add their weight and their inertia.
-:::
-
-::: {.fragment}
-An isokinetic dynamometer weighs the relaxed limb and the lever arm before the test. It subtracts that gravity moment from every reading. [If the patient is not relaxed when the limb is weighed, every reading after that carries the error.]{.red}
-:::
-:::
-
-
-## Load cells
-
-[Demo: a load cell and a live plot]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-::: {.block}
-**Demo.** A bar load cell, an HX711 board and a microcontroller. Place known masses on the cell and take them off. Watch the live plot.
-:::
-
-::: {.fragment}
-The reading follows each mass. It returns to zero when the mass comes off. It stays steady while the mass stays on.
-:::
-
-::: {.fragment}
-This is what a well-made force sensor does. The next slides show why it behaves so well, and when it stops behaving.
-:::
-
-::: {style="margin-top: 1em;"}
-[Lab hardware to be confirmed. Load cell part number and capacity.]{.red}
-:::
-:::
-
-
-## Load cells
-
-[What is inside]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-[Photos to be added. Bar (double-bending beam), S-type, button, shaft torque cell.]{.red}
-
-A load cell is a block of metal shaped so that a force strains it in a known place. Strain gauges are glued at that place.
-
-::: {.fragment}
-- A [bar cell]{.highlight} bends like a beam. Kitchen scales and our lab use this kind.
-- An [S-type cell]{.highlight} takes tension or compression along its axis. Pull tests and instrumented cables use it.
-- A [button cell]{.highlight} takes compression only. It fits under a footplate or inside a handle.
-- A [torque cell]{.highlight} is a shaft that twists. Isokinetic dynamometers use one.
-:::
-
-::: {.fragment}
-The shape decides which forces strain the gauges and which do not. The maker designs and calibrates the shape. [You choose the cell and mount it as the datasheet says.]{.red}
-:::
-:::
-
-
-## Load cells
-
-[The signal is tiny]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A strain gauge is a thin metal foil track. When it stretches, its resistance rises,
-
-$$\frac{\Delta R}{R} = GF \cdot \varepsilon$$
-
-The gauge factor $GF$ is about 2 for metal foil.
-
-::: {.fragment}
-A load cell is designed so that its gauges see about 1000 µε at full load. A 350 Ω gauge then changes by
-
-$$\Delta R = 350 \times 2 \times 1000 \times 10^{-6} = 0.7\ \Omega$$
-
-That is 0.2 % of its resistance.
-:::
-
-::: {.fragment}
-[Anything else that changes the resistance by 0.2 % is an error of the same size.]{.red} A change in temperature can do it. So can the resistance of the leads, or a bending load the cell is not meant to measure.
-:::
-:::
-
-
-## Load cells
-
-[The bridge turns a resistance change into a voltage]{.framesub}
-
-:::: {.columns style="margin-top: -0.5em;"}
-
-::: {.column style="width: 38%;"}
-[Bridge schematic to be drawn. Four gauges, two in tension (T) and two in compression (C), excitation $V_{ex}$, output $v_o$.]{.red}
-:::
-
-::: {.column style="width: 60%; font-size: 0.85em; padding-left: 0.5em;"}
-The cell carries four gauges in a Wheatstone bridge. Two sit where the metal stretches. Two sit where it compresses.
-
-::: {.fragment}
-The output is the difference between the two halves of the bridge. Under load one half rises and the other falls, so the changes add,
-
-$$\frac{v_o}{V_{ex}} \approx GF \cdot \varepsilon$$
-:::
-
-::: {.fragment}
-With $GF = 2$ and 1000 µε at full load, that is 2 mV per volt of excitation. [This is why load cells are rated in mV/V.]{.highlight}
-:::
-
-::: {.fragment}
-The output is a fraction of $V_{ex}$. If the excitation drifts by 1 %, the reading drifts by 1 %. We return to this with ADCs.
-:::
-:::
-
-::::
-
-
-## Load cells
-
-[The bridge rejects what all four gauges share]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A temperature change raises all four resistances together. Both halves of the bridge shift equally. Their difference does not change.
-
-::: {.fragment}
-The same holds for any load that strains all four gauges alike. A bar cell is built so that a load off its axis strains the gauges in this common way, as far as possible.
-:::
-
-::: {.fragment}
-[Symmetry rejects what is common to all four gauges. That is the whole design idea of a load cell.]{.red}
-:::
-
-::: {.fragment}
-The rejection is only as good as the symmetry. Gauges that differ slightly, or a load placed far from where the maker intended, leave a residue. The datasheet gives it as the temperature effect and the eccentric load error.
-:::
-
-::: {style="margin-top: 1em;"}
-[Interactive to be built: `bridge-symmetry.html`. Sliders for load, temperature and off-axis load. Toggle one, two or four active gauges.]{.red}
-:::
-:::
-
-
-## Load cells
-
-[Torque cells]{.framesub}
-
-:::: {.columns style="margin-top: -0.5em;"}
-
-::: {.column style="width: 38%;"}
-[Figure to be drawn. A shaft with gauges at +45° and −45°.]{.red}
-:::
-
-::: {.column style="width: 60%; font-size: 0.85em; padding-left: 0.5em;"}
-Torque is measured the same way. A twisted shaft stretches along one diagonal and compresses along the other. Gauges at +45° and −45° sit on these diagonals. Four of them form a bridge. The bridge rejects bending and axial load by the same symmetry.
-
-::: {.fragment}
-A second way is a load cell at a known distance from the axis. The torque is the force times the lever arm. An error in the lever arm is then an error in the torque.
-:::
-
-::: {.fragment}
-[An isokinetic dynamometer measures torque about its own shaft. Which shaft that is matters, and we return to it.]{.red}
-:::
-:::
-
-::::
-
-
-## Load cells
-
-[From mV/V to a number]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A worked example. A cell rated 2 mV/V and 20 kg, excited at 5 V.
-
-::: {.fragment}
-The full-scale output is $2 \times 5 = 10$ mV. That is 0.5 mV per kg, or 5 µV per 10 g.
-:::
-
-::: {.fragment}
-The HX711 takes this directly. At gain 128 and a 5 V supply its input range is ±20 mV. It has a 24-bit converter, so one step is
-
-$$\frac{40\ \text{mV}}{2^{24}} \approx 2.4\ \text{nV}$$
-:::
-
-::: {.fragment}
-Can it resolve 10 g? That needs 5 µV, and 2.4 nV steps are far finer. But steps finer than the noise are empty digits. [The question is the noise, not the bits.]{.red} We read the noise from the datasheet in the next section.
-:::
-:::
-
-
-## Load cells
-
-[The lab's load cell, from its datasheet]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-[Part number and datasheet to be filled in. The table follows the MPU-9250 slides.]{.red}
-
-::: {.fit}
-| Parameter | Value | What it means for us |
-|:----------|:------|:---------------------|
-| Rated capacity | | The largest load it measures to specification |
-| Rated output | | mV/V at full load. Multiply by the excitation for the full-scale output. |
-| Combined error | | Nonlinearity and hysteresis together, as % of full scale |
-| Creep | | Change in the reading under a constant load, % over 30 min |
-| Zero temperature effect | | The zero moves with temperature, % per °C |
-| Span temperature effect | | The sensitivity changes with temperature, % per °C |
-| Eccentric load error | | Error when the load is off the centre line |
-| Safe overload | | Beyond this the cell is permanently damaged |
-:::
-:::
-
-
-## Load cells
-
-[What remains after calibration]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-Calibrate the whole chain at once. Hang known masses on the cell, record the readings and fit a line. The gauge factor, the bridge resistors and the amplifier gain are now inside the fitted line. Their tolerances no longer matter.
-
-::: {.fragment}
-What remains is what the calibration cannot remove.
-
-- The uncertainty of the reference masses.
-- Nonlinearity. The line does not fit the curve exactly.
-- Hysteresis. Loading and unloading give different readings.
-- Creep. The reading changes under a constant load.
-- Temperature. The zero and the span move when the room warms.
-- Off-axis load. The cell was not calibrated with it.
-:::
-
-::: {.fragment}
-[Each of these has a line on the datasheet. The error budget comes from the datasheet, not from the circuit.]{.red}
-:::
-:::
-
-
-## Force-sensing resistors
-
-[Demo: the same mass on two sensors]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-::: {.block}
-**Demo.** Put the same mass on the load cell and on a force-sensing resistor (FSR). Plot both live for five minutes. Then lift the mass and put it back.
-:::
-
-::: {.fragment}
-The load cell reading stays flat. The FSR reading keeps changing under a constant load. After the mass is lifted and replaced, the FSR gives a different number.
-:::
-
-::: {.fragment}
-An FSR costs a small fraction of a load cell. It is thin and flexible, and it fits into an insole or a handle. [Why does it behave so badly, and is it ever good enough?]{.red}
-:::
-:::
-
-
-## Force-sensing resistors
-
-[Why an FSR creeps]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-An FSR is a polymer film loaded with conductive particles. It is pressed against a pattern of electrodes. More force gives more contact between the particles and the electrodes, and the resistance falls.
-
-::: {.fragment}
-The polymer is viscoelastic. Under a constant force it keeps flowing, the contact keeps growing, and the resistance keeps falling. That is the creep in the demo. When the force is removed the polymer recovers slowly. That is the hysteresis.
-:::
-
-::: {.fragment}
-The resistance depends on the contact area, not on force alone. The same force through a point and through a flat puck gives different readings. The surface behind the sensor matters too.
-:::
-
-::: {.fragment}
-[The error depends on the load history. A single calibration does not remove it.]{.red} In the lab you measure how large it is for our FSR.
-:::
-:::
-
-
-## Force-sensing resistors
-
-[Choosing a force sensor]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-::: {.fit}
-| | Load cell | FSR | Capacitive mat | Piezoelectric |
-|:--|:--|:--|:--|:--|
-| Static force | Yes | Yes, with creep | Yes | No, the reading decays |
-| Accuracy | Best | Poor | Moderate | Good for changing force |
-| Thickness | Bulky | Under 1 mm | A few mm | Bulky, as a plate |
-| Cost | Moderate | Very low | High | High |
-| Clinical use | Dynamometers, robots | Contact and timing | Seating, socket and plantar pressure | Force plates for gait |
-:::
-
-::: {.fragment}
-A piezoelectric crystal produces a charge when loaded. The charge leaks away, so the reading of a constant force decays. Piezoelectric plates suit walking, running and jumping. They drift during long quiet standing.
-:::
-
-::: {.fragment}
-[Use an FSR to detect when something happens. Heel strike, toe off, grasp and release are good uses. Do not use it to report how much force.]{.red}
-:::
-:::
-
-
-## Measuring strength
-
-[The isokinetic dynamometer]{.framesub}
-
-:::: {.columns style="margin-top: -0.5em;"}
-
-::: {.column style="width: 38%;"}
-[Photo or drawing to be added. Patient seated, shank strapped to the lever arm, dynamometer head beside the knee.]{.red}
-:::
-
-::: {.column style="width: 60%; font-size: 0.85em; padding-left: 0.5em;"}
-The patient's shank is strapped to a lever arm. The arm turns on the dynamometer's shaft, and a motor controls the shaft. An encoder on the shaft reads its angle and speed. A torque cell in the shaft reads the torque.
-
-::: {.fragment}
-In an isokinetic test the motor holds the speed constant, whatever the patient does. In an isometric test it holds the arm still.
-:::
-
-::: {.fragment}
-The dynamometer reports the torque about its own shaft. [The clinician wants the moment about the knee. The two are equal only if the knee axis lies on the shaft axis.]{.red}
-:::
-:::
-
-::::
-
-
-## Measuring strength
-
-[Misalignment, worked]{.framesub}
-
-:::: {.columns style="margin-top: -0.5em;"}
-
-::: {.column style="width: 38%;"}
-[Figure to be drawn. Dynamometer axis, knee axis offset by $d$ along the lever, pad force $F$ at $r_d$.]{.red}
-:::
-
-::: {.column style="width: 60%; font-size: 0.85em; padding-left: 0.5em;"}
-The pad pushes on the shank with a force $F$, at a distance $r_d$ from the dynamometer axis. The dynamometer reads $T = F\,r_d$.
-
-::: {.fragment}
-The knee axis sits a distance $d$ from the dynamometer axis, along the lever towards the pad. The moment about the knee is $M = F\,(r_d - d)$. The relative error is
-
-$$\frac{T - M}{M} = \frac{d}{r_d - d}$$
-:::
-
-::: {.fragment}
-With the pad at 30 cm and the knee 3 cm off, the dynamometer overstates the knee moment by 11 %.
-:::
-
-::: {.fragment}
-The therapist aligns the axes with the leg relaxed. During a hard contraction the soft tissue and the straps compress, and the knee moves. The misalignment is largest when the effort is largest. [This is the goniometer and exoskeleton problem again, now for moments instead of angles.]{.red}
-:::
-:::
-
-::::
-
-
-## Measuring strength
-
-[The hand-held dynamometer]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-The examiner holds a small load cell against the patient's limb. The patient pushes. The device reports the peak force.
-
-::: {.fragment}
-[Force is not moment.]{.highlight} The same knee moment gives a larger force with the pad near the knee than near the ankle. The examiner must record where the pad was. The force times that distance gives a moment, which can be compared between patients and between visits.
-:::
-
-::: {.fragment}
-[The examiner is part of the instrument.]{.highlight} In a "make" test the examiner holds still and the patient pushes. If the patient is stronger than the examiner, the limb moves. The reading is then the examiner's strength, not the patient's.
-:::
-
-::: {.fragment}
-[180 N and 240 N can both be honest readings. The pads may have been at different distances. One examiner may have been overpowered.]{.red}
-:::
-:::
-
-
-## Measuring strength
-
-[The grip dynamometer]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-The usual clinical grip dynamometer is hydraulic. The squeeze pushes oil against a pressure gauge, and a dial holds the peak. Electronic versions put a load cell in the handle.
-
-::: {.fragment}
-The number depends on the protocol as much as on the patient.
-
-- The handle has several positions, and the grip span changes the force.
-- Sitting or standing, and the elbow angle, change the force.
-- Encouragement changes the force.
-- The best of three trials and the mean of three trials are different numbers.
-:::
-
-::: {.fragment}
-Module 1 had five grip readings from one person. They spread over about 1 kg with nothing changed. [A change of protocol between two visits can be larger than that. It looks like a change in the patient.]{.red}
-:::
-:::
-
-
-## Measuring strength
-
-[What the three devices have in common]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-::: {.fit}
-| Device | What it measures | What the clinician wants | What lies between |
-|:-------|:-----------------|:-------------------------|:------------------|
-| Isokinetic | Torque about its shaft | Moment about the joint | Axis alignment, limb weight, tissue compliance |
-| Hand-held | Force at the pad | Moment about the joint | Lever arm, examiner strength |
-| Grip | Peak squeeze force | Hand strength over time | Handle position, posture, trial rule |
-:::
-
-::: {.fragment}
-[Each device reports a number in its own geometry. The measurand is in the body. Recording the protocol is part of the measurement.]{.red}
-:::
-:::
-
-
-## Force plates
-
-[A six-axis force/torque sensor laid flat]{.framesub}
-
-:::: {.columns style="margin-top: -0.5em;"}
-
-::: {.column style="width: 38%;"}
-[Figure to be drawn. Plate with four corner sensors, axes, and the resultant force at the CoP.]{.red}
-:::
-
-::: {.column style="width: 60%; font-size: 0.85em; padding-left: 0.5em;"}
-A force plate stands on four sensors at its corners. Together they give three forces and three moments, $F_x, F_y, F_z, M_x, M_y, M_z$.
-
-::: {.fragment}
-The foot touches the plate over an area. The plate cannot see where each part of the foot pushes. It sees one resultant force and the moment it makes. The [centre of pressure]{.highlight} (CoP) is the point on the surface where that one force would act. With the moments taken about the centre of the plate's surface,
-
-$$x_{CoP} = -\frac{M_y}{F_z} \qquad y_{CoP} = \frac{M_x}{F_z}$$
-
-[The signs depend on the plate's axes.]{.deemph}
-:::
-
-::: {.fragment}
-The same kind of sensor, small and mounted on a robot handle, measures the force between the robot and the patient.
-:::
-:::
-
-::::
-
-
-## Force plates
-
-[The balance board]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A balance board has four load cells and measures vertical force only. The CoP comes from how the weight splits between the four.
-
-::: {.fragment}
-Module 1 worked out the CoP uncertainty for two cells a distance $L$ apart. With the load $F$ split evenly and the same noise $\Delta F$ on each cell,
-
-$$\Delta d = \frac{L\,\Delta F}{\sqrt{2}\,F}$$
-
-The CoP error grows as the total load falls. Half the load gives twice the CoP error. A child, partial weight bearing or one-leg stance all give a larger CoP error on the same board.
-:::
-
-::: {.fragment}
-Sway is often reported as the path length of the CoP, the total distance it travels. Noise adds to the path length even when the person stands still, because every small random step counts. [A noisy board makes a steady patient look unsteady.]{.red}
-:::
-
-::: {style="margin-top: 1em;"}
-[Interactive to be built: `cop-noise.html`. CoP from four noisy cells. Sliders for body weight, cell noise and sample rate. Readouts for path length and sway area.]{.red}
-:::
-:::
-
-
-## Force plates
-
-[Checking a force plate in place]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A force plate is calibrated at the factory. Once it is bolted into a floor, or built into a treadmill, the mounting can change its readings.
-
-::: {.fragment}
-To check it, apply known forces at known points. One way uses a pole with its own load cell and with markers the cameras can see. Push down through the pole at many points on the plate. Compare the CoP the plate reports with the pole tip the cameras see.
-:::
-
-::: {.fragment}
-The result is a map of the CoP error over the surface. The map shows where on the plate the CoP can be trusted.
-:::
-
-::: {.fragment}
-[To calibrate an instrument you need a better one. Here the cameras and the pole's load cell are the better one.]{.red}
-:::
-:::
-
-
-## Force plates
-
-[Where this course stops]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-The CoP is where the force acts on the plate. Balance is about keeping the body's centre of mass over the feet. The CoP moves to control the centre of mass, but it is not the centre of mass. A sway measure describes that control, seen from below.
-
-::: {.fragment}
-Combine the force plate with the segment kinematics from the camera section and with the mass and inertia of each segment. Working up from the foot gives the moments at the ankle, the knee and the hip. This is [inverse dynamics]{.highlight}.
-:::
-
-::: {.fragment}
-These joint moments carry the error of the CoP, the error of the joint centres and the error of the segment masses. [We name inverse dynamics here and go no further. Its quality depends on every measurement in this module.]{.red}
-:::
-:::
-
-
-## From number to decision
-
-[Two kinds of repeatability]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-Put the same 10 kg mass on the lab's load cell ten times. The readings agree to a few grams. This is the repeatability of the [instrument]{.highlight}.
-
-::: {.fragment}
-Measure the same person's grip on Monday and again on Thursday. The readings differ by a kilogram or two. The person's effort, posture and fatigue change. This is the repeatability of the [measurement]{.highlight}.
-:::
-
-::: {.fragment}
-The second is far larger than the first. [A clinical decision depends on the second. The instrument's specification tells you little about it.]{.red}
-:::
-
-::: {style="margin-top: 1em;"}
-[The numbers on this slide are illustrative. In the lab you measure both for our rig.]{.deemph}
-:::
-:::
-
-
-## From number to decision
-
-[Is the change real?]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-Test a group of people twice, a few days apart, with nothing changed. For each person take the difference between the two sessions. Let $s_d$ be the standard deviation of these differences.
-
-::: {.fragment}
-The [standard error of measurement]{.highlight} is the typical error in one person's single reading,
-
-$$\mathrm{SEM} = \frac{s_d}{\sqrt{2}}$$
-:::
-
-::: {.fragment}
-A real change must be larger than the change that chance alone produces in 95 % of retests. That is the [minimal detectable change]{.highlight},
-
-$$\mathrm{MDC}_{95} = 1.96\,\sqrt{2}\,\mathrm{SEM} = 1.96\,s_d$$
-:::
-
-::: {.fragment}
-Suppose $s_d = 1.5$ kg for grip. Then $\mathrm{MDC}_{95} \approx 2.9$ kg. A patient goes from 22 kg to 24 kg after six weeks of therapy. [The change is 2 kg, smaller than the MDC. This test does not show that the patient improved.]{.red}
-:::
-:::
-
-
-## From number to decision
-
-[Relative and absolute reliability]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-Studies report two kinds of reliability number. They answer different questions.
-
-::: {.fragment}
-The [intraclass correlation coefficient]{.highlight} (ICC) asks whether the test ranks people the same way on both days. It is the spread between people as a fraction of the total spread. A group with a wide range of strength gives a high ICC, even when the SEM is large.
-:::
-
-::: {.fragment}
-The [SEM]{.highlight} and the MDC are in the units of the measurement. They say how far one person's reading can move by chance.
-:::
-
-::: {.fragment}
-[A decision about one patient needs the SEM. A high ICC alone does not tell you whether a 2 kg change is real.]{.red}
-:::
-:::
-
-
-## From number to decision
-
-[Correlation is not agreement]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A cheap device is validated against a reference. Both measure the same people. The report gives the correlation, $r = 0.9$.
-
-::: {.fragment}
-Suppose the cheap device reads 20 % low for everyone. The points still lie close to a straight line, and $r$ stays high. The two devices do not agree.
-:::
-
-::: {.fragment}
-Plot the difference between the two devices against their mean instead. This is a Bland–Altman plot. The mean difference is the bias. The [limits of agreement]{.highlight} are the bias ± 1.96 standard deviations of the differences. They say how far apart the two devices can be for one person.
-:::
-
-::: {.fragment}
-[When a validation study reports only a correlation, ask for the limits of agreement.]{.red}
-:::
-
-::: {style="margin-top: 1em;"}
-[Interactive to be built: `agreement.html`. Two devices with sliders for bias, proportional error and noise. Scatter with $r$ beside a Bland–Altman plot.]{.red}
-:::
-:::
-
-
-## Measuring kinetics
-
-[Back to the two numbers]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-180 N and 240 N, the same patient, the same morning. Walk through the three gaps.
-
-::: {.fragment}
-[Transducer to load path.]{.highlight} A calibrated load cell reads the force on its pad to about a percent. This gap is small.
-:::
-
-::: {.fragment}
-[Device to body.]{.highlight} Was the pad at the same distance from the knee? Was either examiner overpowered? Was the patient positioned the same way? Each of these can move the number.
-:::
-
-::: {.fragment}
-[Number to decision.]{.highlight} Even with one examiner and one protocol, the same patient varies from day to day. Without the MDC for this test, nobody can say whether 60 N is a real difference.
-:::
-
-::: {.fragment}
-[Record the lever arm, the examiner, the position and the trial rule. Report a moment, not a force. Know the MDC before you call a change.]{.red}
-:::
-:::
-
-
-## Measuring kinetics
-
-[Do now]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-::: {.block}
-**1.** A team fits FSRs into an insole. They want to know how much weight a patient puts on the operated leg over a whole day. What will the data show? What would you use instead?
-:::
-
-::: {.block}
-**2.** A balance board study reports that a stroke patient's sway path length fell by 15 % after therapy. Over the same period the patient began to bear more weight on the board. What else could explain the fall?
-:::
-
-::: {.block}
-**3.** An isokinetic report shows knee extension torque rising from 80 to 92 N·m between two visits. A different therapist ran each visit. What would you ask before calling it an improvement?
-:::
-:::
-
-
-<!-- Section -->
-</section></section>
-<section>
-<section id="analog-front-ends" class="title-slide slide level1 center">
-<h1>Analog Front Ends</h1>
-
 </section>
-<section id="analog-front-ends-1" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">What the sensor gives and what the ADC needs</span></p>
+<section id="kinetic-measurands-12" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">One gauge in a bridge</span></p>
+<div class="columns" style="margin-top: -0.5em; align-items: center;">
+<div class="column" style="width: 44%;">
+<p><img data-src="figures/bridge-quarter.svg" style="width:100%; display:block;"></p>
+</div><div class="column" style="width: 54%; font-size: 0.85em; padding-left: 0.5em;">
+<p>Put the gauge in one arm of a Wheatstone bridge. The other three arms are fixed resistors <span class="math inline">\(R\)</span>.</p>
+<div class="fragment">
+<p>The left half splits <span class="math inline">\(V_{ex}\)</span> equally. The right half splits it by the gauge. The output is the difference,</p>
+<p><span class="math display">\[v_o = V_{ex}\left(\frac{R + \Delta R}{2R + \Delta R} - \frac{1}{2}\right) = V_{ex}\,\frac{\Delta R}{4R + 2\Delta R}\]</span></p>
+<p><span class="math inline">\(\Delta R\)</span> is tiny next to <span class="math inline">\(R\)</span>, so</p>
+<p><span class="math display">\[\frac{v_o}{V_{ex}} \approx \frac{1}{4}\,\frac{\Delta R}{R} = \frac{GF \cdot \varepsilon}{4}\]</span></p>
+</div>
+<div class="fragment">
+<p>Take the gauge from the last problem, 0.15 Ω on 150 Ω, at 5 V excitation. Then <span class="math inline">\(v_o \approx 5 \times 0.001 / 4 = 1.25\)</span> mV. <span class="red">The bridge removes the 2.5 V that both halves share. Only the change is left.</span></p>
+</div>
+</div></div>
+</section>
+<section id="kinetic-measurands-13" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">More active gauges give more signal</span></p>
+
+<img data-src="figures/bridge-arrangements.svg" style="width:94%; display:block; margin:-0.3em auto 0 auto;" class="r-stretch"><div style="font-size: 0.8em;">
+<div class="fragment">
+<p>Gauges that stretch go in opposite arms. Gauges that shorten go in the other two. Every change then adds to the output. <span class="red">With four active gauges, <span class="math inline">\(GF = 2\)</span> and 1000 µε at full load, the output is 2 mV per volt of excitation. This is why load cells are rated in mV/V.</span></p>
+<p>The datasheet gives the output at full load, for example 2 mV/V for a 200 N cell. Per newton, that is 0.01 mV/V.</p>
+</div>
+<div class="fragment">
+<p>The output is a fraction of <span class="math inline">\(V_{ex}\)</span>. If the excitation drifts by 1 %, the reading drifts by 1 %.</p>
+</div>
+<p><span class="deemph">Assignment: derive the half and full bridge outputs, and find how far the quarter bridge strays from a straight line.</span></p>
+</div>
+</section>
+<section id="kinetic-measurands-14" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Where the gauges sit decides what the cell measures</span></p>
+
+<img data-src="figures/cantilever-cells.svg" style="width:88%; display:block; margin:-0.4em auto 0 auto;" class="r-stretch"><div class="columns" style="font-size: 0.75em; margin-top: 0.2em;">
+<div class="column" style="width: 48%;">
+<p>All four gauges sit at one distance from the wall. The bridge reads the bending moment at that section.</p>
+<div class="fragment" data-fragment-index="1">
+<p>The moment is the force times its distance from the gauges. <span class="red">Move the same force outward and the reading grows.</span> This cell is right only when the load always acts at one point.</p>
+</div>
+</div><div class="column" style="width: 48%; padding-left: 1em;">
+<p>The gauges sit at two sections. The bridge reads the difference between the two moments.</p>
+<div class="fragment" data-fragment-index="1">
+<p>That difference is the force times the spacing of the two sections. The spacing is fixed. <span class="red">Move the force and the reading stays the same.</span> Weighing platforms use this cell.</p>
+</div>
+</div></div>
+</section>
+<section id="kinetic-measurands-15" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Move the load and watch what each cell reports</span></p>
+<iframe data-src="interactive/cantilever-cells.html" style="width:100%; height:620px; border:0; display:block;" title="A plain cantilever and a bar with a hole under the same load, with the deformed shape, the strain in each gauge and the force each cell reports as the load moves">
+</iframe>
+</section>
+<section id="kinetic-measurands-16" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Commercial force sensors</span></p>
+<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 0.3em 1.2em; font-size: 0.55em; text-align: center; margin-top: -0.5em;">
+<div class="fsensor">
+<p><img data-src="figures/forsentek/s-type-FS4A.jpg" style="height:150px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+<p><img data-src="figures/force-sensor-structure-1.svg" style="height:135px; width:auto; max-height:none; display:block; margin:0.2em auto 0.3em auto;"></p>
+<p><span class="highlight">S-type</span>, FS4A. 2 to 100 kg, 2.0 mV/V.</p>
+<p>The thin middle beam bends into an S.</p>
+</div>
+<div class="fsensor">
+<p><img data-src="figures/forsentek/button-FC10C.jpg" style="height:150px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+<p><img data-src="figures/force-sensor-structure-2.svg" style="height:135px; width:auto; max-height:none; display:block; margin:0.2em auto 0.3em auto;"></p>
+<p><span class="highlight">Button</span>, FC10C. 5 to 50 kg, 1.0 mV/V.</p>
+<p>A short column is squeezed. It shortens along the load and widens across it.</p>
+</div>
+<div class="fsensor">
+<p><img data-src="figures/forsentek/single-point-FH03.jpg" style="height:150px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+<p><img data-src="figures/force-sensor-structure-3.svg" style="height:135px; width:auto; max-height:none; display:block; margin:0.2em auto 0.3em auto;"></p>
+<p><span class="highlight">Single-point bar</span>, FH03. 3 to 40 kg, 2.0 mV/V.</p>
+<p>A bar with a hole bends into an S. Kitchen scales use this kind.</p>
+</div>
+<div class="fsensor">
+<p><img data-src="figures/forsentek/triaxial-FNZ.jpg" style="height:150px; width:auto; max-height:none; display:block; margin:0 auto;"></p>
+<p><img data-src="figures/force-sensor-structure-4.svg" style="height:135px; width:auto; max-height:none; display:block; margin:0.2em auto 0.3em auto;"></p>
+<p><span class="highlight">Three-axis</span>, FNZ. 10 to 100 N, 1.0 mV/V per axis.</p>
+<p><span class="math inline">\(F_x\)</span> and <span class="math inline">\(F_y\)</span> bend a post. <span class="math inline">\(F_z\)</span> squeezes it. One full bridge per axis.</p>
+</div>
+</div>
+<div style="font-size: 0.6em; margin-top: 0.3em;">
+<p>Each drawing shows one common construction. The makers do not show the inside. <span style="color:#A51C30;">Red: gauges that stretch.</span> <span style="color:#2B6CB0;">Blue: gauges that shorten.</span></p>
+</div>
+<p><span class="deemph" style="font-size: 0.5em;">Images and specifications: Forsentek product pages, forsentek.com, accessed 13 November 2026.</span></p>
+</section>
+<section id="kinetic-measurands-17" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Torque sensing</span></p>
 <div style="font-size: 0.85em; margin-top: -0.5em;">
-<div class="fit">
-<table class="caption-top">
-<colgroup>
-<col style="width: 21%">
-<col style="width: 21%">
-<col style="width: 15%">
-<col style="width: 42%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Sensor</th>
-<th style="text-align: left;">Output</th>
-<th style="text-align: left;">Size</th>
-<th style="text-align: left;">The difficulty</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Load cell bridge</td>
-<td style="text-align: left;">Difference of two voltages</td>
-<td style="text-align: left;">10 mV at full load</td>
-<td style="text-align: left;">Both outputs sit at half the excitation, 2.5 V</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">FSR</td>
-<td style="text-align: left;">Resistance</td>
-<td style="text-align: left;">Megohms falling to kilohms</td>
-<td style="text-align: left;">It is not a voltage yet</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Hall element</td>
-<td style="text-align: left;">Difference of two voltages</td>
-<td style="text-align: left;">Millivolts</td>
-<td style="text-align: left;">Small, with an offset that moves with temperature</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Electrodes, later</td>
-<td style="text-align: left;">Difference of two voltages</td>
-<td style="text-align: left;">About 1 mV</td>
-<td style="text-align: left;">Large common voltage and high source impedance</td>
-</tr>
-</tbody>
-</table>
+<p>We can measure the applied torque or moment by measuring the force at a known distance from the axis about which the torque acts. The torque is the force times the distance. <span class="math display">\[ \tau = F \times d \]</span></p>
+<p>We will see that we can measure human joint moments in this way, by measuring the force at a known distance from the joint.</p>
+<p>This may not always be possible. In that case, we can measure the torque by measuring the strain in a shaft that twists under the torque.</p>
 </div>
 <div class="fragment">
-<p>An ADC wants a single voltage that fills its input range, from a source that can drive it.</p>
-</div>
-<div class="fragment">
-<p>The circuit between the two is the <span class="highlight">analog front end</span>. It has five jobs.</p>
-<ol type="1">
-<li>Turn the sensor’s output into a voltage.</li>
-<li>Amplify the signal to fill the ADC’s range.</li>
-<li>Reject what is common to both inputs.</li>
-<li>Draw almost no current from the sensor.</li>
-<li>Remove frequencies the ADC cannot sample.</li>
-</ol>
+<p><img data-src="figures/torsion-element.svg" style="width:92%; display:block; margin:0.2em auto 0 auto;"></p>
+<div style="font-size: 0.8em;">
+<p><span class="red">A square on the surface shears. One diagonal stretches and the other shortens. So the gauges go at 45° to the shaft.</span></p>
 </div>
 </div>
 </section>
-<section id="analog-front-ends-2" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">The op-amp as a building block</span></p>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
-<p>An op-amp has two inputs, one output and a very large gain. With negative feedback it drives its output until its two inputs are equal. No current flows into its inputs.</p>
-<p><span class="red">Figure to be drawn. Follower, non-inverting amplifier, transimpedance amplifier.</span></p>
+<section id="kinetic-measurands-18" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Elastic elements used in torque sensors</span></p>
+
+<img data-src="figures/torque-sensor-designs.svg" style="width:72%; display:block; margin:-0.5em auto 0 auto;" class="r-stretch"><div style="font-size: 0.75em;">
+<p>A cylinder is stiff, so it strains little. The other shapes replace it with thin beams that bend, which strain more for the same torque. <span class="red">More signal costs stiffness. The sensor then twists more under load.</span></p>
+</div>
+<p><span class="cite">Structures redrawn after Zhang, H.-X., Ryoo, Y.-J. &amp; Byun, K.-S. (2016). Development of torque sensor with high sensitivity for joint of robot manipulator using 4-bar linkage shape. <em>Sensors</em> 16(7), 991, Fig. 3. The gauge positions are typical ones and are not from the paper. <span style="color:#A51C30;">Red: gauges that stretch.</span> <span style="color:#2B6CB0;">Blue: gauges that shorten.</span></span></p>
+</section>
+<section id="kinetic-measurands-19" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Six-axis sensors: three forces and three torques from one element</span></p>
+<div class="columns" style="margin-top: -0.5em; align-items: center;">
+<div class="column" style="width: 44%;">
+<p><img data-src="figures/six-axis-cell.svg" style="width:100%; display:block;"></p>
+<p><span class="deemph" style="font-size: 0.5em;">Drawing shows one common construction. Each gauge stands for a pair/bridge.</span></p>
+</div><div class="column" style="width: 55%; font-size: 0.75em; padding-left: 0.5em;">
+<p>One piece of metal carries six gauge signals, <span class="math inline">\(g_1\)</span> to <span class="math inline">\(g_6\)</span>. <span class="highlight">No signal belongs to one load.</span> A push along <span class="math inline">\(z\)</span> bends all three beams. A torque about <span class="math inline">\(z\)</span> bends them all sideways.</p>
 <div class="fragment">
-<p>Three circuits are enough to read most front ends.</p>
+<p>The maker applies known forces and torques and records the six signals. From these it fits a <span class="math inline">\(6 \times 6\)</span> calibration matrix <span class="math inline">\(\mathbf{C}\)</span>, which ships with the sensor.</p>
+<p><span class="math display">\[
+\begin{bmatrix} F_x \\ F_y \\ F_z \\ \tau_x \\ \tau_y \\ \tau_z \end{bmatrix}
+=
+\begin{bmatrix}
+c_{11} &amp; c_{12} &amp; \cdots &amp; c_{16} \\
+c_{21} &amp; c_{22} &amp; \cdots &amp; c_{26} \\
+\vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
+\end{bmatrix}
+\left(
+\begin{bmatrix} g_1 \\ g_2 \\ \vdots \\ g_6 \end{bmatrix}
+-
+\begin{bmatrix} g_{1,0} \\ g_{2,0} \\ \vdots \\ g_{6,0} \end{bmatrix}
+\right)
+\]</span></p>
+</div>
+<div class="fragment">
 <ul>
-<li>A <span class="highlight">follower</span> has a gain of 1. It draws almost no current from the source and can drive a load. It cures loading.</li>
-<li>A <span class="highlight">non-inverting amplifier</span> has a gain of <span class="math inline">\(1 + R_2/R_1\)</span>, set by two resistors.</li>
-<li>A <span class="highlight">transimpedance amplifier</span> turns a current into a voltage, <span class="math inline">\(v_o = -i\,R_f\)</span>. A photodiode gives a current. Optical encoders use one, and so do the optical sensors later in the course.</li>
+<li><span class="math inline">\(\mathbf{g}_0\)</span> holds the signals at no load. <span class="red">Record it before every measurement.</span></li>
+<li><span class="math inline">\(\mathbf{C}\)</span> belongs to one sensor. It does not fit another sensor of the same model.</li>
+<li>The torques are about the sensor’s own origin. A force applied away from that origin shows up as a torque too.</li>
 </ul>
 </div>
-<div class="fragment">
-<p><span class="red">We use these as blocks. The datasheet tells you how far a real op-amp is from the ideal one.</span></p>
-</div>
-</div>
-</section>
-<section id="analog-front-ends-3" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">The FSR: a divider and a follower</span></p>
-<div class="columns" style="margin-top: -0.5em;">
-<div class="column" style="width: 38%;">
-<p><span class="red">Figure to be drawn. Supply <span class="math inline">\(V_s\)</span>, FSR, fixed resistor <span class="math inline">\(R_m\)</span> to ground, follower, ADC.</span></p>
-</div><div class="column" style="width: 60%; font-size: 0.85em; padding-left: 0.5em;">
-<p>Put the FSR in series with a fixed resistor <span class="math inline">\(R_m\)</span>. The voltage across <span class="math inline">\(R_m\)</span> is</p>
-<p><span class="math display">\[v = V_s\,\frac{R_m}{R_m + R_{FSR}}\]</span></p>
-<p>More force lowers <span class="math inline">\(R_{FSR}\)</span> and raises <span class="math inline">\(v\)</span>.</p>
-<div class="fragment">
-<p>The output is not linear in force. It is most sensitive where <span class="math inline">\(R_{FSR}\)</span> is close to <span class="math inline">\(R_m\)</span>. <span class="highlight">Choose <span class="math inline">\(R_m\)</span> near the FSR’s resistance at the force you care about.</span></p>
-</div>
-<div class="fragment">
-<p>An ADC input draws current while it samples. With a large <span class="math inline">\(R_m\)</span> that current changes <span class="math inline">\(v\)</span>. A follower between the divider and the ADC removes the problem. This is the loading from Module 1.</p>
-</div>
 </div></div>
 </section>
-<section id="analog-front-ends-4" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">The bridge needs a difference amplifier</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>Both bridge outputs sit near 2.5 V. The signal is the difference between them, at most 10 mV.</p>
-<div class="fragment">
-<p>An amplifier with a gain of 128 on one output would try to reach 320 V. It saturates at its supply. We must amplify the difference and ignore the 2.5 V the two outputs share.</p>
+<section id="kinetic-measurands-20" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Measuring muscle strength</span></p>
+<div style="font-size: 0.80em; margin-top: -0.5em;">
+<p>Clinicians are often interested in the isometric strength of a muscle/muscle group. They measure the maximum voluntary contraction (MVC) of a patient, and compare it to the MVC of healthy people of the same age and sex.</p>
+<div class="columns" style="align-items: center;">
+<div class="column" style="width: 35%;">
+<!-- Two stages of one figure (tikz/hhd-elbow.tex), stacked. Stage 2 paints its own
+     white background, so it hides the photo. -->
+<div class="r-stack">
+<p><img data-src="figures/hhd-elbow-1.svg" style="width:100%; display:block;"></p>
+<p><img data-src="figures/hhd-elbow-2.svg" class="fragment" style="width:100%; display:block;" data-fragment-index="2"></p>
 </div>
-<div class="fragment">
-<p>The shared part is the <span class="highlight">common-mode</span> voltage. The difference is the <span class="highlight">differential</span> voltage. An <span class="highlight">instrumentation amplifier</span> amplifies the differential voltage and rejects the common-mode voltage.</p>
+</div><div class="column" style="width: 65%;">
+<p>This is usually done with a hand-held dynamometer. The patient pushes against the dynamometer, which measures the force.</p>
+<div class="fragment" data-fragment-index="1">
+<p><span class="highlight">What are we really measuring here?</span> The force needed to keep the elbow at rest. It is not the biceps force.</p>
 </div>
-<div class="fragment">
-<p><span class="red">Figure to be drawn. The three-op-amp instrumentation amplifier as a block, with the gain resistor <span class="math inline">\(R_G\)</span> marked.</span></p>
-<p>Inside are three op-amps. The first two give both inputs a very high impedance and provide the gain. The third subtracts. One resistor sets the gain. <span class="deemph">You buy it as one chip. We do not derive it.</span></p>
+<div class="fragment" data-fragment-index="2">
+<p>The two forces cancel each other’s turning effect about the elbow.</p>
+<p><span class="math display">\[f_{measured} \cdot d_m = f_{bicep} \cdot d_b \quad\Rightarrow\quad f_{measured} = f_{bicep} \cdot \frac{d_b}{d_m}\]</span></p>
 </div>
+</div></div>
+<div class="fragment" data-fragment-index="3">
+<p><span class="red">What you measure depends on where you place the dynamometer.</span> So the clinician multiplies the force by <span class="math inline">\(d_m\)</span> to get the joint moment, which does not.</p>
+<div style="margin-top: -0.5em;">
+<p>Although the force <span class="math inline">\(f_{measured}\)</span> depends on the placement of the dynamometer, the joint moment will be the same for a fixed biceps force and bicep moment arm.</p>
 </div>
-</section>
-<section id="analog-front-ends-5" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">Common-mode rejection in numbers</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>No amplifier rejects the common mode perfectly. The <span class="highlight">common-mode rejection ratio</span> (CMRR) says how much less it amplifies the common mode than the difference. At 100 dB, a common-mode voltage acts like a differential signal <span class="math inline">\(10^5\)</span> times smaller.</p>
-<div class="fragment">
-<p>The bridge’s 2.5 V then looks like 25 µV. On our example cell, at 0.5 mV per kg, that is 50 g. But it is constant, and setting the zero removes it.</p>
+<div style="margin-top: -0.5em;">
+<p><span class="math display">\[ \tau_{elbow, flex} = f_{measured} \cdot d_m = f_{bicep} \cdot d_b \]</span></p>
 </div>
-<div class="fragment">
-<p>The danger is a common mode that changes. Mains hum picked up equally on both leads is a common-mode signal at 50 Hz. A drifting excitation also moves the common mode.</p>
-</div>
-<div class="fragment">
-<p>The CMRR falls as the frequency rises. Read the CMRR at 50 Hz on the datasheet, not the value at DC. <span class="red">Electrodes in the biopotentials module face the same problem with a much larger common mode.</span></p>
-</div>
-</div>
-</section>
-<section id="analog-front-ends-6" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">Offset, drift and slow noise</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>A load cell measures a static force. The signal changes slowly or not at all. Three amplifier errors live at these low frequencies.</p>
-<div class="fragment">
-<p>The amplifier adds a small constant voltage, its <span class="highlight">offset</span>. Setting the zero removes it.</p>
-</div>
-<div class="fragment">
-<p>The offset changes with temperature. This is the <span class="highlight">offset drift</span>, given in µV per °C. Suppose it is 0.5 µV/°C. A 10 °C change gives 5 µV, which is 10 g on our example cell. Setting the zero at the start does not remove a drift that happens during the test.</p>
-</div>
-<div class="fragment">
-<p>Every amplifier has <span class="highlight">1/f noise</span>. Its power rises as the frequency falls. At low frequencies it is larger than the white noise, and static force lives there. The datasheet gives it as a peak-to-peak voltage from 0.1 to 10 Hz.</p>
-</div>
-<div class="fragment">
-<p><span class="highlight">Zero-drift</span> amplifiers swap their inputs back and forth thousands of times a second and cancel their own offset. They have almost no drift and very little 1/f noise. They suit load cells.</p>
 </div>
 </div>
 </section>
-<section id="analog-front-ends-7" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">Reading an amplifier datasheet</span></p>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
-<div class="fit">
-<table class="caption-top">
-<colgroup>
-<col style="width: 33%">
-<col style="width: 66%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Parameter</th>
-<th style="text-align: left;">What it means for us</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Gain error</td>
-<td style="text-align: left;">Calibration removes it. It does not remove gain drift with temperature.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Input offset voltage</td>
-<td style="text-align: left;">A fixed zero error. Setting the zero removes it.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Offset drift, µV/°C</td>
-<td style="text-align: left;">A zero error that grows as the room warms.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Noise, 0.1 to 10 Hz, peak-to-peak</td>
-<td style="text-align: left;">The smallest static change you can see.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Noise density, nV/√Hz</td>
-<td style="text-align: left;">The noise for faster signals. Multiply by the square root of the bandwidth.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">CMRR at 50 Hz</td>
-<td style="text-align: left;">How much mains hum gets through.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Input bias current</td>
-<td style="text-align: left;">The current drawn from the sensor. It matters for high-impedance sources such as electrodes.</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Input and output range</td>
-<td style="text-align: left;">How close to the supply rails the signals may go.</td>
-</tr>
-</tbody>
-</table>
+<section id="kinetic-measurands-21" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">Inside an electronic grip handle</span></p>
+<div class="columns" style="margin-top: -0.5em; align-items: center;">
+<div class="column" style="width: 26%; font-size: 0.55em; text-align: center;">
+<p><img data-src="figures/forsentek/grip-FFK.jpg" style="width:100%; display:block;"></p>
+<p><span class="highlight">Grip force sensor</span>, FFK. 50 to 1000 N, 2.0 mV/V.</p>
+</div><div class="column" style="width: 70%; font-size: 0.8em; padding-left: 0.6em;">
+<p><img data-src="figures/grip-handle.svg" style="width:100%; display:block;"></p>
+</div></div>
+<div class="fragment">
+<p>The handle is two halves. The palm presses one half. The fingers press the other. The halves touch only through the load cells, so the whole squeeze passes through them.</p>
 </div>
 <div class="fragment">
-<p><span class="red">Divide every input voltage error by the sensor’s sensitivity. A number in microvolts then becomes a number in grams or newtons, which a clinician can judge.</span></p>
+<p>The squeeze is shared between the two cells. A squeeze near one end loads that cell more. <span class="red">The sum of the two readisngs is the grip force, wherever the fingers sit.</span></p>
+</div>
+<p><span class="deemph" style="font-size: 0.5em;">The drawing shows one common construction. The maker does not show the inside. Image and specifications: Forsentek product page, forsentek.com, accessed 13 November 2026.</span></p>
+</section>
+<section id="kinetic-measurands-22" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">A force plate for weight and centre of pressure</span></p>
+<div class="columns" style="margin-top: -0.5em; align-items: center;">
+<div class="column" style="width: 50%;">
+<p><img data-src="figures/force-plate-2d.svg" style="width:100%; display:block;"></p>
+</div><div class="column" style="width: 49%; font-size: 0.8em; padding-left: 0.5em;">
+<p>A stiff plate rests on four load cells, one under each corner. Each cell reads the vertical force at its corner.</p>
+<div class="fragment">
+<p><span class="highlight">Weight.</span> The four cells together carry the whole force.</p>
+<p><span class="math display">\[F = F_1 + F_2 + F_3 + F_4\]</span></p>
+</div>
+</div><div class="fragment">
+<p><span class="highlight">Centre of pressure.</span> This is the point where the whole force acts. A force nearer one edge loads the cells on that edge more.</p>
+<p><span class="math display">\[x = \frac{a}{2}\,\frac{(F_1 + F_4) - (F_2 + F_3)}{F} \qquad y = \frac{b}{2}\,\frac{(F_1 + F_2) - (F_3 + F_4)}{F}\]</span></p>
+</div><div class="fragment">
+<p><span class="red">The sum of the cells gives the weight. Their differences give the centre of pressure.</span></p>
 </div>
 </div>
 </section>
-<section id="analog-front-ends-8" class="slide level2">
-<h2>Analog front ends</h2>
-<p><span class="framesub">Integrated front ends</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>You will rarely build a front end from parts. The amplifier, and often the ADC, come on one chip.</p>
-<div class="fragment">
-<p>The <span class="highlight">HX711</span> is built for load cells. It holds a two-channel multiplexer, an amplifier with a gain of 32, 64 or 128, and a 24-bit converter. A regulator on the chip can supply the bridge excitation. It gives 10 or 80 readings per second.</p>
-</div>
-<div class="fragment">
-<p>The <span class="highlight">AD8232</span> is built for the heart’s electrical signal. It holds an instrumentation amplifier, filters, and a driver that holds the body’s common-mode voltage down. We meet it in the biopotentials module.</p>
-</div>
-<div class="fragment">
-<p><span class="red">The chip’s makers made the design decisions. Your job is to read the datasheet and decide whether the chip suits the measurement.</span></p>
-</div>
-<div style="margin-top: 1em;">
-<p><span class="deemph">HX711 values to be checked against its datasheet.</span></p>
-</div>
-</div>
-</section>
-<section id="front-ends-from-our-projects" class="slide level2">
-<h2>Front ends from our projects</h2>
-<p><span class="framesub">What we used, and what went wrong</span></p>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
-<p><span class="red">Projects and part numbers to be filled in by Siva.</span></p>
-<div class="fit">
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th style="text-align: left;">Project</th>
-<th style="text-align: left;">Sensor</th>
-<th style="text-align: left;">Front end</th>
-<th style="text-align: left;">Why we chose it</th>
-<th style="text-align: left;">What went wrong</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-</tr>
-<tr class="even">
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-<td style="text-align: left;"></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="fragment">
-<p><span class="deemph">The last column is the useful one. A front end that worked first time teaches less than one that did not.</span></p>
-</div>
-</div>
-<!-- Section -->
-</section></section>
-<section>
-<section id="analog-to-digital-converters" class="title-slide slide level1 center">
-<h1>Analog-to-Digital Converters</h1>
+<section id="kinetic-measurands-23" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">The centre of pressure is the net effect of a pressure distribution</span></p>
 
-</section>
-<section id="analog-to-digital-converters-1" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">What every ADC does</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>Module 1 covered sampling and quantisation. An ADC takes the input at an instant and gives the nearest of <span class="math inline">\(2^n\)</span> levels.</p>
+<img data-src="figures/force-plate-pressure.svg" style="width:84%; display:block; margin:-0.5em auto 0 auto;" class="r-stretch"><div style="font-size: 0.8em;">
+<p>The feet press on the plate over an area <span class="math inline">\(A\)</span>. The pressure <span class="math inline">\(p(x, y)\)</span> differs from point to point.</p>
 <div class="fragment">
-<p>Every ADC compares the input with a <span class="highlight">reference voltage</span> <span class="math inline">\(V_{ref}\)</span>. The output is the input as a fraction of <span class="math inline">\(V_{ref}\)</span>,</p>
-<p><span class="math display">\[\text{code} = \operatorname{round}\left(2^n\,\frac{v_{in}}{V_{ref}}\right)\]</span></p>
-<p>A 1 % error in <span class="math inline">\(V_{ref}\)</span> is a 1 % error in every reading.</p>
+<p>The plate reports one force and one point.</p>
+<p><span class="math display">\[F = \int_A p(x, y)\,dA \qquad x_{CoP} = \frac{1}{F}\int_A x\,p(x, y)\,dA \qquad y_{CoP} = \frac{1}{F}\int_A y\,p(x, y)\,dA\]</span></p>
 </div>
 <div class="fragment">
-<p>Use the bridge excitation as the reference. If the excitation drifts by 1 %, the bridge output and the reference both drift by 1 %, and the code does not change. This is a <span class="highlight">ratiometric</span> measurement.</p>
+<p><span class="red">The plate measures the net effect of the pressure. It cannot tell how the pressure is spread.</span> Here the CoP lies between the feet, where nothing touches the plate.</p>
 </div>
 <div class="fragment">
-<p>ADCs differ in how they make the comparison. The method sets the speed, the resolution and the delay.</p>
+<p><span class="highlight">Question.</span> Take the same integrals over one foot alone. What do <span class="math inline">\(\int p\,dA\)</span> and <span class="math inline">\(\int x\,p\,dA\)</span> mean then?</p>
 </div>
 </div>
 </section>
-<section id="analog-to-digital-converters-2" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">Flash: all comparisons at once</span></p>
-<div class="columns" style="margin-top: -0.5em;">
-<div class="column" style="width: 38%;">
-<p><span class="red">Figure to be drawn. Resistor ladder, <span class="math inline">\(2^n - 1\)</span> comparators, encoder.</span></p>
-</div><div class="column" style="width: 60%; font-size: 0.85em; padding-left: 0.5em;">
-<p>A resistor ladder divides <span class="math inline">\(V_{ref}\)</span> into <span class="math inline">\(2^n\)</span> levels. One comparator sits at each level. All the comparators decide at the same instant. The highest one that trips gives the code.</p>
+<section id="kinetic-measurands-24" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">The six-component force plate</span></p>
+<div class="columns" style="margin-top: -1.0em; align-items: center;">
+<div class="column" style="width: 46%;">
+<p><img data-src="figures/force-plate-6d.svg" style="width:100%; display:block;"></p>
+</div><div class="column" style="width: 53%; font-size: 0.8em; padding-left: 0.5em;">
+<p>Each corner sensor reads three forces, not one. That gives twelve readings.</p>
 <div class="fragment">
-<p>One step gives the answer, so a flash ADC is the fastest kind. It converts billions of samples a second.</p>
-</div>
-<div class="fragment">
-<p>An <span class="math inline">\(n\)</span>-bit flash needs <span class="math inline">\(2^n - 1\)</span> comparators. Eight bits need 255. Each extra bit doubles the number of comparators, the power and the chip area. Flash ADCs rarely go past 8 bits.</p>
-</div>
-<div class="fragment">
-<p><span class="deemph">We meet them inside oscilloscopes. Movement and force signals never need this speed.</span></p>
+<p><span class="highlight">Three forces.</span> Each is a sum over the four sensors.</p>
+<p><span class="math display">\[\mathbf{F} = \mathbf{f}_1 + \mathbf{f}_2 + \mathbf{f}_3 + \mathbf{f}_4\]</span></p>
 </div>
 </div></div>
+<div class="fragment">
+<div style="font-size: 0.80em; margin-top: -0.0em;">
+<p><span class="highlight">Three moments about the plate’s centre.</span> Each is a difference of corner forces times the sensor spacing. These are a step towards the centre of pressure, not a result we want.</p>
+</div>
+<div style="font-size: 0.80em; margin-top: -1.0em;">
+<p><span class="math display">\[M_x = \tfrac{b}{2}\big[(f_{z1} + f_{z2}) - (f_{z3} + f_{z4})\big] \qquad M_y = -\tfrac{a}{2}\big[(f_{z1} + f_{z4}) - (f_{z2} + f_{z3})\big] \qquad M_z = \sum_i \big(x_i f_{yi} - y_i f_{xi}\big)\]</span></p>
+</div>
+</div>
+<div class="fragment">
+<div style="font-size: 0.80em; margin-top: -0.5em;">
+<p><span class="highlight">Centre of pressure and free moment.</span> The surface is a height <span class="math inline">\(h\)</span> above the sensors.</p>
+</div>
+<div style="font-size: 0.80em; margin-top: -1.0em;">
+<p><span class="math display">\[x = \frac{h F_x - M_y}{F_z} \qquad y = \frac{M_x + h F_y}{F_z} \qquad T_z = M_z - x F_y + y F_x\]</span></p>
+</div>
+</div>
+<div class="fragment">
+<div style="font-size: 0.80em; margin-top: -1.0em;">
+<p><span class="red">An off-centre force shows up as a moment. The plate uses exactly that to find the CoP.</span></p>
+</div>
+</div>
+<p><span class="deemph" style="font-size: 0.5em;">The drawing shows one common construction. The signs follow the axes drawn here. Makers choose their own axes.</span></p>
 </section>
-<section id="analog-to-digital-converters-3" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">Successive approximation: a binary search</span></p>
-<div class="columns" style="margin-top: -0.5em;">
-<div class="column" style="width: 38%;">
-<p><span class="red">Figure to be drawn. Sample-and-hold, comparator, DAC, SAR register.</span></p>
-</div><div class="column" style="width: 60%; font-size: 0.85em; padding-left: 0.5em;">
-<p>The input is sampled and held still. One comparator compares it with the output of a DAC. The first comparison asks whether the input is above half of <span class="math inline">\(V_{ref}\)</span>. The next asks about a quarter or three quarters. Each comparison fixes one bit.</p>
-<div class="fragment">
-<p>An <span class="math inline">\(n\)</span>-bit SAR ADC needs <span class="math inline">\(n\)</span> comparisons. Twelve bits need twelve steps.</p>
-</div>
-<div class="fragment">
-<p>Each reading is a snapshot of one instant. The converter keeps no memory of earlier samples, so it can switch between channels freely. Microcontroller ADCs are usually SAR, with 10 or 12 bits. Standalone SAR chips reach 16 to 18 bits at up to a few million samples a second.</p>
-</div>
-<div class="fragment">
-<p>The input must not contain frequencies above half the sample rate. A SAR ADC needs an <span class="highlight">anti-aliasing filter</span> in front of it.</p>
-</div>
-<p><span class="red">Interactive to be built: <code>sar.html</code>. Step through the binary search for a chosen input.</span></p>
-</div></div>
-</section>
-<section id="analog-to-digital-converters-4" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">Dual-slope: averaging over a fixed time</span></p>
-<div class="columns" style="margin-top: -0.5em;">
-<div class="column" style="width: 38%;">
-<p><span class="red">Figure to be drawn. Integrator voltage against time, rising for a fixed time, falling at a fixed rate.</span></p>
-</div><div class="column" style="width: 60%; font-size: 0.85em; padding-left: 0.5em;">
-<p>A dual-slope ADC charges a capacitor from the input for a fixed time <span class="math inline">\(T\)</span>. It then discharges it with the reference and times how long that takes. The discharge time is proportional to the average input over <span class="math inline">\(T\)</span>.</p>
-<div class="fragment">
-<p>A sine wave that completes whole cycles in <span class="math inline">\(T\)</span> averages to zero. Choose <span class="math inline">\(T = 20\)</span> ms and 50 Hz mains hum vanishes, with all its harmonics.</p>
-</div>
-<div class="fragment">
-<p>It is slow, a few readings a second, and very accurate. Bench multimeters use it.</p>
-</div>
-<div class="fragment">
-<p><span class="deemph">The same idea appears in slow delta-sigma converters. Some choose their output rate so that their filter rejects 50 Hz and 60 Hz.</span></p>
-</div>
-</div></div>
-</section>
-<section id="analog-to-digital-converters-5" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">Delta-sigma: many coarse samples, averaged</span></p>
-<div class="columns" style="margin-top: -0.5em;">
-<div class="column" style="width: 38%;">
-<p><span class="red">Figure to be drawn. Modulator with integrator, 1-bit quantiser and feedback, then a digital filter.</span></p>
-</div><div class="column" style="width: 60%; font-size: 0.85em; padding-left: 0.5em;">
-<p>A delta-sigma converter samples far faster than needed, often with a 1-bit quantiser. A feedback loop keeps the running average of the bit stream equal to the input.</p>
-<div class="fragment">
-<p>The loop pushes the quantisation noise up to high frequencies. A digital filter removes them and averages many samples into one reading. The result has 16 to 24 bits at a much lower rate. This trade of speed for resolution is <span class="highlight">oversampling</span>.</p>
-</div>
-<div class="fragment">
-<p>The fast sampling makes aliasing easy to prevent. A simple RC filter in front is usually enough.</p>
-</div>
-<div class="fragment">
-<p>The digital filter takes time to settle after a step or after a switch between channels. <span class="red">A delta-sigma ADC has a delay, and switching channels can cost several readings.</span> The datasheet gives the settling time. The HX711, the ADS1115 and most biopotential front ends are delta-sigma.</p>
-</div>
-</div></div>
-</section>
-<section id="analog-to-digital-converters-6" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">Comparing the types</span></p>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
+<section id="kinetic-measurands-25" class="slide level2">
+<h2>Kinetic measurands</h2>
+<p><span class="framesub">What we did not cover</span></p>
+<div style="font-size: 0.8em; margin-top: -0.5em;">
+<p>Every sensor in this module read strain with a metal foil gauge. Other ways of sensing force are in common use.</p>
 <div class="fit">
 <table class="caption-top">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 18%">
-<col style="width: 19%">
-<col style="width: 11%">
-<col style="width: 11%">
 <col style="width: 29%">
+<col style="width: 25%">
+<col style="width: 44%">
 </colgroup>
 <thead>
 <tr class="header">
-<th style="text-align: left;">Type</th>
-<th style="text-align: left;">Principle</th>
-<th style="text-align: left;">Resolution</th>
-<th style="text-align: left;">Speed</th>
-<th style="text-align: left;">Delay</th>
-<th style="text-align: left;">Where we meet it</th>
+<th style="text-align: left;">Sensing method</th>
+<th style="text-align: left;">How it works</th>
+<th style="text-align: left;">Where you will meet it</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">Flash</td>
-<td style="text-align: left;">All levels compared at once</td>
-<td style="text-align: left;">6 to 8 bits</td>
-<td style="text-align: left;">GS/s</td>
-<td style="text-align: left;">Almost none</td>
-<td style="text-align: left;">Oscilloscopes</td>
+<td style="text-align: left;">Force-sensing resistor</td>
+<td style="text-align: left;">A polymer film. Its resistance falls when it is pressed. Thin and cheap, but it drifts and repeats poorly.</td>
+<td style="text-align: left;">Insoles, handles, contact and timing</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Pipeline</td>
-<td style="text-align: left;">A few bits per stage, in a chain</td>
-<td style="text-align: left;">8 to 16 bits</td>
-<td style="text-align: left;">10 to 100s of MS/s</td>
-<td style="text-align: left;">A few samples</td>
-<td style="text-align: left;">Ultrasound, imaging</td>
+<td style="text-align: left;">Piezoelectric</td>
+<td style="text-align: left;">A crystal gives out charge when it is squeezed. Very stiff and fast. It cannot hold a steady load.</td>
+<td style="text-align: left;">Force plates for gait and impact</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">SAR</td>
-<td style="text-align: left;">Binary search, one bit per step</td>
-<td style="text-align: left;">10 to 18 bits</td>
-<td style="text-align: left;">kS/s to MS/s</td>
-<td style="text-align: left;">One conversion</td>
-<td style="text-align: left;">Microcontrollers, multichannel amplifier chips</td>
+<td style="text-align: left;">Capacitive</td>
+<td style="text-align: left;">Two plates move closer under load, and the capacitance rises.</td>
+<td style="text-align: left;">Pressure mats, touch sensing</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Dual-slope</td>
-<td style="text-align: left;">Average over a fixed time</td>
-<td style="text-align: left;">16 to 22 bits</td>
-<td style="text-align: left;">A few S/s</td>
-<td style="text-align: left;">One integration</td>
-<td style="text-align: left;">Multimeters</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Delta-sigma</td>
-<td style="text-align: left;">Oversample, shape the noise, filter</td>
-<td style="text-align: left;">16 to 24 bits</td>
-<td style="text-align: left;">S/s to tens of kS/s</td>
-<td style="text-align: left;">One or more readings</td>
-<td style="text-align: left;">Load cells, biopotentials, the ADS1115</td>
-</tr>
-</tbody>
-</table>
-</div>
-<p><span class="deemph">Typical values. Individual parts fall outside these ranges.</span></p>
-<div class="fragment">
-<p><span class="red">More bits cost speed. More speed costs bits or power. No type wins on all three.</span></p>
-</div>
-</div>
-</section>
-<section id="analog-to-digital-converters-7" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">Bits are not resolution</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>The HX711 has 24 bits. On a ±20 mV range one step is 2.4 nV. Its input noise is much larger than that, so the last several bits are noise.</p>
-<div class="fragment">
-<p>The useful number is the <span class="highlight">noise-free resolution</span>. It is the number of bits that stay steady with a constant input,</p>
-<p><span class="math display">\[n_{\text{noise-free}} = \log_2 \frac{\text{full-scale range}}{\text{peak-to-peak noise}}\]</span></p>
-</div>
-<div class="fragment">
-<p>Measure it yourself. Put a constant mass on the cell and record a minute of readings. Take the peak-to-peak spread. Divide it by the sensitivity to get it in grams.</p>
-</div>
-<div class="fragment">
-<p><span class="red">This is the encoder lesson again. Resolution is not accuracy, and steps finer than the noise are empty digits.</span></p>
-</div>
-</div>
-</section>
-<section id="analog-to-digital-converters-8" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">Choosing an ADC</span></p>
-<div style="font-size: 0.9em; margin-top: -0.5em;">
-<p>Three cases from this module.</p>
-<div class="fragment">
-<p><span class="highlight">Grip force in clinic.</span> The force changes over a second or more. A delta-sigma converter at 10 readings a second is enough. Its slowness also rejects mains hum.</p>
-</div>
-<div class="fragment">
-<p><span class="highlight">A force plate during running.</span> The force at heel strike rises in tens of milliseconds. Ten readings a second miss it entirely. The plate needs 1000 samples a second or more on every channel, taken together. That means a SAR converter, or a fast delta-sigma converter on each channel.</p>
-</div>
-<div class="fragment">
-<p><span class="highlight">A balance board through an ADS1115.</span> Four cells share one converter through its multiplexer. Each cell gets a quarter of the converter’s rate, and the four cells are not read at the same instant. Check that the delay between cells is small compared with how fast the CoP moves.</p>
-</div>
-<div class="fragment">
-<p><span class="red">Ask three questions. How fast does the signal change? How many channels must be read together? What is the smallest change you must see?</span></p>
-</div>
-</div>
-</section>
-<section id="analog-to-digital-converters-9" class="slide level2">
-<h2>Analog-to-digital converters</h2>
-<p><span class="framesub">The lab’s ADC: ADS1115</span></p>
-<div style="font-size: 0.85em; margin-top: -0.5em;">
-<p><span class="red">Values to be checked against the ADS1115 datasheet.</span></p>
-<div class="fit">
-<table class="caption-top">
-<colgroup>
-<col style="width: 27%">
-<col style="width: 17%">
-<col style="width: 55%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">Parameter</th>
-<th style="text-align: left;">Value</th>
-<th style="text-align: left;">What it means for us</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">Type</td>
-<td style="text-align: left;">Delta-sigma</td>
-<td style="text-align: left;">Filtering is built in, with a delay per reading</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Resolution</td>
-<td style="text-align: left;">16 bits</td>
-<td style="text-align: left;">One sign bit, so <span class="math inline">\(2^{15}\)</span> steps on each side of zero</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Rate</td>
-<td style="text-align: left;">8 to 860 readings per second</td>
-<td style="text-align: left;">Shared among the channels in use</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Input range</td>
-<td style="text-align: left;">±0.256 V to ±6.144 V, set by its amplifier</td>
-<td style="text-align: left;">On ±0.256 V one step is 7.8 µV. That is 16 g on our example cell.</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Inputs</td>
-<td style="text-align: left;">4 single-ended or 2 differential</td>
-<td style="text-align: left;">A bridge needs one differential pair</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Interface</td>
-<td style="text-align: left;">I²C</td>
-<td style="text-align: left;">It can share the bus with the MPU-9250</td>
+<td style="text-align: left;">Optical</td>
+<td style="text-align: left;">The load changes the light passing through a fibre.</td>
+<td style="text-align: left;">Inside MRI scanners, where metal cannot go</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="fragment">
-<p><span class="red">A bare load cell on the ADS1115 resolves about 16 g at best. That is why the lab uses the HX711 for the load cell.</span></p>
+<p><span class="red">The questions stay the same for each one. What deforms? What reads the deformation? What else changes the reading?</span></p>
 </div>
-<div class="-->">
+</div>
+<!-- # Analog Front Ends
 
-</div>
-</div>
+## Analog front ends
+
+[What the sensor gives and what the ADC needs]{.framesub}
+
+::: {style="font-size: 0.85em; margin-top: -0.5em;"}
+::: {.fit}
+| Sensor | Output | Size | The difficulty |
+|:-------|:-------|:-----|:---------------|
+| Load cell bridge | Difference of two voltages | 10 mV at full load | Both outputs sit at half the excitation, 2.5 V |
+| FSR | Resistance | Megohms falling to kilohms | It is not a voltage yet |
+| Hall element | Difference of two voltages | Millivolts | Small, with an offset that moves with temperature |
+| Electrodes, later | Difference of two voltages | About 1 mV | Large common voltage and high source impedance |
+:::
+
+::: {.fragment}
+An ADC wants a single voltage that fills its input range, from a source that can drive it.
+:::
+
+::: {.fragment}
+The circuit between the two is the [analog front end]{.highlight}. It has five jobs.
+
+1. Turn the sensor's output into a voltage.
+2. Amplify the signal to fill the ADC's range.
+3. Reject what is common to both inputs.
+4. Draw almost no current from the sensor.
+5. Remove frequencies the ADC cannot sample.
+:::
+:::
+
+
+## Analog front ends
+
+[The op-amp as a building block]{.framesub}
+
+::: {style="font-size: 0.85em; margin-top: -0.5em;"}
+An op-amp has two inputs, one output and a very large gain. With negative feedback it drives its output until its two inputs are equal. No current flows into its inputs.
+
+[Figure to be drawn. Follower, non-inverting amplifier, transimpedance amplifier.]{.red}
+
+::: {.fragment}
+Three circuits are enough to read most front ends.
+
+- A [follower]{.highlight} has a gain of 1. It draws almost no current from the source and can drive a load. It cures loading.
+- A [non-inverting amplifier]{.highlight} has a gain of $1 + R_2/R_1$, set by two resistors.
+- A [transimpedance amplifier]{.highlight} turns a current into a voltage, $v_o = -i\,R_f$. A photodiode gives a current. Optical encoders use one, and so do the optical sensors later in the course.
+:::
+
+::: {.fragment}
+[We use these as blocks. The datasheet tells you how far a real op-amp is from the ideal one.]{.red}
+:::
+:::
+
+
+## Analog front ends
+
+[The FSR: a divider and a follower]{.framesub}
+
+:::: {.columns style="margin-top: -0.5em;"}
+
+::: {.column style="width: 38%;"}
+[Figure to be drawn. Supply $V_s$, FSR, fixed resistor $R_m$ to ground, follower, ADC.]{.red}
+:::
+
+::: {.column style="width: 60%; font-size: 0.85em; padding-left: 0.5em;"}
+Put the FSR in series with a fixed resistor $R_m$. The voltage across $R_m$ is
+
+$$v = V_s\,\frac{R_m}{R_m + R_{FSR}}$$
+
+More force lowers $R_{FSR}$ and raises $v$.
+
+::: {.fragment}
+The output is not linear in force. It is most sensitive where $R_{FSR}$ is close to $R_m$. [Choose $R_m$ near the FSR's resistance at the force you care about.]{.highlight}
+:::
+
+::: {.fragment}
+An ADC input draws current while it samples. With a large $R_m$ that current changes $v$. A follower between the divider and the ADC removes the problem. This is the loading from Module 1.
+:::
+:::
+
+::::
+
+
+## Analog front ends
+
+[The bridge needs a difference amplifier]{.framesub}
+
+::: {style="font-size: 0.9em; margin-top: -0.5em;"}
+Both bridge outputs sit near 2.5 V. The signal is the difference between them, at most 10 mV.
+
+::: {.fragment}
+An amplifier with a gain of 128 on one output would try to reach 320 V. It saturates at its supply. We must amplify the difference and ignore the 2.5 V the two outputs share.
+:::
+
+::: {.fragment}
+The shared part is the [common-mode]{.highlight} voltage. The difference is the [differential]{.highlight} voltage. An [instrumentation amplifier]{.highlight} amplifies the differential voltage and rejects the common-mode voltage.
+:::
+
+::: {.fragment}
+[Figure to be drawn. The three-op-amp instrumentation amplifier as a block, with the gain resistor $R_G$ marked.]{.red}
+
+Inside are three op-amps. The first two give both inputs a very high impedance and provide the gain. The third subtracts. One resistor sets the gain. [You buy it as one chip. We do not derive it.]{.deemph}
+:::
+:::
+
+
+## Analog front ends
+
+[Common-mode rejection in numbers]{.framesub}
+
+::: {style="font-size: 0.9em; margin-top: -0.5em;"}
+No amplifier rejects the common mode perfectly. The [common-mode rejection ratio]{.highlight} (CMRR) says how much less it amplifies the common mode than the difference. At 100 dB, a common-mode voltage acts like a differential signal $10^5$ times smaller.
+
+::: {.fragment}
+The bridge's 2.5 V then looks like 25 µV. On our example cell, at 0.5 mV per kg, that is 50 g. But it is constant, and setting the zero removes it.
+:::
+
+::: {.fragment}
+The danger is a common mode that changes. Mains hum picked up equally on both leads is a common-mode signal at 50 Hz. A drifting excitation also moves the common mode.
+:::
+
+::: {.fragment}
+The CMRR falls as the frequency rises. Read the CMRR at 50 Hz on the datasheet, not the value at DC. [Electrodes in the biopotentials module face the same problem with a much larger common mode.]{.red}
+:::
+:::
+
+
+## Analog front ends
+
+[Offset, drift and slow noise]{.framesub}
+
+::: {style="font-size: 0.9em; margin-top: -0.5em;"}
+A load cell measures a static force. The signal changes slowly or not at all. Three amplifier errors live at these low frequencies.
+
+::: {.fragment}
+The amplifier adds a small constant voltage, its [offset]{.highlight}. Setting the zero removes it.
+:::
+
+::: {.fragment}
+The offset changes with temperature. This is the [offset drift]{.highlight}, given in µV per °C. Suppose it is 0.5 µV/°C. A 10 °C change gives 5 µV, which is 10 g on our example cell. Setting the zero at the start does not remove a drift that happens during the test.
+:::
+
+::: {.fragment}
+Every amplifier has [1/f noise]{.highlight}. Its power rises as the frequency falls. At low frequencies it is larger than the white noise, and static force lives there. The datasheet gives it as a peak-to-peak voltage from 0.1 to 10 Hz.
+:::
+
+::: {.fragment}
+[Zero-drift]{.highlight} amplifiers swap their inputs back and forth thousands of times a second and cancel their own offset. They have almost no drift and very little 1/f noise. They suit load cells.
+:::
+:::
+
+
+## Analog front ends
+
+[Reading an amplifier datasheet]{.framesub}
+
+::: {style="font-size: 0.85em; margin-top: -0.5em;"}
+::: {.fit}
+| Parameter | What it means for us |
+|:----------|:---------------------|
+| Gain error | Calibration removes it. It does not remove gain drift with temperature. |
+| Input offset voltage | A fixed zero error. Setting the zero removes it. |
+| Offset drift, µV/°C | A zero error that grows as the room warms. |
+| Noise, 0.1 to 10 Hz, peak-to-peak | The smallest static change you can see. |
+| Noise density, nV/√Hz | The noise for faster signals. Multiply by the square root of the bandwidth. |
+| CMRR at 50 Hz | How much mains hum gets through. |
+| Input bias current | The current drawn from the sensor. It matters for high-impedance sources such as electrodes. |
+| Input and output range | How close to the supply rails the signals may go. |
+:::
+
+::: {.fragment}
+[Divide every input voltage error by the sensor's sensitivity. A number in microvolts then becomes a number in grams or newtons, which a clinician can judge.]{.red}
+:::
+:::
+
+
+## Analog front ends
+
+[Integrated front ends]{.framesub}
+
+::: {style="font-size: 0.9em; margin-top: -0.5em;"}
+You will rarely build a front end from parts. The amplifier, and often the ADC, come on one chip.
+
+::: {.fragment}
+The [HX711]{.highlight} is built for load cells. It holds a two-channel multiplexer, an amplifier with a gain of 32, 64 or 128, and a 24-bit converter. A regulator on the chip can supply the bridge excitation. It gives 10 or 80 readings per second.
+:::
+
+::: {.fragment}
+The [AD8232]{.highlight} is built for the heart's electrical signal. It holds an instrumentation amplifier, filters, and a driver that holds the body's common-mode voltage down. We meet it in the biopotentials module.
+:::
+
+::: {.fragment}
+[The chip's makers made the design decisions. Your job is to read the datasheet and decide whether the chip suits the measurement.]{.red}
+:::
+
+::: {style="margin-top: 1em;"}
+[HX711 values to be checked against its datasheet.]{.deemph}
+:::
+:::
+
+
+## Front ends from our projects
+
+[What we used, and what went wrong]{.framesub}
+
+::: {style="font-size: 0.85em; margin-top: -0.5em;"}
+[Projects and part numbers to be filled in by Siva.]{.red}
+
+::: {.fit}
+| Project | Sensor | Front end | Why we chose it | What went wrong |
+|:--------|:-------|:----------|:----------------|:----------------|
+| | | | | |
+| | | | | |
+| | | | | |
+:::
+
+::: {.fragment}
+[The last column is the useful one. A front end that worked first time teaches less than one that did not.]{.deemph}
+:::
+::: -->
+
 </section></section>
     </div>
   <div class="quarto-auto-generated-content" style="display: none;">

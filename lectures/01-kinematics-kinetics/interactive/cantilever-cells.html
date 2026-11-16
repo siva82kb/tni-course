@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two load cells, one moving load</title>
+
+<style>
+  :root {
+    --charcoal: #2D3748;
+    --warmgray: #718096;
+    --forest:   #2B6CB0;
+    --crimson:  #A51C30;
+    --amber:    #D69E2E;
+    --orange:   #DD6B20;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #FFFFFF; color: var(--charcoal);
+    font-family: "Linux Libertine O", Libertine, Palatino, Georgia, serif;
+    overflow: hidden;
+  }
+  #stage { position: relative; width: 100%; height: 100%; }
+  #stage.grab { cursor: grab; }
+  #stage.grabbing { cursor: grabbing; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #panel {
+    position: absolute; top: 8px; left: 8px; width: 250px;
+    padding: 6px 9px; font-size: 10.5px; line-height: 1.35;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  #panel label { display: block; }
+  #panel .grp { margin-top: 6px; padding-top: 5px; border-top: 1px solid #EDF2F7; }
+  #panel .grp:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  #panel .hd { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.04em;
+               color: var(--warmgray); margin-bottom: 3px; }
+  #panel input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100px; height: 14px; margin: 0 3px; padding: 0;
+    vertical-align: middle; background: transparent; cursor: pointer;
+  }
+  #panel input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+    border-radius: 50%; border: none; background: var(--charcoal);
+  }
+  #panel input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: #CBD5E0; }
+  #panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--charcoal); }
+  #panel .sl { margin-bottom: 3px; white-space: nowrap; }
+  #panel .k { display: inline-block; width: 6.2em; font-family: "Linux Libertine O", Georgia, serif; font-size: 11.5px; }
+  #panel .val { display: inline-block; width: 4.4em; text-align: right; font-variant-numeric: tabular-nums; }
+  #panel button {
+    font: inherit; font-size: 10px; padding: 1px 6px; margin: 3px 4px 0 0;
+    border: 1px solid #CBD5E0; border-radius: 3px; background: #fff; color: var(--charcoal); cursor: pointer;
+  }
+  #panel .note { color: var(--warmgray); margin-top: 2px; }
+
+  /* the readouts of each cell, laid over the canvas to the right of its drawing */
+  .read { position: absolute; pointer-events: none; }
+  .read .hd { font-size: 12px; color: var(--warmgray); margin-bottom: 3px; white-space: nowrap; }
+  .read table { border-collapse: collapse; }
+  .read td { padding: 0 8px 0 0; white-space: nowrap; line-height: 1.42; font-size: 15px; }
+  .read td.n { text-align: right; min-width: 4.6em; font-family: Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 13.5px; }
+  .read td.u { font-size: 13px; color: var(--warmgray); padding-right: 0; }
+  .read tr.sep td { padding-top: 7px; }
+  .read tr.big td { font-weight: bold; }
+  .read tr.bad td.n { color: var(--crimson); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="panel">
+    <div class="grp">
+      <div class="hd">The load</div>
+      <label class="sl"><span class="k">Position</span>
+        <input type="range" id="sa" min="90" max="198" step="1" value="100">
+        <span class="val" id="va">100 mm</span></label>
+      <label class="sl"><span class="k">Force</span>
+        <input type="range" id="sf" min="5" max="40" step="1" value="20">
+        <span class="val" id="vf">20 N</span></label>
+      <label class="sl"><span class="k">Exaggeration</span>
+        <input type="range" id="se" min="0" max="60" step="1" value="30">
+        <span class="val" id="ve">30 times</span></label>
+    </div>
+
+    <div class="grp">
+      <div class="hd">Try these</div>
+      <button data-a="100">At calibration</button>
+      <button data-a="150">Moved out</button>
+      <button data-a="198">At the tip</button>
+      <div class="note">Drag the arrow to move the load.</div>
+    </div>
+
+    <div class="grp">
+      <div class="hd">Key</div>
+      <div class="note">Red is stretched. Blue is shortened. Dotted is the bar before the load. Each cell is calibrated once with the load at 100 mm.</div>
+    </div>
+  </div>
+
+  <div class="read" id="r-plain"></div>
+  <div class="read" id="r-binocular"></div>
+</div>
+
+<script>
+// ==== FEM BEGIN ====
+// Plane-stress finite elements for the two load cells. Units: mm, N, MPa.
+// The mesh is a structured grid of nine-node quadrilaterals. Each grid column is split
+// into a bottom band, a middle band and a top band. Over the hole the middle band is
+// left out, and the band edges follow the hole, so the thin walls are fitted exactly.
+// The stiffness matrix is factorised once. Each load position is then one back-substitution.
+// fem/compare_js.js runs this block under node and checks it against scikit-fem.
+var FEM = (function () {
+  "use strict";
+  var L = 200, H = 20, T = 10, E = 70e3, NU = 0.33, GF = 2;
+  var R = 7, XH1 = 30, XH2 = 60, SLOT = 3, GLEN = 6, PATCH = 4, A_REF = 100;
+  var DXH = Math.sqrt(R * R - SLOT * SLOT / 4);
+  // The hole in the mesh starts where the circle is as high as the slot. The two end caps
+  // of the true hole beyond that, 0.16 mm long, are filled.
+  var X0 = XH1 - DXH, X1 = XH2 + DXH;
+  var CELLS = {
+    plain:     { hole: false, gauges: [{ name: "T1", x: 45, top: true, sign: 1 }, { name: "T2", x: 45, top: true, sign: 1 },
+                                       { name: "C1", x: 45, top: false, sign: -1 }, { name: "C2", x: 45, top: false, sign: -1 }] },
+    binocular: { hole: true,  gauges: [{ name: "T1", x: XH1, top: true, sign: 1 }, { name: "T2", x: XH2, top: false, sign: 1 },
+                                       { name: "C1", x: XH2, top: true, sign: -1 }, { name: "C2", x: XH1, top: false, sign: -1 }] }
+  };
+  var GP = [-Math.sqrt(0.6), 0, Math.sqrt(0.6)], GW = [5 / 9, 8 / 9, 5 / 9];
+  function N1(s) { return [s * (s - 1) / 2, 1 - s * s, s * (s + 1) / 2]; }     // quadratic shape functions on [-1, 1]
+  function D1(s) { return [s - 0.5, -2 * s, s + 0.5]; }
+
+  function build(hole, opt) {
+    opt = opt || {};
+    var nw = opt.nw || 4, nm = opt.nm || 2, hf = opt.hf || 1, hc = opt.hc || 5;   // elements per band, element lengths
+    var i, j, k, a, b, e;
+    // element boundaries along x: fine up to 75 mm, coarse beyond
+    var br = [0, X0, XH1 + DXH, XH2 - DXH, X1, 75, L], xe = [0];
+    for (i = 0; i < br.length - 1; i++) {
+      var len = br[i + 1] - br[i], n = Math.max(1, Math.round(len / (br[i] < 75 ? hf : hc)));
+      for (k = 1; k <= n; k++) xe.push(br[i] + len * k / n);
+    }
+    var NEX = xe.length - 1, NEY = 2 * nw + nm, NC = 2 * NEX + 1, NR = 2 * NEY + 1;
+    function gap(x) {                       // half-height of the middle band at x
+      var g = SLOT / 2;
+      if (hole && x > X0 && x < X1) [XH1, XH2].forEach(function (c) { var d = Math.abs(x - c); if (d < R) g = Math.max(g, Math.sqrt(R * R - d * d)); });
+      return g;
+    }
+    function yrow(x, r) {
+      var g = gap(x), w = H / 2 - g;
+      if (r <= 2 * nw) return w * r / (2 * nw);
+      if (r < 2 * nw + 2 * nm) return w + 2 * g * (r - 2 * nw) / (2 * nm);
+      return H / 2 + g + w * (r - 2 * nw - 2 * nm) / (2 * nw);
+    }
+    // elements, and the grid nodes they use
+    var id = new Int32Array(NC * NR).fill(-1), els = [], ex, ey;
+    for (ex = 0; ex < NEX; ex++) {
+      var xm = (xe[ex] + xe[ex + 1]) / 2, open = hole && xm > X0 && xm < X1;
+      for (ey = 0; ey < NEY; ey++) {
+        if (open && ey >= nw && ey < nw + nm) continue;
+        var g9 = [];
+        for (b = 0; b < 3; b++) for (a = 0; a < 3; a++) { g9.push((2 * ex + a) * NR + 2 * ey + b); id[(2 * ex + a) * NR + 2 * ey + b] = 0; }
+        els.push(g9);
+      }
+    }
+    var nn = 0, X = [], Y = [];
+    for (i = 0; i < NC; i++) for (j = 0; j < NR; j++) if (id[i * NR + j] === 0) {
+      var x = i % 2 ? (xe[(i - 1) / 2] + xe[(i + 1) / 2]) / 2 : xe[i / 2];
+      id[i * NR + j] = nn++; X.push(x); Y.push(yrow(x, j));
+    }
+    var nel = els.length, conn = new Int32Array(nel * 9);
+    for (e = 0; e < nel; e++) for (k = 0; k < 9; k++) conn[e * 9 + k] = id[els[e][k]];
+    var nd = 2 * nn, bw = 0;
+    for (e = 0; e < nel; e++) {
+      var lo = 1e9, hi = -1;
+      for (k = 0; k < 9; k++) { lo = Math.min(lo, conn[e * 9 + k]); hi = Math.max(hi, conn[e * 9 + k]); }
+      bw = Math.max(bw, 2 * (hi - lo) + 1);
+    }
+    var fixed = new Uint8Array(nd);                         // clamped at the wall
+    for (j = 0; j < NR; j++) { fixed[2 * id[j]] = 1; fixed[2 * id[j] + 1] = 1; }
+
+    // stiffness, stored as a lower band; and the weights that give strain eps_xx at each element node
+    var w = bw + 1, A = new Float64Array(nd * w), GX = new Float64Array(nel * 81);
+    var D11 = E / (1 - NU * NU), D12 = NU * D11, D33 = E / (2 * (1 + NU));
+    function grads(e, s, t) {                               // shape-function gradients in x and y, and det J
+      var Ns = N1(s), Nt = N1(t), Ds = D1(s), Dt = D1(t), dS = [], dT = [], xs = 0, xt = 0, ys = 0, yt = 0, p, a, b, k;
+      for (b = 0; b < 3; b++) for (a = 0; a < 3; a++) {
+        p = conn[e * 9 + a + 3 * b]; dS.push(Ds[a] * Nt[b]); dT.push(Ns[a] * Dt[b]);
+        xs += dS[a + 3 * b] * X[p]; xt += dT[a + 3 * b] * X[p]; ys += dS[a + 3 * b] * Y[p]; yt += dT[a + 3 * b] * Y[p];
+      }
+      var det = xs * yt - xt * ys, dx = [], dy = [];
+      for (k = 0; k < 9; k++) { dx.push((yt * dS[k] - ys * dT[k]) / det); dy.push((xs * dT[k] - xt * dS[k]) / det); }
+      return { dx: dx, dy: dy, det: det };
+    }
+    function add(r, c, v) { if (r >= c && !fixed[r] && !fixed[c]) A[r * w + bw - (r - c)] += v; }
+    for (e = 0; e < nel; e++) {
+      for (var q = 0; q < 9; q++) {
+        var G = grads(e, GP[q % 3], GP[(q - q % 3) / 3]), wt = GW[q % 3] * GW[(q - q % 3) / 3] * G.det * T;
+        for (a = 0; a < 9; a++) for (b = 0; b < 9; b++) {
+          var ra = 2 * conn[e * 9 + a], rb = 2 * conn[e * 9 + b];
+          var ax = G.dx[a], ay = G.dy[a], bx = G.dx[b], by = G.dy[b];
+          add(ra, rb, wt * (D11 * ax * bx + D33 * ay * by));
+          add(ra, rb + 1, wt * (D12 * ax * by + D33 * ay * bx));
+          add(ra + 1, rb, wt * (D12 * ay * bx + D33 * ax * by));
+          add(ra + 1, rb + 1, wt * (D11 * ay * by + D33 * ax * bx));
+        }
+      }
+      for (k = 0; k < 9; k++) { var Gn = grads(e, k % 3 - 1, (k - k % 3) / 3 - 1); for (a = 0; a < 9; a++) GX[e * 81 + k * 9 + a] = Gn.dx[a]; }
+    }
+    for (i = 0; i < nd; i++) if (fixed[i]) A[i * w + bw] = 1;
+    // Cholesky factor, in place
+    for (i = 0; i < nd; i++) {
+      var j0 = Math.max(0, i - bw), iw = i * w + bw - i;
+      for (j = j0; j <= i; j++) {
+        var s = A[iw + j], jw = j * w + bw - j;
+        for (k = Math.max(j0, j - bw); k < j; k++) s -= A[iw + k] * A[jw + k];
+        A[iw + j] = j < i ? s / A[jw + j] : Math.sqrt(s);
+      }
+    }
+
+    function colOf(x) { var c = 0; while (c < NEX - 1 && xe[c + 1] < x) c++; return c; }
+    // displacement of the top or bottom surface at x: [u_x, u_y]
+    function surf(u, x, top) {
+      var c = colOf(x), N = N1(2 * (x - xe[c]) / (xe[c + 1] - xe[c]) - 1), r = top ? NR - 1 : 0, ux = 0, uy = 0;
+      for (var a = 0; a < 3; a++) { var p = id[(2 * c + a) * NR + r]; ux += N[a] * u[2 * p]; uy += N[a] * u[2 * p + 1]; }
+      return [ux, uy];
+    }
+    // displacements for a downward force f spread evenly over PATCH mm of the top surface, centred at a
+    function solve(a0, f) {
+      var u = new Float64Array(nd), xa = a0 - PATCH / 2, xb = a0 + PATCH / 2, c, g, m, i, k;
+      for (c = colOf(xa); c <= colOf(xb); c++) {
+        var l = Math.max(xa, xe[c]), r = Math.min(xb, xe[c + 1]);
+        if (r <= l) continue;
+        for (g = 0; g < 3; g++) {
+          var xg = (l + r) / 2 + GP[g] * (r - l) / 2, N = N1(2 * (xg - xe[c]) / (xe[c + 1] - xe[c]) - 1);
+          for (m = 0; m < 3; m++) u[2 * id[(2 * c + m) * NR + NR - 1] + 1] -= f / PATCH * GW[g] * (r - l) / 2 * N[m];
+        }
+      }
+      for (i = 0; i < nd; i++) {
+        if (fixed[i]) { u[i] = 0; continue; }
+        var s = u[i], iw = i * w + bw - i;
+        for (k = Math.max(0, i - bw); k < i; k++) s -= A[iw + k] * u[k];
+        u[i] = s / A[iw + i];
+      }
+      for (i = nd - 1; i >= 0; i--) {
+        var iw2 = i * w + bw - i, v = u[i] / A[iw2 + i]; u[i] = v;
+        for (k = Math.max(0, i - bw); k < i; k++) u[k] -= A[iw2 + k] * v;
+      }
+      return u;
+    }
+    // what the gauges and the bridge read. A gauge reads the mean surface strain over its length.
+    function read(u, gauges) {
+      var eps = gauges.map(function (g) { return (surf(u, g.x + GLEN / 2, g.top)[0] - surf(u, g.x - GLEN / 2, g.top)[0]) / GLEN; });
+      var sum = 0; gauges.forEach(function (g, n) { sum += g.sign * eps[n]; });
+      return { eps: eps, bridge: GF / 4 * sum };            // bridge is v_o / V_ex
+    }
+    // strain eps_xx at every node, averaged over the elements that share the node
+    var cnt = new Float64Array(nn);
+    for (e = 0; e < nel * 9; e++) cnt[conn[e]]++;
+    function exx(u, out) {
+      out = out || new Float64Array(nn); out.fill(0);
+      for (var e = 0; e < nel; e++) for (var k = 0; k < 9; k++) {
+        var s = 0, o = e * 81 + k * 9;
+        for (var a = 0; a < 9; a++) s += GX[o + a] * u[2 * conn[e * 9 + a]];
+        out[conn[e * 9 + k]] += s;
+      }
+      for (var p = 0; p < nn; p++) out[p] /= cnt[p];
+      return out;
+    }
+    return { hole: hole, nn: nn, nel: nel, nd: nd, bw: bw, X: X, Y: Y, conn: conn, id: id, NC: NC, NR: NR, nw: nw, nm: nm, xe: xe,
+             solve: solve, surf: surf, read: read, exx: exx };
+  }
+  return { build: build, CELLS: CELLS, L: L, H: H, T: T, E: E, GF: GF, R: R, XH1: XH1, XH2: XH2, X0: X0, X1: X1,
+           GLEN: GLEN, PATCH: PATCH, A_REF: A_REF };
+})();
+// ==== FEM END ====
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var stage  = document.getElementById("stage");
+  var canvas = document.getElementById("cv");
+  var ctx    = canvas.getContext("2d");
+  var COL = { disc: "#2D3748", text: "#718096", grid: "#EDF2F7", line: "#CBD5E0", edge: "#A0AEC0",
+              tens: "#A51C30", comp: "#2B6CB0", plain: "#2D3748", bino: "#DD6B20", tru: "#CBD5E0" };
+  var SERIF = '"Linux Libertine O", Libertine, Palatino, Georgia, serif';
+  var A_MIN = 90, A_MAX = 198, MAP_PER_N = 10;         // the colour map saturates at 10 µε per newton of load
+
+  var P = { a: 100, f: 20, ex: 30 };
+
+  // ---- the two cells: mesh, factor, calibration, and the curve of estimated force ------
+  var NAMES = ["plain", "binocular"];
+  var TITLE = { plain: "Plain cantilever", binocular: "Binocular bar" };
+  var SUB = { plain: "Four gauges at one section. Two on top, two underneath.",
+              binocular: "Four gauges on the thin walls, at two sections." };
+  var CELL = {};
+  NAMES.forEach(function (name) {
+    var spec = FEM.CELLS[name], m = FEM.build(spec.hole), c = { name: name, spec: spec, m: m };
+    c.perN = m.read(m.solve(FEM.A_REF, 1), spec.gauges).bridge;      // bridge output per newton, at the calibration position
+    c.curve = [];                                                     // estimated force per newton of true force
+    for (var a = A_MIN; a <= A_MAX; a += 4) c.curve.push([a, m.read(m.solve(a, 1), spec.gauges).bridge / c.perN]);
+    c.strain = new Float64Array(m.nn);
+    // the sub-quads to paint: four per element
+    var q = [], e, i, j;
+    for (e = 0; e < m.nel; e++) for (j = 0; j < 2; j++) for (i = 0; i < 2; i++) {
+      var o = e * 9 + i + 3 * j; q.push(m.conn[o], m.conn[o + 1], m.conn[o + 4], m.conn[o + 3]);
+    }
+    c.quads = q;
+    CELL[name] = c;
+  });
+
+  // ---- helpers ---------------------------------------------------------------------
+  function fmt(v, d) { return v.toFixed(d).replace("-", "−"); }
+  function text(s, x, y, color, size, align, bold) {
+    ctx.save(); ctx.fillStyle = color; ctx.font = (bold ? "bold " : "") + (size || 12) + "px " + SERIF;
+    ctx.textAlign = align || "left"; ctx.textBaseline = "middle"; ctx.fillText(s, x, y); ctx.restore();
+  }
+  // strain colours: light grey at zero, to crimson when stretched and blue when shortened
+  var PAL = [];
+  (function () {
+    var z = [226, 232, 240], t = [165, 28, 48], c = [43, 108, 176];
+    for (var i = -64; i <= 64; i++) {
+      var a = Math.abs(i) / 64, to = i >= 0 ? t : c;
+      PAL.push("rgb(" + [0, 1, 2].map(function (k) { return Math.round(z[k] + (to[k] - z[k]) * a); }).join(",") + ")");
+    }
+  })();
+  function pal(v) { return PAL[64 + Math.max(-64, Math.min(64, Math.round(64 * v)))]; }
+  function gaugeCol(e) { return Math.abs(e) < 0.5e-6 ? COL.text : (e > 0 ? COL.tens : COL.comp); }
+
+  // ---- one cell: the deformed bar, its strain map, the wall, the gauges and the load ----
+  var GEO = {};                                          // where each cell is drawn; used for dragging
+  function drawCell(c, x0, y0, wd, ht) {
+    var m = c.m, u = c.u, k = P.ex, S = GEO.S, bx = x0 + 18, yt = y0 + 96, i, n;
+    function px(x, y, ux, uy) { return [bx + S * (x + k * ux), yt + S * (FEM.H - y - k * uy)]; }
+    function node(p) { return px(m.X[p], m.Y[p], u[2 * p], u[2 * p + 1]); }
+    function onSurf(x, top) { var d = m.surf(u, x, top); return px(x, top ? FEM.H : 0, d[0], d[1]); }
+
+    text(TITLE[c.name], x0 + 4, y0 + 12, COL.disc, 17, "left", true);
+    text(SUB[c.name], x0 + 4, y0 + 31, COL.text, 13);
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0 - 4, y0 + 42, wd + 8, ht - 42); ctx.clip();
+    // the bar, painted by strain
+    var XY = new Float64Array(2 * m.nn), q = c.quads, lim = MAP_PER_N * P.f * 1e-6;
+    for (i = 0; i < m.nn; i++) { var w = node(i); XY[2 * i] = w[0]; XY[2 * i + 1] = w[1]; }
+    ctx.lineWidth = 0.7; ctx.lineJoin = "round";
+    for (i = 0; i < q.length; i += 4) {
+      var col = pal((c.strain[q[i]] + c.strain[q[i + 1]] + c.strain[q[i + 2]] + c.strain[q[i + 3]]) / 4 / lim);
+      ctx.fillStyle = col; ctx.strokeStyle = col; ctx.beginPath();
+      ctx.moveTo(XY[2 * q[i]], XY[2 * q[i] + 1]);
+      for (n = 1; n < 4; n++) ctx.lineTo(XY[2 * q[i + n]], XY[2 * q[i + n] + 1]);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    // its outline, and the outline of the hole
+    function trace(pts) {
+      ctx.beginPath(); pts.forEach(function (p, n) { if (n) ctx.lineTo(XY[2 * p], XY[2 * p + 1]); else ctx.moveTo(XY[2 * p], XY[2 * p + 1]); });
+      ctx.closePath(); ctx.stroke();
+    }
+    var out = [], r, col2;
+    for (i = 0; i < m.NC; i++) out.push(m.id[i * m.NR]);
+    for (r = 1; r < m.NR; r++) out.push(m.id[(m.NC - 1) * m.NR + r]);
+    for (i = m.NC - 2; i >= 0; i--) out.push(m.id[i * m.NR + m.NR - 1]);
+    ctx.strokeStyle = COL.edge; ctx.lineWidth = 1; trace(out);
+    if (m.hole) {
+      var lo = 2 * m.nw, hi = 2 * m.nw + 2 * m.nm, c0 = 0, c1 = 0, hole = [];
+      for (i = 0; i < m.xe.length; i++) { if (Math.abs(m.xe[i] - FEM.X0) < 1e-6) c0 = 2 * i; if (Math.abs(m.xe[i] - FEM.X1) < 1e-6) c1 = 2 * i; }
+      for (i = c0; i <= c1; i++) hole.push(m.id[i * m.NR + lo]);
+      for (i = c1; i >= c0; i--) hole.push(m.id[i * m.NR + hi]);
+      // the hole is white, with the true rounded ends drawn over the two short filled caps
+      ctx.fillStyle = "#FFFFFF"; trace(hole); ctx.fill(); ctx.stroke();
+    }
+    // the bar before the load
+    ctx.save(); ctx.strokeStyle = COL.disc; ctx.lineWidth = 1; ctx.setLineDash([1.5, 3]); ctx.lineCap = "round";
+    ctx.strokeRect(bx, yt, S * FEM.L, S * FEM.H); ctx.restore();
+    // the wall
+    ctx.fillStyle = "#E2E8F0"; ctx.fillRect(bx - 16, yt - 26, 16, S * FEM.H + 52);
+    ctx.save(); ctx.beginPath(); ctx.rect(bx - 16, yt - 26, 16, S * FEM.H + 52); ctx.clip();
+    ctx.strokeStyle = COL.edge; ctx.lineWidth = 1; ctx.beginPath();
+    for (var hy = yt - 40; hy < yt + S * FEM.H + 40; hy += 8) { ctx.moveTo(bx - 18, hy + 16); ctx.lineTo(bx + 2, hy); }
+    ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = COL.disc; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(bx, yt - 26); ctx.lineTo(bx, yt + S * FEM.H + 26); ctx.stroke();
+
+    // the gauges: a thick mark just outside the surface, red when stretched, blue when shortened
+    var seen = {};
+    c.spec.gauges.forEach(function (g, gi) {
+      var key = g.x + (g.top ? "t" : "b"), off = g.top ? -4.5 : 4.5;
+      if (seen[key]) return;
+      var names = c.spec.gauges.filter(function (h) { return h.x === g.x && h.top === g.top; }).map(function (h) { return h.name; });
+      seen[key] = 1;
+      function path() {
+        ctx.beginPath();
+        for (var s = 0; s <= 8; s++) { var p = onSurf(g.x - FEM.GLEN / 2 + FEM.GLEN * s / 8, g.top); if (s) ctx.lineTo(p[0], p[1] + off); else ctx.moveTo(p[0], p[1] + off); }
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt"; ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 8; path();
+      ctx.strokeStyle = gaugeCol(c.r.eps[gi]); ctx.lineWidth = 5; path();
+      var mid = onSurf(g.x, g.top);
+      text(names.join(", "), mid[0], mid[1] + (g.top ? -18 : 18), gaugeCol(c.r.eps[gi]), 14, "center", true);
+    });
+
+    // the load
+    var tip = onSurf(P.a, true), len = 44;
+    ctx.strokeStyle = COL.disc; ctx.fillStyle = COL.disc; ctx.lineWidth = 2.5; ctx.lineCap = "butt";
+    ctx.beginPath(); ctx.moveTo(tip[0], tip[1] - len); ctx.lineTo(tip[0], tip[1] - 9); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tip[0], tip[1] - 1); ctx.lineTo(tip[0] - 5.5, tip[1] - 12); ctx.lineTo(tip[0] + 5.5, tip[1] - 12); ctx.closePath(); ctx.fill();
+    var flip = P.a > 170;                              // near the tip the label goes to the left of the arrow
+    text(fmt(P.f, 0) + " N", tip[0] + (flip ? -8 : 8), tip[1] - len + 8, COL.disc, 15, flip ? "right" : "left");
+    ctx.restore();
+
+    GEO[c.name] = { bx: bx, y0: y0, y1: y0 + ht };
+  }
+
+  // ---- the plot: estimated force against load position ---------------------------------
+  function drawPlot(x0, y0, wd, ht) {
+    var L = x0 + 34, Rt = x0 + wd - 6, Tp = y0 + 24, B = y0 + ht - 30, ymax = 3 * P.f;
+    function X(a) { return L + (Rt - L) * (a - A_MIN) / (200 - A_MIN); }
+    function Y(v) { return B - (B - Tp) * v / ymax; }
+    text("Estimated force, N", x0 + 4, y0 + 8, COL.disc, 13.5, "left", true);
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.beginPath();
+    [1, 2, 3].forEach(function (n) { ctx.moveTo(L, Y(n * P.f)); ctx.lineTo(Rt, Y(n * P.f)); });
+    ctx.stroke();
+    ctx.strokeStyle = COL.line; ctx.beginPath(); ctx.moveTo(L, Tp); ctx.lineTo(L, B); ctx.lineTo(Rt, B); ctx.stroke();
+    [0, 1, 2, 3].forEach(function (n) { text(fmt(n * P.f, 0), L - 5, Y(n * P.f), COL.text, 11.5, "right"); });
+    [100, 150, 200].forEach(function (a) {
+      ctx.beginPath(); ctx.moveTo(X(a), B); ctx.lineTo(X(a), B + 4); ctx.stroke();
+      text(String(a), X(a), B + 11, COL.text, 11.5, "center");
+    });
+    text("Load position, mm", (L + Rt) / 2, B + 24, COL.text, 12, "center");
+    // the true force, then the two cells
+    ctx.strokeStyle = COL.tru; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(L, Y(P.f)); ctx.lineTo(Rt, Y(P.f)); ctx.stroke();
+    NAMES.forEach(function (name) {
+      var c = CELL[name]; ctx.strokeStyle = COL[name === "plain" ? "plain" : "bino"]; ctx.lineWidth = 1.8; ctx.beginPath();
+      c.curve.forEach(function (p, n) { if (n) ctx.lineTo(X(p[0]), Y(p[1] * P.f)); else ctx.moveTo(X(p[0]), Y(p[1] * P.f)); });
+      ctx.stroke();
+    });
+    text("Plain", X(150), Y(CELL.plain.curve[15][1] * P.f) - 14, COL.plain, 13, "right");
+    text("Binocular", Rt, Y(P.f) - 11, COL.bino, 13, "right");
+    text("True force", Rt, Y(P.f) + 12, COL.text, 13, "right");
+    // the load position now
+    ctx.save(); ctx.strokeStyle = COL.text; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(X(P.a), Tp); ctx.lineTo(X(P.a), B); ctx.stroke(); ctx.restore();
+    NAMES.forEach(function (name) {
+      var c = CELL[name];
+      ctx.fillStyle = COL[name === "plain" ? "plain" : "bino"]; ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(X(P.a), Y(Math.min(ymax, c.est)), 4.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+    });
+  }
+
+  // ---- the readouts ---------------------------------------------------------------------
+  NAMES.forEach(function (name) {
+    var rows = FEM.CELLS[name].gauges.map(function (g, n) {
+      return '<tr><td>Gauge ' + g.name + '</td><td class="n" data-k="g' + n + '"></td><td class="u">µε</td></tr>'; }).join("");
+    document.getElementById("r-" + name).innerHTML = '<div class="hd">What this cell reads</div><table>' + rows +
+      '<tr class="sep"><td>Bridge output</td><td class="n" data-k="b"></td><td class="u">mV/V</td></tr>' +
+      '<tr class="big"><td>Estimated force</td><td class="n" data-k="f"></td><td class="u">N</td></tr>' +
+      '<tr><td>True force</td><td class="n" data-k="t"></td><td class="u">N</td></tr>' +
+      '<tr data-row="err"><td>Error</td><td class="n" data-k="e"></td><td class="u">%</td></tr></table>';
+  });
+  function fill(c) {
+    var el = document.getElementById("r-" + c.name);
+    function put(k, s, col) { var td = el.querySelector('[data-k="' + k + '"]'); td.textContent = s; td.style.color = col || ""; }
+    c.r.eps.forEach(function (e, n) { put("g" + n, fmt(e * 1e6, 1), gaugeCol(e)); });
+    put("b", fmt(c.r.bridge * 1e3, 4)); put("f", fmt(c.est, 2)); put("t", fmt(P.f, 2));
+    var err = 100 * (c.est - P.f) / P.f;
+    put("e", (err > 0.05 ? "+" : "") + fmt(Math.abs(err) < 0.05 ? 0 : err, 1));
+    el.querySelector('[data-row="err"]').className = Math.abs(err) > 2 ? "bad" : "";
+  }
+
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var panel = document.getElementById("panel"), left = panel.offsetWidth + 22, readW = 232;
+    var wd = W - left - readW - 22, ht = (H - 12) / 2;
+    GEO.S = (wd - 22) / FEM.L;
+    NAMES.forEach(function (name, n) {
+      var c = CELL[name], y0 = 6 + n * ht;
+      c.u = c.m.solve(P.a, P.f); c.r = c.m.read(c.u, c.spec.gauges); c.m.exx(c.u, c.strain);
+      c.est = c.r.bridge / c.perN;
+      drawCell(c, left, y0, wd, ht);
+      var el = document.getElementById("r-" + name);
+      el.style.left = (left + wd + 16) + "px"; el.style.top = (y0 + 44) + "px";
+      fill(c);
+    });
+    ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(left, 6 + ht); ctx.lineTo(W - 10, 6 + ht); ctx.stroke();
+    var py = panel.offsetTop + panel.offsetHeight + 12;
+    drawPlot(12, py, panel.offsetWidth, Math.min(H - py - 6, 300));
+  }
+
+  // ---- controls ---------------------------------------------------------------------------
+  function show() {
+    document.getElementById("sa").value = P.a; document.getElementById("sf").value = P.f; document.getElementById("se").value = P.ex;
+    document.getElementById("va").textContent = fmt(P.a, 0) + " mm";
+    document.getElementById("vf").textContent = fmt(P.f, 0) + " N";
+    document.getElementById("ve").textContent = fmt(P.ex, 0) + " times";
+    draw();
+  }
+  function clampA(a) { return Math.max(A_MIN, Math.min(A_MAX, Math.round(a))); }
+  document.getElementById("sa").addEventListener("input", function (e) { P.a = parseFloat(e.target.value); show(); });
+  document.getElementById("sf").addEventListener("input", function (e) { P.f = parseFloat(e.target.value); show(); });
+  document.getElementById("se").addEventListener("input", function (e) { P.ex = parseFloat(e.target.value); show(); });
+  Array.prototype.forEach.call(document.querySelectorAll("button[data-a]"), function (b) {
+    b.addEventListener("click", function () { P.a = parseFloat(b.getAttribute("data-a")); show(); });
+  });
+  // drag the arrow: anywhere over a bar, to the right of the gauges
+  var dragging = false;
+  function overBar(ev) {
+    var r = canvas.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, hit = null;
+    NAMES.forEach(function (name) { var g = GEO[name]; if (g && y > g.y0 + 42 && y < g.y1 && x > g.bx + GEO.S * 80 && x < g.bx + GEO.S * 205) hit = g; });
+    return hit ? (x - hit.bx) / GEO.S : null;
+  }
+  canvas.addEventListener("pointerdown", function (ev) {
+    var a = overBar(ev); if (a === null) return;
+    dragging = true; canvas.setPointerCapture(ev.pointerId); stage.className = "grabbing"; P.a = clampA(a); show();
+  });
+  canvas.addEventListener("pointermove", function (ev) {
+    if (dragging) { var r = canvas.getBoundingClientRect(); P.a = clampA((ev.clientX - r.left - GEO.plain.bx) / GEO.S); show(); }
+    else stage.className = overBar(ev) === null ? "" : "grab";
+  });
+  function drop() { dragging = false; stage.className = ""; }
+  canvas.addEventListener("pointerup", drop); canvas.addEventListener("pointercancel", drop);
+
+  // URL presets: ?a=150 (load position, mm), ?f=20 (force, N), ?x=30 (exaggeration)
+  (function () {
+    var q = new URLSearchParams(location.search);
+    function num(key, lo, hi) { var v = parseFloat(q.get(key)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null; }
+    var a = num("a", A_MIN, A_MAX), f = num("f", 5, 40), x = num("x", 0, 60);
+    if (a !== null) P.a = Math.round(a);
+    if (f !== null) P.f = Math.round(f);
+    if (x !== null) P.ex = Math.round(x);
+  })();
+
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = window.devicePixelRatio || 1; W = stage.clientWidth; H = stage.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR); show();
+  }
+  window.addEventListener("resize", resize);
+  resize();
+})();
+</script>
+</body>
+</html>
