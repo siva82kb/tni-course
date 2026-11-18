@@ -32,7 +32,7 @@
       vertical-align: middle;
     }
   </style>
-  <link rel="stylesheet" href="kinematics-kinetics_files/libs/revealjs/dist/theme/quarto-b8d87771e97f577391282b9941c6ae86.css">
+  <link rel="stylesheet" href="kinematics-kinetics_files/libs/revealjs/dist/theme/quarto-6611bd9593b3bf48697715fdedd63267.css">
   <link href="kinematics-kinetics_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="kinematics-kinetics_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="kinematics-kinetics_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -469,7 +469,7 @@ Sivakumar Balasubramanian
 <p><span class="fragment"><span class="math display">\[ \v{R}_{B}^{A} = \m{\v{x}_{B}^{A} &amp; \v{y}_{B}^{A}} = \m{\v{x}_{A}^\top \v{x}_{B} &amp; \v{x}_{A}^\top \v{y}_{B} \\ \v{y}_{A}^\top \v{x}_{B} &amp; \v{y}_{A}^\top \v{y}_{B}}\]</span></span></p>
 <p><span class="fragment"><span class="math display">\[ \v{R}_{B}^{A} = \m{ \cos\left( \theta \right) &amp; -\sin\left( \theta \right) \\ \sin\left( \theta \right) &amp; \cos\left( \theta \right) }\]</span></span></p>
 </div></div>
-<p><span class="fragment">Representation of <span class="math inline">\(P_1\)</span> in reference frames <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> are <span class="math inline">\(\v{r}_{1}^{A}\)</span> and <span class="math inline">\(\v{r}_{1}^{B}\)</span>, respectively. <span class="math display">\[ \v{r}_{1}^{A} = \m{r_{11}^{A} \\ r_{12}^{A}} \qquad \v{r}_{1}^{B} = \m{r_{11}^{B} \\ r_{12}^{B}} \qquad \v{r}_{1}^{A} = \v{R}_{B}^{A} \, \v{r}_1^{B} \]</span></span></p>
+<p><span class="fragment">Representations of <span class="math inline">\(P_1\)</span> in reference frames <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> are <span class="math inline">\(\v{r}_{1}^{A}\)</span> and <span class="math inline">\(\v{r}_{1}^{B}\)</span>, respectively. <span class="math display">\[ \v{r}_{1}^{A} = \m{r_{11}^{A} \\ r_{12}^{A}} \qquad \v{r}_{1}^{B} = \m{r_{11}^{B} \\ r_{12}^{B}} \qquad \v{r}_{1}^{A} = \v{R}_{B}^{A} \, \v{r}_1^{B} \]</span></span></p>
 </div>
 </section>
 <section id="the-linear-algebra-we-need" class="slide level2">
@@ -487,7 +487,7 @@ Sivakumar Balasubramanian
 <p><span class="math display">\[ \v{x}^\top = \m{x_1 &amp; x_2 &amp; \cdots &amp; x_n} \qquad \qquad \left(\v{x}^\top\right)^\top = \v{x} \]</span></p>
 </div>
 <div style="margin-top: -1.0em">
-<p>Addition and scaling rules and their geometric interpretation are the same as that in <span class="math inline">\(\mathbb{R}^2\)</span>.</p>
+<p>Addition and scaling rules and their geometric interpretation are the same as those in <span class="math inline">\(\mathbb{R}^2\)</span>.</p>
 </div>
 <div style="margin-top: -1.0em">
 <p><span class="highlight">2-Norm</span>: Consider a vector <span class="math inline">\(\v{x} \in \mathbb{R}^n\)</span>. <span class="math inline">\(\Vert \v{x} \Vert = \sqrt{\sum_{i=1}^n x_i^2 }\)</span></p>
@@ -619,7 +619,7 @@ Sivakumar Balasubramanian
 <p>What is <span class="math inline">\(\v{R}_{B}^{A}\)</span>? <span class="fragment"><span class="math inline">\(\longrightarrow \m{1 &amp; 0 \\ 0 &amp; 1} = \v{I}\)</span></span></p>
 <p><span class="fragment">What is <span class="math inline">\(\v{r}_{P}^{B}\)</span>?</span> <span class="fragment"><span class="math inline">\(\longrightarrow \m{1 \\ 4}\)</span></span></p>
 <p><span class="fragment">What is <span class="math inline">\(\v{R}_{C}^{B}\)</span>?</span> <span class="fragment"><span class="math inline">\(\longrightarrow \m{\frac{\sqrt{3}}{2} &amp; -\frac{1}{2} \\ \frac{1}{2} &amp; \frac{\sqrt{3}}{2}}\)</span></span></p>
-<p><span class="fragment"><span class="highlight">How do we change between reference frames <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>?</span> We have rotation and the translation. <span class="math inline">\(\left( \v{R}_{B}^{A}, \v{o}_{B}^{A}\right)\)</span>.</span></p>
+<p><span class="fragment"><span class="highlight">How do we change between reference frames <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>?</span> We have the rotation and the translation. <span class="math inline">\(\left( \v{R}_{B}^{A}, \v{o}_{B}^{A}\right)\)</span>.</span></p>
 <div class="fragment">
 <p><span class="math display">\[ \v{r}_{P}^{A} = \v{R}_{B}^{A} \v{r}_{P}^{B} + \v{o}_{B}^{A} \]</span> <span class="math display">\[ \v{r}_{P}^{B} = {\v{R}_{B}^{A}}^{-1} \left( \v{r}_{P}^{A} - \v{o}_{B}^{A} \right) \]</span><br>
 <span class="math display">\[\implies \v{R}_{A}^{B} = {\v{R}_{B}^{A}}^{-1} = {\v{R}_{B}^{A}}^{\top} \qquad \v{o}_{A}^{B} = -{\v{R}_{B}^{A}}^{\top}\v{o}_{B}^{A}\]</span></p>
@@ -676,10 +676,10 @@ Sivakumar Balasubramanian
 <p>Let <span class="math inline">\(\tilde{\v{r}}_{P}^{C}\)</span> be the homogeneous coordinates of the point <span class="math inline">\(P\)</span> in reference frame <span class="math inline">\(C\)</span>: <span class="math inline">\(\quad \tilde{\v{r}}_{P}^{C} = \m{\v{r}_{P}^{C} \\ 1}\)</span>.</p>
 </div>
 <div style="margin-top:-0.5em">
-<p>Note that an <span class="math inline">\(n\)</span>-dimensional vector is represented by an <span class="math inline">\((n+1)\)</span>-dimensional vector in the homogeneous coordinates.</p>
+<p>Note that an <span class="math inline">\(n\)</span>-dimensional vector is represented by an <span class="math inline">\((n+1)\)</span>-dimensional vector in homogeneous coordinates.</p>
 </div>
 <div style="margin-top:-0.5em">
-<p>In the homogeneous coordinates, there are infinitely many ways to represent the same point.</p>
+<p>In homogeneous coordinates, there are infinitely many ways to represent the same point.</p>
 </div>
 <div style="margin-top:-0.5em">
 <p><span class="math display">\[\m{x \\ y \\ z \\ 1} \;{\Large\equiv}\; \m{\lambda x \\ \lambda y \\ \lambda z \\ \lambda}\]</span></p>
@@ -746,7 +746,7 @@ Sivakumar Balasubramanian
 <p>Useful approximation for many applications, simplifying representing/analysing kinematics of real objects.</p>
 <p>We need a total of 6 numbers to represent its position and orientation w.r.t. a reference frame.</p>
 <p><span class="math display">\[ \text{Rigid body in 3D space} \longrightarrow \left( \alpha, \beta, \gamma, x, y, z\right)\]</span></p>
-<p><span class="math inline">\(\left(\alpha, \beta, \gamma\right)\)</span> represent the <span class="red">orientation</span> of the body in space, and <span class="math inline">\(\left(x, y, z\right)\)</span> represents, typically, the <span class="red">position</span> of some point in the rigid body. Once we know these 6 numbers, we know (i.e.&nbsp;can compute) the location of every point in the rigid body.</p>
+<p><span class="math inline">\(\left(\alpha, \beta, \gamma\right)\)</span> represent the <span class="red">orientation</span> of the body in space, and <span class="math inline">\(\left(x, y, z\right)\)</span> represent, typically, the <span class="red">position</span> of some point in the rigid body. Once we know these 6 numbers, we know (i.e.&nbsp;can compute) the location of every point in the rigid body.</p>
 <p>One of many ways to describe rigid body kinematics in 3D space; <span class="highlight">all representations need 6 numbers</span>.</p>
 <p>These numbers are also referred to as <span class="highlight">degrees-of-freedom (DOFs)</span>.</p>
 </section>
@@ -810,7 +810,7 @@ Sivakumar Balasubramanian
 </div>
 <div class="fragment" style="font-size: 0.8em;">
 <ul>
-<li><span class="highlight">Pros</span>: Full characterisation; Suitable for complex movement behaviors (e.g.&nbsp;gait analysis, upper-limb reaching, object manipulation, etc.).</li>
+<li><span class="highlight">Pros</span>: Full characterisation; Suitable for complex movement behaviours (e.g.&nbsp;gait analysis, upper-limb reaching, object manipulation, etc.).</li>
 </ul>
 </div>
 <div class="fragment" style="font-size: 0.8em;">
@@ -883,10 +883,10 @@ Sivakumar Balasubramanian
 </div>
 </div></div>
 <div class="fragment" style="margin-top: -0.5em;">
-<p><span class="highlight">Geometry of the optics</span> determines the mapping of the spatial location of a source of light in the world <span class="math inline">\(\left(x^W, y^W, z^W\right)\)</span> to a spatial location of the image <span class="math inline">\(\left(x^I, y^I\right)\)</span>.</p>
+<p><span class="highlight">Geometry of the optics</span> determines the mapping of the spatial location of a source of light in the world <span class="math inline">\(\left(x^W, y^W, z^W\right)\)</span> to a spatial location in the image <span class="math inline">\(\left(x^I, y^I\right)\)</span>.</p>
 </div>
 <div class="fragment" style="margin-top: -0.25em;">
-<p>We will primarily focus on the geometry of the optics for the purpose of kinematics tracking using camera image.</p>
+<p>We will primarily focus on the geometry of the optics for the purpose of kinematics tracking using camera images.</p>
 </div>
 </div>
 </section>
@@ -919,7 +919,7 @@ Sivakumar Balasubramanian
 <p><span class="math inline">\(p\)</span> is the corresponding point in the image with coordinates <span class="math inline">\(\v{r}_p^I = \m{x_p^I &amp; y_p^I}^\top \in \mathbb{R}^2\)</span> w.r.t. the image reference frame.</p>
 </div>
 <div style="margin-top: -1.00em; font-size: 0.85em;">
-<p><span class="math inline">\(\mathbf{o}_I\)</span> is <span class="highlight">principal point</span> of the image, i.e.&nbsp;the point where the optical axis intersects the image plane.</p>
+<p><span class="math inline">\(\mathbf{o}_I\)</span> is the <span class="highlight">principal point</span> of the image, i.e.&nbsp;the point where the optical axis intersects the image plane.</p>
 </div>
 </section>
 <section id="camera-based-movement-tracking-4" class="slide level2">
@@ -929,7 +929,7 @@ Sivakumar Balasubramanian
 <p><img data-src="figures/pinhole-frame-front.svg" style="width:80%; max-height:none; display:block;"></p>
 </div>
 <div style="margin-top: -2.00em; font-size:0.9em;">
-<p>Assume the image plane to be in front of the camera center, then we have,</p>
+<p>Assume the image plane to be in front of the camera centre, then we have,</p>
 </div>
 <div style="margin-top: -1.00em; font-size:0.9em;">
 <p><span class="math display">\[x_p^I = \frac{f}{z_P^C} x_P^C \qquad y_p^I = \frac{f}{z_P^C} y_P^C \implies z_P^C \m{x_p^I \\ y_p^I \\ 1} = \m{f &amp; 0 &amp; 0 &amp; 0\\ 0 &amp; f &amp; 0 &amp; 0\\ 0 &amp; 0 &amp; 1 &amp; 0}\m{x_P^C \\ y_P^C \\ z_P^C \\ 1}\]</span></p>
@@ -1017,7 +1017,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <p><span class="math display">\[\v{r}_p^S = \m{s_x &amp; s_{\theta} &amp; 0 \\ 0 &amp; s_y &amp; 0 \\ 0 &amp; 0 &amp; 1} \m{1 &amp; 0 &amp; u \\ 0 &amp; -1 &amp; v \\ 0 &amp; 0 &amp; 1} \m{f &amp; 0 &amp; 0\\ 0 &amp; f &amp; 0\\ 0 &amp; 0 &amp; 1} \m{\v{R}_{W}^{C} &amp; \v{o}_{W}^{C}} \v{r}_P^W = \v{K}_f \m{\v{R}_{W}^{C} &amp; \v{o}_{W}^{C}} \v{r}_P^W\]</span></p>
 </div>
 <div style="margin-top: -0.80em;">
-<p>Looks like there are additional 6 parameters associated with the camera itself – <span class="math inline">\(\left(f, s_x, s_y, s_\theta, u, v\right)\)</span>. But there are only 5!</p>
+<p>Looks like there are 6 additional parameters associated with the camera itself – <span class="math inline">\(\left(f, s_x, s_y, s_\theta, u, v\right)\)</span>. But there are only 5!</p>
 <div class="fragment" style="margin-top: -0.80em;">
 <p><span class="math display">\[\v{K}_f = \m{s_x f &amp; -s_{\theta} f &amp; s_x u + s_\theta v \\ 0 &amp; -s_y f &amp; s_y v \\ 0 &amp; 0 &amp; 1}\]</span></p>
 </div>
@@ -1063,7 +1063,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">Camera distortion</span></p>
 <p>Real cameras are not pinhole cameras. They employ lenses to collect more light for producing brighter images.</p>
-<p>Lenses introduce different types of distortions on images. The most common distortions considered are: (a) <span class="highlight">radial distortion</span> or <span class="highlight">barrel distortion</span>, and (b) <span class="highlight">tangential distortion</span></p>
+<p>Lenses introduce different types of distortions on images. The most common distortions considered are: (a) <span class="highlight">radial distortion</span> or <span class="highlight">barrel distortion</span>, and (b) <span class="highlight">tangential distortion</span>.</p>
 <p>The distortion acts <span class="red">before</span> the pixel conversion, on the <span class="highlight">normalised</span> coordinates <span class="math inline">\(\v{r}_p^N\)</span> — centred on the optical axis and divided by <span class="math inline">\(z_P^C\)</span>, so they carry no units:</p>
 <div style="margin-top:-0.75em; font-size:0.85em;">
 <p><span class="math display">\[\m{{x_p^N} \\ {y_p^N}} = \frac{1}{z_P^C}\m{x_P^C \\ y_P^C}, \qquad r^2 = {x_p^N}^2 + {y_p^N}^2\]</span></p>
@@ -1179,7 +1179,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <ul>
 <li>Positions of the corners on the checkered board are known.</li>
 <li>Detects the corners for the given size; this provides the correspondence between the 3D points and the image points.</li>
-<li>Searches for the set of numbers that best <span class="red">predicts where every corner actually appeared</span></li>
+<li>Searches for the set of numbers that best <span class="red">predicts where every corner actually appeared</span>.</li>
 <li>Leftover mismatch, in pixels, is the reprojection error.</li>
 </ul>
 </div>
@@ -1209,10 +1209,10 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <p><span class="framesub">Single camera inverse problem</span></p>
 <p><span class="highlight">Can we estimate the position of points in 3D space from a single camera?</span></p>
 <div style="margin-top: -0.75em; font-size: 0.9em;">
-<p>Let’s assume that we have calibrated the camera. <span class="math inline">\(\v{K}\)</span> is estimated and <span class="math inline">\(\v{R} = \v{I}\)</span> and <span class="math inline">\(\v{o} = \v{0}\)</span> assuming camera coordinate is the world coordinate.</p>
+<p>Let’s assume that we have calibrated the camera. <span class="math inline">\(\v{K}\)</span> is estimated and <span class="math inline">\(\v{R} = \v{I}\)</span> and <span class="math inline">\(\v{o} = \v{0}\)</span> assuming the camera coordinates are the world coordinates.</p>
 </div>
 <div style="margin-top: -0.75em; font-size: 0.9em;">
-<p><span class="highlight">Forward problem</span>: 3D point <span class="math inline">\(\v{r}_P^W\)</span> in world to 2D point in the image <span class="math inline">\(\v{r}_p^S\)</span>. <span class="math display">\[\lambda \v{r}_p^S = \v{K}_f \m{\v{I}_3 &amp; \v{0}} \v{r}_P^W\]</span></p>
+<p><span class="highlight">Forward problem</span>: 3D point <span class="math inline">\(\v{r}_P^W\)</span> in the world to the 2D point in the image <span class="math inline">\(\v{r}_p^S\)</span>. <span class="math display">\[\lambda \v{r}_p^S = \v{K}_f \m{\v{I}_3 &amp; \v{0}} \v{r}_P^W\]</span></p>
 </div>
 <div style="margin-top: -0.75em; font-size: 0.9em;">
 <p><span class="math inline">\(\lambda &gt; 0\)</span> is an unknown here because we are operating with homogeneous coordinates, and <span class="math inline">\(\v{r}_p^S = \m{x_p^S \\ y_p^S \\ 1}\)</span>.</p>
@@ -1225,7 +1225,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <p><span class="math display">\[ \v{r}_P^W = \lambda \v{K}_f^{-1} \v{r}_p^S \]</span></p>
 </div>
 <div class="fragment">
-<p>This is the <span class="highlight">equation of a ray from the camera’s origin, pointing in the direction <span class="math inline">\(\v{K}_f^{-1} \v{r}_p^S\)</span> !</span></p>
+<p>This is the <span class="highlight">equation of a ray from the camera’s origin, pointing in the direction <span class="math inline">\(\v{K}_f^{-1} \v{r}_p^S\)</span>!</span></p>
 </div>
 </section>
 <section id="camera-based-movement-tracking-19" class="slide level2">
@@ -1253,7 +1253,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">Two cameras — the forward problem</span></p>
 <div style="margin-top: -0.5em;">
-<p><span class="highlight">Forward problem</span>: 3D point <span class="math inline">\(\v{r}_P^W\)</span> in world to the 2D points in the two images <span class="math inline">\(\v{r}_p^{S_A}\)</span> and <span class="math inline">\(\v{r}_p^{S_B}\)</span> in cameras <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>, respectively.</p>
+<p><span class="highlight">Forward problem</span>: 3D point <span class="math inline">\(\v{r}_P^W\)</span> in the world to the 2D points in the two images <span class="math inline">\(\v{r}_p^{S_A}\)</span> and <span class="math inline">\(\v{r}_p^{S_B}\)</span> in cameras <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>, respectively.</p>
 <div style="font-size: 0.8em;">
 <p><strong>Assumption</strong>: <span class="deemph">(a) Camera <span class="math inline">\(A\)</span> as the world reference frame, and (b) Camera <span class="math inline">\(A\)</span>’s frame known w.r.t. camera <span class="math inline">\(B\)</span>, <span class="math inline">\(\left(\v{R}_{A}^{B}, \v{o}_{A}^{B}\right)\)</span>.</span></p>
 </div>
@@ -1297,12 +1297,12 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <h2>Camera-based movement tracking</h2>
 <p><span class="framesub">Human movement tracking setup</span></p>
 <div style="font-size: 0.85em; margin-top:-0.5em;">
-<p>When tracking full body kinematics typically interested in:</p>
+<p>When tracking full body kinematics, we are typically interested in:</p>
 <ul>
 <li>Movement of the whole-body centre of mass.</li>
 <li>Relative movement between adjacent bones or joint kinematics.</li>
 </ul>
-<p>Tracking kinematics is acheived by placing markers on the individual body segments, tracked using a multi-camera setup.</p>
+<p>Tracking kinematics is achieved by placing markers on the individual body segments, tracked using a multi-camera setup.</p>
 <div style="text-align:center; margin-top:-0.5em;">
 <p><img data-src="figures/mocap-subject.jpeg" style="display:inline-block; height:350px; width:auto; max-height:none; margin:0 1em 0 0; vertical-align:top;"> <img data-src="figures/mocap-markers.png" style="display:inline-block; height:350px; width:auto; max-height:none; margin:0; vertical-align:top;"></p>
 </div>
@@ -1353,7 +1353,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 <p><span class="math display">\[\v{R}_{B}^{A} = \m{\v{x}_{B}^{A} &amp; \v{y}_{B}^{A} &amp; \v{z}_{B}^{A}} \qquad  \v{o}_{B}^{A} = \v{r}_{m_{1}}^{A}\]</span></p>
 </div>
 <div style="margin-top: -0.5em;">
-<p>6DOF poses of the individual segments give multi-segment kinematics, from which joint kinematics are derived. When we have the rotation matrices <span class="math inline">\(\v{R}_{B_p}^{A}\)</span> and <span class="math inline">\(\v{R}_{B_d}^{A}\)</span> of two adjacent segmenets, we can obtain the joint angles as follows:</p>
+<p>6DOF poses of the individual segments give multi-segment kinematics, from which joint kinematics are derived. When we have the rotation matrices <span class="math inline">\(\v{R}_{B_p}^{A}\)</span> and <span class="math inline">\(\v{R}_{B_d}^{A}\)</span> of two adjacent segments, we can obtain the joint angles as follows:</p>
 </div>
 <div style="margin-top: -0.5em;">
 <p><span class="math display">\[\v{R}_{B_d}^{B_p} = {\v{R}_{B_p}^{A}}^\top\v{R}_{B_d}^{A} \longrightarrow  \left( \alpha_{pd}, \beta_{pd}, \gamma_{pd}\right)\]</span></p>
@@ -1654,9 +1654,9 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 </div>
 <div class="fragment" style="margin-top: -1.0em;">
 <ul>
-<li><p><span class="highlight">At tag face-on:</span> <span class="math inline">\(\cos\theta = h/s\)</span>. Tag’s true height 100 px, measured 99.5 px because of the noise. <span class="math inline">\(\cos\theta = 0.995 \implies \theta = 5.7°\)</span>.</p></li>
-<li><p><span class="highlight">At an oblique angle:</span>: At 40°, true height 76.7 px, measured 76.2 px: <span class="math inline">\(\theta = 40.4°\)</span>.</p></li>
-<li><p><span class="highlight">This is Module 1’s rule.</span> A sensor gives <span class="math inline">\(y = \mathcal{F}(x_m) + e_n\)</span> and the noise referred back to the measurand is <span class="math inline">\(e_n \big/ \frac{\partial \mathcal{F}}{\partial x_m}\)</span>. Tag height <span class="math inline">\(h = s\cos\theta\)</span>, the measurand is <span class="math inline">\(\theta\)</span>, the sensitivity is <span class="math inline">\(\partial h/\partial\theta = -s\sin\theta\)</span> and the noise is <span class="math inline">\(\sigma\)</span>, so <span class="math inline">\(\delta\theta \approx \sigma/(s\sin\theta)\)</span> <span class="red">A face-on tag has zero sensitivity.</span></p></li>
+<li><p><span class="highlight">Tag face-on:</span> <span class="math inline">\(\cos\theta = h/s\)</span>. Tag’s true height 100 px, measured 99.5 px because of the noise. <span class="math inline">\(\cos\theta = 0.995 \implies \theta = 5.7°\)</span>.</p></li>
+<li><p><span class="highlight">At an oblique angle:</span> At 40°, true height 76.7 px, measured 76.2 px: <span class="math inline">\(\theta = 40.4°\)</span>.</p></li>
+<li><p><span class="highlight">This is Module 1’s rule.</span> A sensor gives <span class="math inline">\(y = \mathcal{F}(x_m) + e_n\)</span> and the noise referred back to the measurand is <span class="math inline">\(e_n \big/ \frac{\partial \mathcal{F}}{\partial x_m}\)</span>. Tag height <span class="math inline">\(h = s\cos\theta\)</span>, the measurand is <span class="math inline">\(\theta\)</span>, the sensitivity is <span class="math inline">\(\partial h/\partial\theta = -s\sin\theta\)</span> and the noise is <span class="math inline">\(\sigma\)</span>, so <span class="math inline">\(\delta\theta \approx \sigma/(s\sin\theta)\)</span>. <span class="red">A face-on tag has zero sensitivity.</span></p></li>
 </ul>
 </div>
 </div>
@@ -1689,7 +1689,7 @@ y_p^S &amp;= s_y\left(-y_p^I + v\right)
 </div>
 <div class="fragment" style="margin-top: -0.5em;">
 <ul>
-<li><span class="highlight">Both directions change, but not alike.</span> The columns converge by a small amount 4 px to 3.9 px. The rows collapse by <span class="math inline">\(\cos\theta\)</span>: 4 px, 3 px, 2 px, 1 px, 0.3 px.</li>
+<li><span class="highlight">Both directions change, but not alike.</span> The columns converge by a small amount, 4 px to 3.9 px. The rows collapse by <span class="math inline">\(\cos\theta\)</span>: 4 px, 3 px, 2 px, 1 px, 0.3 px.</li>
 </ul>
 </div>
 <!-- row-height derivation, held back until verified in the notes
@@ -1788,12 +1788,12 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <p><span class="framesub">What an IMU is</span></p>
 <div class="columns" style="align-items:center; margin-top: -1.0em;">
 <div class="column" style="width:60%; font-size: 0.9em;">
-<p>An <span class="highlight">inertial measurement unit (IMU)</span> is a chip carrying <span class="red">three-axis accelerometers</span> and <span class="red">three-axis gyroscopes</span>, one of each along every axis of the chip’s own frame <span class="math inline">\(S\)</span> <span class="math inline">\(\longrightarrow\)</span> a 6DOf sensor!</p>
-<p>Most sensors also carry a three-axis magnetometer <span class="math inline">\(\longrightarrow\)</span> a 9 DOF sensor! Its often referred to as a <span class="red">MARG (magnetic, angular rate and gravity)</span> sensor.</p>
+<p>An <span class="highlight">inertial measurement unit (IMU)</span> is a chip carrying <span class="red">three-axis accelerometers</span> and <span class="red">three-axis gyroscopes</span>, one of each along every axis of the chip’s own frame <span class="math inline">\(S\)</span> <span class="math inline">\(\longrightarrow\)</span> a 6DOF sensor!</p>
+<p>Most sensors also carry a three-axis magnetometer <span class="math inline">\(\longrightarrow\)</span> a 9 DOF sensor! It is often referred to as a <span class="red">MARG (magnetic, angular rate and gravity)</span> sensor.</p>
 <div class="fragment" style="margin-top: -0.5em;">
 <p>Reports six numbers, typically a few hundred times a second:</p>
 <ul>
-<li><span class="math inline">\(\v{a}_S^S(t)\)</span>: accelerometers output in the sensor frame.</li>
+<li><span class="math inline">\(\v{a}_S^S(t)\)</span>: accelerometer’s output in the sensor frame.</li>
 <li><span class="math inline">\(\boldsymbol{\omega}_S^S(t)\)</span>: gyroscope’s output in the sensor frame.</li>
 </ul>
 </div>
@@ -1834,7 +1834,7 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <li><span class="highlight">Natural frequency</span> <span class="math inline">\(\omega_n = \sqrt{K/M}\)</span>.</li>
 </ul>
 <div style="margin-top:-1.0em;">
-<p>We ideally want both to be high, which we cannot because the two are one number!</p>
+<p>We ideally want both to be high, which we cannot have, because the two are one number!</p>
 </div>
 </div><div class="fragment">
 <div style="margin-top:-1.0em;">
@@ -1890,13 +1890,13 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 </div><div class="column" style="width:2%;">
 
 </div><div class="column" style="width:38%; font-size: 0.85em;">
-<p><span class="highlight">Accelerometer as a tilt-sensor</span></p>
+<p><span class="highlight">Accelerometer as a tilt sensor</span></p>
 <p><span class="math display">\[\v{a}_S^S(t) = \v{R}_E^S(t)\left(\v{a}_S^E(t) - \v{g}^E\right)\]</span></p>
 <p>When there is no or little linear acceleration, <span class="math inline">\(\Vert \v{a}_{S}^{E}(t) \Vert_2 \approx 0\)</span>, so</p>
 <p><span class="math display">\[\v{a}_S^S(t) = - \v{R}_E^S(t)\, \v{g}^E\]</span></p>
 <ul>
 <li>Three equations, but only two are independent: <span class="math inline">\(\Vert \v{a}_S^S \Vert_2 = \Vert \v{g}^E \Vert_2\)</span>.</li>
-<li><span class="math inline">\(\v{R}_E^S(t)\)</span> is characterized by three angles, only two can be determined: <span class="highlight">pitch</span> and <span class="highlight">roll</span>; <span class="red">yaw</span> cannot be determined.</li>
+<li><span class="math inline">\(\v{R}_E^S(t)\)</span> is characterized by three angles, but only two can be determined: <span class="highlight">pitch</span> and <span class="highlight">roll</span>; <span class="red">yaw</span> cannot be determined.</li>
 </ul>
 </div></div>
 </section>
@@ -1904,7 +1904,7 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <h2>Inertial measurement units</h2>
 <p><span class="framesub">Accelerometer — using gravity to estimate orientation</span></p>
 <div style="margin-top: -1.0em;">
-<p><span class="highlight">Orientation estimation with 2-axis Accelerometer</span></p>
+<p><span class="highlight">Orientation estimation with a 2-axis accelerometer</span></p>
 </div>
 <div style="margin-top: -1.0em;">
 <p><img data-src="figures/accel-twoaxis.svg" style="width:75%; max-height:none; display:block; margin:0 auto;"></p>
@@ -1950,7 +1950,7 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <p><span class="framesub">Accelerometer — kinematic tracking</span></p>
 <p><span class="highlight">How do we use the accelerometer to track movement kinematics?</span></p>
 <div style="font-size: 0.9em;">
-<p>Accelerometers do not provide position kinematics directly. After correct for the sensor’s orientation, we still only get the linear acceleration - the second derivative of position.</p>
+<p>Accelerometers do not provide position kinematics directly. After correcting for the sensor’s orientation, we still only get the linear acceleration - the second derivative of position.</p>
 <p><span class="math display">\[\v{a}_S^S(t) = \v{R}_E^S(t)\left(\v{a}_S^E(t) - \v{g}^E\right)\]</span></p>
 <p>Assuming we have perfect knowledge of the sensor’s orientation <span class="math inline">\(\v{R}_{E}^{S}(t)\)</span>, we have</p>
 <p><span class="math display">\[ \v{a}_{S}^{E}(t) = \left(\v{R}_{E}^{S}(t)\right)^\top \v{a}_{S}^{S}(t) + \v{g}_{}^{E} = \v{\ddot{r}}_{S}^{E}(t)\]</span></p>
@@ -2048,8 +2048,8 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <div class="column" style="width:55%;">
 <p><img data-src="figures/gyro-frames.svg" style="width:100%; max-height:none; display:block;"></p>
 </div><div class="column" style="width:45%;">
-<p>The gyroscope does not pick-up any linear kinematics information or gravity.</p>
-<p>Just like the accelerometer, knowledge of the orientation of the sensor is required to know the angular velocity of the sensors with respect to the earth fixed reference frame. <span class="math display">\[\boldsymbol{\omega}_E^S(t) = \left(\v{R}_E^S(t)\right)^\top \boldsymbol{\omega}_{S}^{S}(t)\]</span></p>
+<p>The gyroscope does not pick up any linear kinematics information or gravity.</p>
+<p>Just like the accelerometer, knowledge of the orientation of the sensor is required to know the angular velocity of the sensors with respect to the earth-fixed reference frame. <span class="math display">\[\boldsymbol{\omega}_E^S(t) = \left(\v{R}_E^S(t)\right)^\top \boldsymbol{\omega}_{S}^{S}(t)\]</span></p>
 </div></div>
 </section>
 <section id="inertial-measurement-units-15" class="slide level2">
@@ -2147,7 +2147,7 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <tbody>
 <tr class="odd">
 <td><strong>Short term</strong></td>
-<td>Wrong whenever large linear acceleration</td>
+<td>Wrong whenever there is large linear acceleration</td>
 <td>Works well</td>
 </tr>
 <tr class="even">
@@ -2752,7 +2752,7 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <p>A <strong>rehabilitation robot</strong> must know the angle before its first move. So it needs an absolute encoder, or it must first search slowly for a home position.</p>
 </div>
 <div class="deemph" style="font-size: 0.85em; margin-top: -1.0em;">
-<p>Similarly a <strong>electrogoniometer</strong> requires well defined zero, so that it can be used for measruing range of motion without any ambiguity. A relative encoder can be used, but it must be zeroed at the start of each measurement.</p>
+<p>Similarly, an <strong>electrogoniometer</strong> requires a well-defined zero, so that it can be used for measuring range of motion without any ambiguity. A relative encoder can be used, but it must be zeroed at the start of each measurement.</p>
 </div>
 </div>
 <div class="fragment">
@@ -2850,37 +2850,12 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 </div>
 <div class="fragment" style="margin-top: -0.5em;">
 <p><span class="math inline">\(\operatorname{atan2}(B, A)\)</span> is rounded to the nearest <span class="math inline">\(1/K\)</span>, and <span class="math inline">\(K\)</span> sets the resolution within a slot. The step of the whole encoder is then <span class="math inline">\(360^\circ / (N K)\)</span>. This is <span class="highlight">interpolation</span>. The maker chooses <span class="math inline">\(K \approx 100-1000\)</span>.</p>
-<p><span class="deemph"><span class="math inline">\(K\)</span> limited by noise in A and B channels. A and B are never a perfect cosine/sine pair, so computed position is slightly off. Steps finer than these two effects are empty digits.</span></p>
+<p><span class="deemph"><span class="math inline">\(K\)</span> is limited by noise in the A and B channels. A and B are never a perfect cosine/sine pair, so the computed position is slightly off. Steps finer than these two effects are empty digits.</span></p>
 </div>
 </div>
 <div style="font-size: 0.7em; margin-top: 0.25em;">
 <p><span class="deemph">Asahi Kasei Microdevices, Basic knowledge of encoder, part 4.</span></p>
 </div>
-<!-- 
-
-## Encoders
-
-[Optical encoder: resolution is not accuracy]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-An encoder datasheet gives two numbers. They mean different things.
-
-::: {.fragment}
-[Resolution]{.highlight} is the size of one step. It comes from the slots and from the interpolation of the last slide. The step is $360^\circ/(NK)$. The maker can make it as small as they like.
-:::
-
-::: {.fragment}
-[Accuracy]{.highlight} is how far the reported angle can be from the true angle. It comes from the wheel and its mounting. A wheel centred $0.05$ mm off its shaft, on a $10$ mm track, reads $0.3^\circ$ wrong once per turn, whatever the step size.
-:::
-
-::: {.fragment}
-[Ask for both numbers. A 2000-count encoder with a $0.3^\circ$ wheel error has a resolution of $0.18^\circ$ and an accuracy of $0.3^\circ$.]{.red} [The maker centres the wheel and sets $K$. You read the datasheet.]{.deemph}
-:::
-:::
-
-::: {style="font-size: 0.7em; margin-top: 0.5em;"}
-[The $0.3^\circ$ is the offset over the track radius, $e/r$, our estimate.]{.deemph}
-::: -->
 </section>
 <section id="encoders-9" class="slide level2">
 <h2>Encoders</h2>
@@ -3041,13 +3016,13 @@ An encoder datasheet gives two numbers. They mean different things.
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Dust, oil, water</td>
-<td style="text-align: left;">Blocks the light path.</td>
+<td style="text-align: left;">Block the light path.</td>
 <td style="text-align: left;">No effect.</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">Nearby magnets and steel</td>
 <td style="text-align: left;">No effect.</td>
-<td style="text-align: left;">Bends the field, shifts the angle.</td>
+<td style="text-align: left;">Bend the field, shift the angle.</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">Size</td>
@@ -3088,9 +3063,9 @@ An encoder datasheet gives two numbers. They mean different things.
 <iframe data-src="interactive/exo.html?ex=0&amp;ey=0&amp;r=0.5&amp;zero=1" style="width:100%; height:380px; border:0; display:block;" title="An exoskeleton strapped to a moving shank, its hinge off the knee: the knee angle and the exoskeleton's angle over time">
 </iframe>
 <div style="font-size: 0.85em; margin-top: -0.5em;">
-<p>Exactly the same as goniometer-based joint angle measurement problem.</p>
+<p>Exactly the same as the goniometer-based joint angle measurement problem.</p>
 <p>Joint offset will change as the subject moves depending on the strap tension and the joint angle. <span class="math display">\[ \theta_{robot} \neq \theta_{human} \]</span></p>
-<p>Apart from safety, this is another reason why joint axes alignment is important in exoskeletons. <span class="deemph" style="font-size: 0.85em;">The misalignment will cause the exoskeleton to apply unwanted torques on the human joints, which can lead to discomfort or injury.</span></p>
+<p>Apart from safety, this is another reason why joint axis alignment is important in exoskeletons. <span class="deemph" style="font-size: 0.85em;">The misalignment will cause the exoskeleton to apply unwanted torques on the human joints, which can lead to discomfort or injury.</span></p>
 </div>
 <!-- Section -->
 </section></section>
@@ -3153,11 +3128,11 @@ An encoder datasheet gives two numbers. They mean different things.
 <h2>Kinetic measurands</h2>
 <p><span class="framesub">How do we measure muscle force?</span></p>
 <div style="font-size: 0.90em; margin-top: -1.0em;">
-<p>Muscle force is the most important kinetic measurand of interst to clinicians.</p>
-<p><span class="highlight">There is no force without a reaction force.</span> A force can be applied onto something else. For you apply 10N of push in the direction away from you, you need something to apply 10N of push in the back in the direction towards you.</p>
-<p>Consider a body <span class="math inline">\(B\)</span> of mass <span class="math inline">\(m\)</span>. If the body was moving <span class="math inline">\(\v{r}(t)\)</span>, we can infer the the net force acting from the linear acceleration, <span class="math display">\[ \v{f}_B = m \, \ddot{\v{r}}(t) = \sum_i \v{f}_{B,i} \]</span> where, <span class="math inline">\(\v{f}_{B,i}\)</span> is the <span class="math inline">\(i\)</span>-th force acting on the body.</p>
-<p>Or if the body was in static equilibrium in a gravitational field with known <span class="math inline">\(\v{g}\)</span>, the net force acting on the body to keep it in static equilibrium is, <span class="math display">\[ \v{f}_B = m \, \v{g} \]</span></p>
-<p><span class="math inline">\(\v{f}_{B,i}\)</span> cannot be determined through this method. We will need to use a sensing element in line with the action of <span class="math inline">\(\v{f}_{B,i}\)</span> to measure it.</p>
+<p>Muscle force is the most important kinetic measurand of interest to clinicians.</p>
+<p><span class="highlight">There is no force without a reaction force.</span> A force can be applied onto something else. For you to apply 10N of push in the direction away from you, you need something to apply 10N of force back towards you.</p>
+<p>Consider a body <span class="math inline">\(B\)</span> of mass <span class="math inline">\(m\)</span>. If the body was moving <span class="math inline">\(\v{r}(t)\)</span>, we can infer the net force acting from the linear acceleration, <span class="math display">\[ \v{f}_B = m \, \ddot{\v{r}}(t) = \sum_i \v{f}_{B,i} \]</span> where, <span class="math inline">\(\v{f}_{B,i}\)</span> is the <span class="math inline">\(i\)</span>-th force acting on the body.</p>
+<p>Or if the body was in static equilibrium in a gravitational field with known <span class="math inline">\(\v{g}\)</span>, the net force acting on the body to keep it in static equilibrium is, <span class="math display">\[ \v{f}_B = m \, \v{g} = \sum_i \v{f}_{B,i} \]</span></p>
+<p><span class="math inline">\(\v{f}_{B,i}\)</span> cannot be determined through this method. We will need a sensing element in line with the action of <span class="math inline">\(\v{f}_{B,i}\)</span> to measure it.</p>
 </div>
 </section>
 <section id="kinetic-measurands-4" class="slide level2">
@@ -3180,7 +3155,7 @@ An encoder datasheet gives two numbers. They mean different things.
 <p><span class="math display">\[\mathbf{M} = \mathbf{r} \times \mathbf{F}\]</span></p>
 </div>
 <div style="font-size: 0.85em; margin-top: -1.0em;">
-<p>The vectors are expressed in the frames from the kinematics section.</p>
+<p>The vectors are expressed in some frame of reference.</p>
 </div>
 </section>
 <section id="kinetic-measurands-5" class="slide level2">
@@ -3236,7 +3211,7 @@ An encoder datasheet gives two numbers. They mean different things.
 </section>
 <section id="kinetic-measurands-8" class="slide level2">
 <h2>Kinetic measurands</h2>
-<p><span class="framesub">How do we measure strains</span></p>
+<p><span class="framesub">How do we measure strains?</span></p>
 <div style="font-size: 0.85em; margin-top: -0.5em;">
 <p>Glue a thin conductor to the surface. It stretches with the surface, and its resistance changes. This is a <span class="highlight">strain gauge</span>.</p>
 <p>A conductor of length <span class="math inline">\(L\)</span>, cross-section <span class="math inline">\(A\)</span> and resistivity <span class="math inline">\(\rho\)</span> has resistance</p>
@@ -3256,7 +3231,7 @@ An encoder datasheet gives two numbers. They mean different things.
 </section>
 <section id="kinetic-measurands-9" class="slide level2">
 <h2>Kinetic measurands</h2>
-<p><span class="framesub">How do we measure strains</span></p>
+<p><span class="framesub">How do we measure strains?</span></p>
 <div class="columns" style="font-size: 0.8em; margin-top: -0.5em; align-items: center;">
 <div class="column" style="width: 56%;">
 <p><img data-src="figures/strain-gauge-foil.svg" style="width:100%; display:block;"></p>
@@ -3470,7 +3445,7 @@ c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
 <div class="fragment" data-fragment-index="3">
 <p><span class="red">What you measure depends on where you place the dynamometer.</span> So the clinician multiplies the force by <span class="math inline">\(d_m\)</span> to get the joint moment, which does not.</p>
 <div style="margin-top: -0.5em;">
-<p>Although the force <span class="math inline">\(f_{measured}\)</span> depends on the placement of the dynamometer, the joint moment will be the same for a fixed biceps force and bicep moment arm.</p>
+<p>Although the force <span class="math inline">\(f_{measured}\)</span> depends on the placement of the dynamometer, the joint moment will be the same for a fixed biceps force and biceps moment arm.</p>
 </div>
 <div style="margin-top: -0.5em;">
 <p><span class="math display">\[ \tau_{elbow, flex} = f_{measured} \cdot d_m = f_{bicep} \cdot d_b \]</span></p>
@@ -3492,7 +3467,7 @@ c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
 <p>The handle is two halves. The palm presses one half. The fingers press the other. The halves touch only through the load cells, so the whole squeeze passes through them.</p>
 </div>
 <div class="fragment">
-<p>The squeeze is shared between the two cells. A squeeze near one end loads that cell more. <span class="red">The sum of the two readisngs is the grip force, wherever the fingers sit.</span></p>
+<p>The squeeze is shared between the two cells. A squeeze near one end loads that cell more. <span class="red">The sum of the two readings is the grip force, wherever the fingers sit.</span></p>
 </div>
 <p><span class="deemph" style="font-size: 0.5em;">The drawing shows one common construction. The maker does not show the inside. Image and specifications: Forsentek product page, forsentek.com, accessed 13 November 2026.</span></p>
 </section>
@@ -3529,8 +3504,8 @@ c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
 <div class="fragment">
 <p><span class="red">The plate measures the net effect of the pressure. It cannot tell how the pressure is spread.</span> Here the CoP lies between the feet, where nothing touches the plate.</p>
 </div>
-<div class="fragment">
-<p><span class="highlight">Question.</span> Take the same integrals over one foot alone. What do <span class="math inline">\(\int p\,dA\)</span> and <span class="math inline">\(\int x\,p\,dA\)</span> mean then?</p>
+<div class="question fragment">
+<p>Take the same integrals over one foot alone. What do <span class="math inline">\(\int p\,dA\)</span> and <span class="math inline">\(\int x\,p\,dA\)</span> mean then?</p>
 </div>
 </div>
 </section>
@@ -3617,227 +3592,577 @@ c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
 <p><span class="red">The questions stay the same for each one. What deforms? What reads the deformation? What else changes the reading?</span></p>
 </div>
 </div>
-<!-- # Analog Front Ends
-
-## Analog front ends
-
-[What the sensor gives and what the ADC needs]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-::: {.fit}
-| Sensor | Output | Size | The difficulty |
-|:-------|:-------|:-----|:---------------|
-| Load cell bridge | Difference of two voltages | 10 mV at full load | Both outputs sit at half the excitation, 2.5 V |
-| FSR | Resistance | Megohms falling to kilohms | It is not a voltage yet |
-| Hall element | Difference of two voltages | Millivolts | Small, with an offset that moves with temperature |
-| Electrodes, later | Difference of two voltages | About 1 mV | Large common voltage and high source impedance |
-:::
-
-::: {.fragment}
-An ADC wants a single voltage that fills its input range, from a source that can drive it.
-:::
-
-::: {.fragment}
-The circuit between the two is the [analog front end]{.highlight}. It has five jobs.
-
-1. Turn the sensor's output into a voltage.
-2. Amplify the signal to fill the ADC's range.
-3. Reject what is common to both inputs.
-4. Draw almost no current from the sensor.
-5. Remove frequencies the ADC cannot sample.
-:::
-:::
-
-
-## Analog front ends
-
-[The op-amp as a building block]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-An op-amp has two inputs, one output and a very large gain. With negative feedback it drives its output until its two inputs are equal. No current flows into its inputs.
-
-[Figure to be drawn. Follower, non-inverting amplifier, transimpedance amplifier.]{.red}
-
-::: {.fragment}
-Three circuits are enough to read most front ends.
-
-- A [follower]{.highlight} has a gain of 1. It draws almost no current from the source and can drive a load. It cures loading.
-- A [non-inverting amplifier]{.highlight} has a gain of $1 + R_2/R_1$, set by two resistors.
-- A [transimpedance amplifier]{.highlight} turns a current into a voltage, $v_o = -i\,R_f$. A photodiode gives a current. Optical encoders use one, and so do the optical sensors later in the course.
-:::
-
-::: {.fragment}
-[We use these as blocks. The datasheet tells you how far a real op-amp is from the ideal one.]{.red}
-:::
-:::
-
-
-## Analog front ends
-
-[The FSR: a divider and a follower]{.framesub}
-
-:::: {.columns style="margin-top: -0.5em;"}
-
-::: {.column style="width: 38%;"}
-[Figure to be drawn. Supply $V_s$, FSR, fixed resistor $R_m$ to ground, follower, ADC.]{.red}
-:::
-
-::: {.column style="width: 60%; font-size: 0.85em; padding-left: 0.5em;"}
-Put the FSR in series with a fixed resistor $R_m$. The voltage across $R_m$ is
-
-$$v = V_s\,\frac{R_m}{R_m + R_{FSR}}$$
-
-More force lowers $R_{FSR}$ and raises $v$.
-
-::: {.fragment}
-The output is not linear in force. It is most sensitive where $R_{FSR}$ is close to $R_m$. [Choose $R_m$ near the FSR's resistance at the force you care about.]{.highlight}
-:::
-
-::: {.fragment}
-An ADC input draws current while it samples. With a large $R_m$ that current changes $v$. A follower between the divider and the ADC removes the problem. This is the loading from Module 1.
-:::
-:::
-
-::::
-
-
-## Analog front ends
-
-[The bridge needs a difference amplifier]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-Both bridge outputs sit near 2.5 V. The signal is the difference between them, at most 10 mV.
-
-::: {.fragment}
-An amplifier with a gain of 128 on one output would try to reach 320 V. It saturates at its supply. We must amplify the difference and ignore the 2.5 V the two outputs share.
-:::
-
-::: {.fragment}
-The shared part is the [common-mode]{.highlight} voltage. The difference is the [differential]{.highlight} voltage. An [instrumentation amplifier]{.highlight} amplifies the differential voltage and rejects the common-mode voltage.
-:::
-
-::: {.fragment}
-[Figure to be drawn. The three-op-amp instrumentation amplifier as a block, with the gain resistor $R_G$ marked.]{.red}
-
-Inside are three op-amps. The first two give both inputs a very high impedance and provide the gain. The third subtracts. One resistor sets the gain. [You buy it as one chip. We do not derive it.]{.deemph}
-:::
-:::
-
-
-## Analog front ends
-
-[Common-mode rejection in numbers]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-No amplifier rejects the common mode perfectly. The [common-mode rejection ratio]{.highlight} (CMRR) says how much less it amplifies the common mode than the difference. At 100 dB, a common-mode voltage acts like a differential signal $10^5$ times smaller.
-
-::: {.fragment}
-The bridge's 2.5 V then looks like 25 µV. On our example cell, at 0.5 mV per kg, that is 50 g. But it is constant, and setting the zero removes it.
-:::
-
-::: {.fragment}
-The danger is a common mode that changes. Mains hum picked up equally on both leads is a common-mode signal at 50 Hz. A drifting excitation also moves the common mode.
-:::
-
-::: {.fragment}
-The CMRR falls as the frequency rises. Read the CMRR at 50 Hz on the datasheet, not the value at DC. [Electrodes in the biopotentials module face the same problem with a much larger common mode.]{.red}
-:::
-:::
-
-
-## Analog front ends
-
-[Offset, drift and slow noise]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-A load cell measures a static force. The signal changes slowly or not at all. Three amplifier errors live at these low frequencies.
-
-::: {.fragment}
-The amplifier adds a small constant voltage, its [offset]{.highlight}. Setting the zero removes it.
-:::
-
-::: {.fragment}
-The offset changes with temperature. This is the [offset drift]{.highlight}, given in µV per °C. Suppose it is 0.5 µV/°C. A 10 °C change gives 5 µV, which is 10 g on our example cell. Setting the zero at the start does not remove a drift that happens during the test.
-:::
-
-::: {.fragment}
-Every amplifier has [1/f noise]{.highlight}. Its power rises as the frequency falls. At low frequencies it is larger than the white noise, and static force lives there. The datasheet gives it as a peak-to-peak voltage from 0.1 to 10 Hz.
-:::
-
-::: {.fragment}
-[Zero-drift]{.highlight} amplifiers swap their inputs back and forth thousands of times a second and cancel their own offset. They have almost no drift and very little 1/f noise. They suit load cells.
-:::
-:::
-
-
-## Analog front ends
-
-[Reading an amplifier datasheet]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-::: {.fit}
-| Parameter | What it means for us |
-|:----------|:---------------------|
-| Gain error | Calibration removes it. It does not remove gain drift with temperature. |
-| Input offset voltage | A fixed zero error. Setting the zero removes it. |
-| Offset drift, µV/°C | A zero error that grows as the room warms. |
-| Noise, 0.1 to 10 Hz, peak-to-peak | The smallest static change you can see. |
-| Noise density, nV/√Hz | The noise for faster signals. Multiply by the square root of the bandwidth. |
-| CMRR at 50 Hz | How much mains hum gets through. |
-| Input bias current | The current drawn from the sensor. It matters for high-impedance sources such as electrodes. |
-| Input and output range | How close to the supply rails the signals may go. |
-:::
-
-::: {.fragment}
-[Divide every input voltage error by the sensor's sensitivity. A number in microvolts then becomes a number in grams or newtons, which a clinician can judge.]{.red}
-:::
-:::
-
-
-## Analog front ends
-
-[Integrated front ends]{.framesub}
-
-::: {style="font-size: 0.9em; margin-top: -0.5em;"}
-You will rarely build a front end from parts. The amplifier, and often the ADC, come on one chip.
-
-::: {.fragment}
-The [HX711]{.highlight} is built for load cells. It holds a two-channel multiplexer, an amplifier with a gain of 32, 64 or 128, and a 24-bit converter. A regulator on the chip can supply the bridge excitation. It gives 10 or 80 readings per second.
-:::
-
-::: {.fragment}
-The [AD8232]{.highlight} is built for the heart's electrical signal. It holds an instrumentation amplifier, filters, and a driver that holds the body's common-mode voltage down. We meet it in the biopotentials module.
-:::
-
-::: {.fragment}
-[The chip's makers made the design decisions. Your job is to read the datasheet and decide whether the chip suits the measurement.]{.red}
-:::
-
-::: {style="margin-top: 1em;"}
-[HX711 values to be checked against its datasheet.]{.deemph}
-:::
-:::
-
-
-## Front ends from our projects
-
-[What we used, and what went wrong]{.framesub}
-
-::: {style="font-size: 0.85em; margin-top: -0.5em;"}
-[Projects and part numbers to be filled in by Siva.]{.red}
-
-::: {.fit}
-| Project | Sensor | Front end | Why we chose it | What went wrong |
-|:--------|:-------|:----------|:----------------|:----------------|
-| | | | | |
-| | | | | |
-| | | | | |
-:::
-
-::: {.fragment}
-[The last column is the useful one. A front end that worked first time teaches less than one that did not.]{.deemph}
-:::
-::: -->
+</section></section>
+<section>
+<section id="analog-front-ends" class="title-slide slide level1 center">
+<h1>Analog Front Ends</h1>
+
+</section>
+<section id="analog-front-ends-1" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">From the bridge to the ADC</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>Take the S-type cell from the commercial sensors slide, the FS4A in its 100 kg version. Its rated output is 2.0 mV/V. We excite the bridge with 3.3 V. We read it with a 24-bit ADC that covers −3.3 V to 3.3 V.</p>
+<div class="fit">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Quantity</th>
+<th style="text-align: left;">Calculation</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Bridge output at full load</td>
+<td style="text-align: left;">2.0 mV/V × 3.3 V</td>
+<td style="text-align: left;">6.6 mV</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Level of each bridge output</td>
+<td style="text-align: left;">3.3 V ÷ 2</td>
+<td style="text-align: left;">1.65 V</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">One ADC step</td>
+<td style="text-align: left;">3.3 V ÷ <span class="math inline">\(2^{23}\)</span></td>
+<td style="text-align: left;">0.39 µV</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Steps across full load</td>
+<td style="text-align: left;">6.6 mV ÷ 0.39 µV</td>
+<td style="text-align: left;">About 16 800 (14 bits)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">One step as load</td>
+<td style="text-align: left;">100 kg ÷ 16 800</td>
+<td style="text-align: left;">About 6 g</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="question fragment" style="margin-top: 1.0em;">
+<p>On paper, one step is 6 g on a 100 kg cell. Why not connect the bridge straight to the ADC?</p>
+</div>
+<div class="answer fragment">
+<p>Two things limit us.</p>
+<ul>
+<li>The signal at full load is 1/500 of the ADC’s full scale, 3.3 V. We use 14 of its 24 bits.</li>
+<li>The ADC’s noise is fixed. It tells us how many of those 14 bits we can trust.</li>
+</ul>
+</div>
+<div class="answer fragment">
+<p>The signal also rides on a large shared voltage. At full load each output moves by only 3.3 mV, around 1.65 V. The circuit must subtract the two outputs accurately. If it does not, part of the 1.65 V leaks into the reading.</p>
+</div>
+<div class="fragment">
+<p>The circuit that deals with all three is the <span class="highlight">analog front end</span>. <span class="red">We will not build one from parts. We will use a chip made for bridges, and learn to read its datasheet.</span></p>
+</div>
+</div>
+</section>
+<section id="analog-front-ends-2" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">The structure of a front end for a bridge</span></p>
+
+<img data-src="figures/afe-structure.svg" style="width:100%; display:block; margin:-0.3em auto 0 auto;" class="r-stretch"><div style="font-size: 0.8em;">
+<div class="fragment">
+<ul>
+<li>The <span class="highlight">PGA</span> is a programmable gain amplifier. It takes the difference of the two bridge outputs and ignores the 1.65 V they share. We select its gain.</li>
+<li>The <span class="highlight">anti-aliasing filter</span> removes the frequencies the ADC cannot sample, as in Module 1.</li>
+<li>The <span class="highlight">ADC</span> compares the amplified signal with its reference voltage and gives a number.</li>
+<li>The <span class="highlight">digital filter</span> averages the ADC’s samples. The data rate we select decides how long it averages.</li>
+</ul>
+</div>
+<div class="fragment">
+<p>The bridge excitation is also the ADC’s reference. The bridge output is a fraction of the excitation, and the ADC reports a fraction of its reference. <span class="red">If the 3.3 V drifts, both move together and the number stays the same.</span></p>
+</div>
+</div>
+<!-- Held back for a later slide on one specific chip (ADS1232, TI datasheet SBAS350H, 3 V noise table):
+At a gain of 128 and 10 readings a second, the datasheet gives a noise of 18 nV at the input. Our cell gives 66 µV per kg. The noise is about 0.3 g, on a 100 kg cell.
+-->
+</section>
+<section id="analog-front-ends-3" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">Why a front end on one chip</span></p>
+
+<img data-src="figures/afe-structure.svg" style="width:88%; display:block; margin:-0.5em auto 0 auto;" class="r-stretch"><div style="font-size: 0.62em; margin-top: 0.4em;">
+<!-- Advantages: five boxes in one row. -->
+<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 0.6em;">
+<div style="border:1px solid #CBD5E0; border-radius:6px; background:#F7FAFC; padding:0.4em 0.6em;">
+<p><span class="highlight">Rejects the shared 1.65 V</span></p>
+<p>Resistors made together on one chip match. Separate resistors do not match well enough.</p>
+<p><span class="deemph" style="font-size: 0.85em;">A difference amplifier with 0.1 % resistors, at a gain of 128, can be off by 0.8 kg on our 100 kg cell.</span></p>
+</div>
+<div style="border:1px solid #CBD5E0; border-radius:6px; background:#F7FAFC; padding:0.4em 0.6em;">
+<p><span class="highlight">Ignores excitation drift</span></p>
+<p>The excitation is also the ADC’s reference. Both move together.</p>
+<p><span class="deemph" style="font-size: 0.85em;">With a separate reference, a supply that fluctuates by ±0.1 V around 3.3 V makes the reading fluctuate by ±3 %. That is ±3 kg at a load of 100 kg.</span></p>
+</div>
+<div style="border:1px solid #CBD5E0; border-radius:6px; background:#F7FAFC; padding:0.4em 0.6em;">
+<p><span class="highlight">Known noise, low drift</span></p>
+<p>The maker measures the noise of the whole chain and reports it. The chip cancels its own offset many times a second, so the drift stays low.</p>
+<p><span class="deemph" style="font-size: 0.85em;">With separate parts we must work out the noise and test it ourselves.</span></p>
+</div>
+<div style="border:1px solid #CBD5E0; border-radius:6px; background:#F7FAFC; padding:0.4em 0.6em;">
+<p><span class="highlight">Less pickup</span></p>
+<p>The tiny signal stays inside the chip. It does not cross the board.</p>
+<p><span class="deemph" style="font-size: 0.85em;">Pickup grows with the length of the wires and the area of the loop they form. Inside a chip both are far smaller than on a board.</span></p>
+</div>
+<div style="border:1px solid #CBD5E0; border-radius:6px; background:#F7FAFC; padding:0.4em 0.6em;">
+<p><span class="highlight">Fewer parts</span></p>
+<p>One chip does every job. It is smaller and cheaper.</p>
+</div>
+</div>
+<!-- Costs: two boxes, shown as a fragment. -->
+<div class="fragment" style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 0.6em; margin-top: 0.6em;">
+<div style="border:1px solid #A51C30; border-radius:6px; background:#FBF3F4; padding:0.4em 0.6em;">
+<p><span class="red">Fixed choices</span></p>
+<p>We get only the gains and data rates the maker chose.</p>
+</div>
+<div style="border:1px solid #A51C30; border-radius:6px; background:#FBF3F4; padding:0.4em 0.6em;">
+<p><span class="red">A black box</span></p>
+<p>We cannot see or change what is inside. We depend on the datasheet.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="analog-front-ends-4" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">Let’s look at a commercial AFE</span></p>
+<div class="columns" style="align-items:center; margin-top:-0.3em;">
+<div class="column" style="width: 60%;">
+<p><img data-src="figures/ads1261-functional-block.png" class="" style="width:100%; display:block; margin:0 auto;"></p>
+<div style="margin-top:-1.2em; text-align:justify;">
+<p><span class="cite">Functional block diagram of the ADS1261. Texas Instruments, ADS1261 datasheet SBAS760C (2019), section 9.2, p.&nbsp;27. Filter resistors and 4.7 nF capacitor: Figure 49, p.&nbsp;30. Gains and data rates: section 7.5, p.&nbsp;8. Reference choices: section 9.3.3, p.&nbsp;33.</span></p>
+</div>
+</div><div class="column" style="width: 40%;">
+<!-- One wrapper holds every bullet. Quarto gives a 0.5rem left margin to a column's
+     direct children that are not lists, so a bare list and a fragment would not line up. -->
+<div style="font-size: 0.75em;">
+<ul>
+<li>The <span class="highlight">ADS1261</span> is a 24-bit ADC from Texas Instruments. It is made for bridges and other sensors with small signals.</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>It holds the chain from the last slide. Find the input mux, the PGA, the ADC and the digital filter.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>The <span class="highlight">anti-aliasing filter</span> is split. The two resistors after the PGA are inside the chip. We add a 4.7 nF capacitor across the pins CAPP and CAPN.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>We select the gain, from 1 to 128. We select the data rate, from 2.5 to 40 000 readings a second.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>The reference mux selects what the ADC compares the signal with. For a bridge we connect the excitation to the reference inputs and select them.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Most of the other blocks check that the measurement can be trusted.</li>
+</ul>
+</div>
+</div>
+</div></div>
+</section>
+<section id="analog-front-ends-5" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">The ADS1261 specifications that matter for our load cell</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<div class="fit">
+<table class="caption-top">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 28%">
+<col style="width: 45%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Specification</th>
+<th style="text-align: left;">Datasheet value</th>
+<th style="text-align: left;">The question for our cell</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Analog supply</td>
+<td style="text-align: left;">4.75 V to 5.25 V</td>
+<td style="text-align: left;">What can excite the bridge?</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Gain</td>
+<td style="text-align: left;">1, 2, 4 and so on up to 128</td>
+<td style="text-align: left;">Which gain do we select?</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Differential input range</td>
+<td style="text-align: left;">±<span class="math inline">\(V_\text{REF}\)</span> ÷ Gain</td>
+<td style="text-align: left;">Does the signal at full load fit?</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Absolute input voltage</td>
+<td style="text-align: left;">0.3 V inside each supply rail, and less at high gain</td>
+<td style="text-align: left;">Is the level the two bridge outputs share allowed?</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Differential input impedance</td>
+<td style="text-align: left;">1 GΩ</td>
+<td style="text-align: left;">Does the chip load the bridge?</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Reference input</td>
+<td style="text-align: left;">0.9 V up to the analog supply</td>
+<td style="text-align: left;">Can the excitation be the reference?</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Noise at the input</td>
+<td style="text-align: left;">13 nV RMS at a gain of 32 and 10 readings a second</td>
+<td style="text-align: left;">What is the smallest change in load we can see?</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Data rate</td>
+<td style="text-align: left;">2.5 to 40 000 readings a second</td>
+<td style="text-align: left;">How fast a change in force can we follow?</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Common-mode rejection</td>
+<td style="text-align: left;">130 dB at 20 readings a second</td>
+<td style="text-align: left;">How much of the shared level leaks into the reading?</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Offset drift</td>
+<td style="text-align: left;">10 nV/°C at gains of 16 to 128</td>
+<td style="text-align: left;">How far does the zero move as the room warms?</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Gain error and gain drift</td>
+<td style="text-align: left;">±0.05 % and 0.5 ppm/°C</td>
+<td style="text-align: left;">Do we need to calibrate, and how often?</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div style="margin-top:-0.4em;">
+<p><span class="highlight">Our setup.</span> The chip runs from a 5 V supply. We excite the bridge with 3.3 V. The same 3.3 V is the ADC’s reference, connected to the inputs AIN0 and AIN1. So <span class="math inline">\(V_\text{REF}\)</span> = 3.3 V, and the range is ±3.3 V ÷ Gain.</p>
+</div>
+<div style="margin-top:-0.4em; text-align:justify;">
+<p><span class="cite">Typical values at 25 °C with a 5 V analog supply. Texas Instruments, ADS1261 datasheet SBAS760C (2019). Supply, differential input range and reference limits: section 7.3, p.&nbsp;7. Absolute input voltage: Equation 5, section 9.3.2, p.&nbsp;31. Gain, input impedance, data rate, common-mode rejection, offset drift, gain error and gain drift: section 7.5, p.&nbsp;8. Noise: Table 1, section 8.1, p.&nbsp;22, row 10 SPS sinc4, column gain 32, with the internal 2.5 V reference. The common-mode rejection is specified at 60 Hz. Reference on AIN0 and AIN1: section 9.3.3.2, p.&nbsp;33.</span></p>
+</div>
+</div>
+</section>
+<section id="analog-front-ends-6" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">Which gain? Signal against noise</span></p>
+<div class="columns" style="align-items:center; margin-top:-0.3em;">
+<div class="column" style="width: 50%;">
+<!-- One wrapper holds every bullet, so a bare list and the fragments line up. -->
+<div style="font-size: 0.72em;">
+<ul>
+<li>At a gain of 1 the range is ±3.3 V. It covers every output that a bridge on 3.3 V could give.</li>
+<li>One step is <span class="math inline">\(3.3\,\text{V} \div 2^{23} = 0.39\,\text{µV}\)</span>. On our cell that is 6 g.</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Our cell gives 6.6 mV at full load. It uses <span class="math inline">\(\frac{6.6\,\text{mV}}{3.3\,\text{V}} = \frac{1}{500}\)</span> of the range.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>The noise at a gain of 1 is 170 nV, which is 2.6 g. The signal to noise ratio at full load is 6.6 mV ÷ 170 nV = 39 000.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>The gain lifts the signal above the converter’s noise. The noise at the bridge falls as <span class="math inline">\(1 \div \text{Gain}\)</span>. It stops falling when the amplifier’s own noise takes over.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>At a gain of 32 the noise is 13 nV, which is 0.20 g. The signal to noise ratio is 510 000.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Past a gain of 32 the noise hardly falls. A gain of 128 gives 12 nV. Both hold our 6.6 mV easily. <span class="red">We select 32.</span></li>
+</ul>
+</div>
+</div>
+</div><div class="column" style="width: 48%;">
+<p><img data-src="figures/afe-noise-gain.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
+<div style="margin-top:-1.0em; text-align:justify;">
+<p><span class="cite">ADS1261 at 10 readings a second, sinc4 filter. Texas Instruments, ADS1261 datasheet SBAS760C (2019). Noise: Table 1, section 8.1, p.&nbsp;22, row 10 SPS sinc4, typical RMS values. One step: Table 15, p.&nbsp;52. We calculated the values in grams and the signal to noise ratios.</span></p>
+</div>
+</div></div>
+</section>
+<section id="analog-front-ends-7" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">Does the signal to noise ratio matter?</span></p>
+<div style="font-size: 0.85em; margin-top: -0.5em;">
+<p>At a gain of 1 the noise is 2.6 g. The signal to noise ratio is 39 000 at a load of 100 kg. At 1 kg it is 390.</p>
+<div class="question fragment">
+<p>Does this ratio matter if we want the weight or the force?</p>
+</div>
+<div class="answer fragment">
+<p>No.&nbsp;The noise is 2.6 g at any load. For weight or force only the noise in grams matters. From peak to peak it is about 10 g.</p>
+</div>
+<div class="question fragment" style="margin-top: 2.00em;">
+<p>When does the ratio matter more than the noise in grams? You have seen a case in Module 1.</p>
+</div>
+<div class="answer fragment">
+<p>When we compute the centre of pressure from two forces. Its error grows as the noise divided by the total load (<a href="../00-measurements-basics/measurements-basics.html#/cop-balance-board" target="_blank">Module 1, centre of pressure on a balance board</a>).</p>
+<p><span class="deemph">Take a board 0.5 m long with equal loads on its two cells. A noise of 2.6 g on each cell gives an error of 0.9 mm at a total load of 1 kg. At 70 kg it gives 0.01 mm.</span></p>
+</div>
+<div class="fragment">
+<p><span class="red">The measurand decides which number matters.</span></p>
+</div>
+</div>
+</section>
+<section id="analog-front-ends-8" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">How fast? Speed against noise</span></p>
+<div class="columns" style="align-items:center; margin-top:-0.3em;">
+<div class="column" style="width: 48%;">
+<p><img data-src="figures/afe-noise-rate.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
+<div style="margin-top:-1.0em; text-align:justify;">
+<p><span class="cite">ADS1261 at a gain of 32, sinc4 filter. Texas Instruments, ADS1261 datasheet SBAS760C (2019). Noise: Table 1, pp.&nbsp;22 and 23, column gain 32, rows sinc4. Bandwidth: Table 6, p.&nbsp;41, column sinc4. Rejection: Table 7, p.&nbsp;42, row 10 SPS sinc4, 50 Hz ±2 % and 60 Hz ±2 %. Settling: Table 8, p.&nbsp;44, column sinc4, plus one conversion period because the load changes during continuous conversion (p.&nbsp;44). We calculated the values in grams.</span></p>
+</div>
+</div><div class="column" style="width: 50%;">
+<!-- One wrapper holds every block, so the table and the fragments line up. -->
+<div style="font-size: 0.72em;">
+<div class="fit" style="font-size: 1.25em; margin-bottom: 0.5em;">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Readings a second</th>
+<th style="text-align: left;">Noise</th>
+<th style="text-align: left;">Bandwidth</th>
+<th style="text-align: left;">Settles in</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">0.20 g</td>
+<td style="text-align: left;">2.3 Hz</td>
+<td style="text-align: left;">500 ms</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">100</td>
+<td style="text-align: left;">0.65 g</td>
+<td style="text-align: left;">23 Hz</td>
+<td style="text-align: left;">50 ms</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">1200</td>
+<td style="text-align: left;">2.3 g</td>
+<td style="text-align: left;">273 Hz</td>
+<td style="text-align: left;">4.6 ms</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="fragment">
+<ul>
+<li>Each reading is an average. A longer average has less noise and a slower response.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>At 10 readings a second the average spans 5 cycles of 50 Hz and 6 cycles of 60 Hz. The datasheet gives 136 dB of rejection at both.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><span class="red">For a steady weight we select 10 readings a second.</span> An impact on a force plate needs hundreds. The noise is then six to ten times larger.</li>
+</ul>
+</div>
+</div>
+</div></div>
+</section>
+<section id="analog-front-ends-9" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">Can the chip accept the load cell’s signal?</span></p>
+<!-- Two tables side by side. Row by row, the left one gives a window of the chip and
+     the right one gives the voltage of our cell that must sit inside it. -->
+<div style="display:grid; grid-template-columns: auto auto; justify-content: space-evenly; align-items: start; column-gap: 1em; font-size: 0.80em; margin-top: 0.5em;">
+<div class="fit">
+<table class="caption-top">
+<colgroup>
+<col style="width: 52%">
+<col style="width: 30%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">What the chip allows</th>
+<th style="text-align: left;">Calculation</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Input window</td>
+<td style="text-align: left;">0.3 V + 0.10 V<br>4.75 V − 0.3 V − 0.10 V</td>
+<td style="text-align: left;">0.40 V<br>4.35 V</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Reference window</td>
+<td style="text-align: left;">Datasheet limits</td>
+<td style="text-align: left;">0.9 V to 5 V</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Range of the ADC</td>
+<td style="text-align: left;">± the reference</td>
+<td style="text-align: left;">±3.3 V</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="fit">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: left;">What our cell gives</th>
+<th style="text-align: left;">Calculation</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Each bridge output</td>
+<td style="text-align: left;">3.3 V ÷ 2<br>6.6 mV ÷ 2</td>
+<td style="text-align: left;">1.65 V<br>± 3.3 mV</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Excitation</td>
+<td style="text-align: left;">Our choice</td>
+<td style="text-align: left;">3.3 V</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Amplified difference</td>
+<td style="text-align: left;">6.6 mV × 32</td>
+<td style="text-align: left;">±0.21 V</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div style="font-size: 0.6em; margin-top: -0.0em; text-align: center;">
+<p><span class="deemph">The 0.10 V is the room the amplified signal needs at the amplifier’s outputs, 6.6 mV × (32 − 1) ÷ 2. The 4.75 V is the lowest supply the datasheet allows.</span></p>
+</div>
+<div style="margin-top: 1.0em;">
+<div class="columns" style="align-items:center;">
+<div class="column fragment" style="width: 65%;">
+<p><img data-src="figures/afe-voltage-windows.svg" class="" style="width:84%; display:block; margin:0 auto;"></p>
+<div style="margin-top:-1.0em; text-align:justify;">
+<p><span class="cite">Texas Instruments, ADS1261 datasheet SBAS760C (2019). Input window: Equation 5, p.&nbsp;31. Supply and reference limits: section 7.3, p.&nbsp;7. Input impedance: section 7.5, p.&nbsp;8. We calculated the other values at a gain of 32. The 350 Ω is assumed.</span></p>
+</div>
+</div><div class="column" style="width: 33%;">
+<!-- One wrapper holds every block, so the fragments line up. -->
+<div style="font-size: 0.68em;">
+<div class="fragment">
+<p>Every voltage sits inside its window. After the amplifier the signal is ±0.21 V, about 1/16 of the ADC’s range. At a gain of 1 it was 1/500.</p>
+</div>
+<div class="fragment">
+<p><span class="highlight">Loading.</span> The bridge’s output impedance is 350 Ω. The chip’s input impedance is 1 GΩ. The loss is <span class="math inline">\(\approx 350\,\Omega \div 1\,\text{G}\Omega = 0.35 \times 10^{-6}\)</span>. At 100 kg that is 0.035 g.</p>
+</div>
+</div>
+</div></div>
+</div>
+</section>
+<section id="analog-front-ends-10" class="slide level2">
+<h2>Analog front ends</h2>
+<p><span class="framesub">The chip’s share of the uncertainty</span></p>
+<div style="font-size: 0.88em; margin-top: -0.5em;">
+<p>Each datasheet value is a voltage at the input. We divide by 66 µV per kg to get a load. We then set the zero with nothing on the cell, and calibrate with one known mass. Later the room warms by 10 °C.</p>
+<div class="fit total-row">
+<table class="caption-top">
+<colgroup>
+<col style="width: 9%">
+<col style="width: 19%">
+<col style="width: 33%">
+<col style="width: 13%">
+<col style="width: 24%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Source</th>
+<th style="text-align: left;">Datasheet value</th>
+<th style="text-align: left;">Before zero and calibration</th>
+<th style="text-align: left;">Just after</th>
+<th style="text-align: left;">Later, 10 °C warmer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Noise, RMS</td>
+<td style="text-align: left;">13 nV</td>
+<td style="text-align: left;">0.20 g</td>
+<td style="text-align: left;">0.20 g</td>
+<td style="text-align: left;">0.20 g</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Offset &amp; its drift</td>
+<td style="text-align: left;">50 µV ÷ 32 = 1.6 µV, &amp; 10 nV/°C</td>
+<td style="text-align: left;">24 g</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">1.5 g</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Gain error &amp; its drift</td>
+<td style="text-align: left;">±0.05 %, &amp; 0.5 ppm/°C</td>
+<td style="text-align: left;">50 g at 100 kg</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0.5 g at 100 kg</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Leak of the shared level</td>
+<td style="text-align: left;">130 dB, so 1.65 V ÷ 3.2 million = 0.52 µV</td>
+<td style="text-align: left;">8 g</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0.24 g</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Loading of the bridge</td>
+<td style="text-align: left;">0.35 parts per million</td>
+<td style="text-align: left;">0.04 g</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Nonlinearity</td>
+<td style="text-align: left;">±3 ppm of 206 mV = 0.62 µV</td>
+<td style="text-align: left;">9 g</td>
+<td style="text-align: left;">Up to 2 g</td>
+<td style="text-align: left;">Up to 2 g</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;"><strong>Combined, root sum of squares:</strong></td>
+<td style="text-align: left;">About 57 g</td>
+<td style="text-align: left;">Up to 2 g</td>
+<td style="text-align: left;">Up to 2.6 g</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="fragment">
+<p>The chip adds up to about 3 g on a 100 kg cell. That is 0.003 % of full scale. Before the zero and the calibration it was about 57&nbsp;g.</p>
+</div>
+<div class="fragment">
+<p>This is the chip’s contribution alone. The cell, its mounting and the wiring add their own.</p>
+</div>
+<div class="fragment">
+<p><span class="highlight">The method.</span> Take a value from the datasheet. Convert it to the units of the measurand. Then decide. It works for any chip and any sensor.</p>
+</div>
+<div style="margin-top:0.2em; text-align:justify;">
+<p><span class="cite">Typical values from the ADS1261 datasheet, SBAS760C (2019). Noise: Table 1, p.&nbsp;22, row 10 SPS sinc4, column gain 32. Offset, drifts, gain error, common-mode rejection and input impedance: section 7.5, p.&nbsp;8. The 130 dB is specified at 20 readings a second and 60 Hz. We calculated the values in grams and the loading. The bridge resistance of 350 Ω is assumed. The maximum offset drift is five times the typical value, and the maximum gain drift is eight times. The leak after zeroing assumes the excitation moves by 0.1 V, which moves the shared level by 0.05 V. Nonlinearity: section 7.5, p.&nbsp;8, over the full range of 2 × 3.3 V ÷ 32 = 206 mV (section 8.1, Equation 1). Our signal uses ±6 % of that range. Zeroing and calibration remove all but the curvature there, which we estimated from Figure 26, p.&nbsp;17.</span></p>
+</div>
+</div>
 
 </section></section>
     </div>
