@@ -3378,8 +3378,8 @@ $$\frac{v\,T_{\mathrm{exp}}\,f}{z} = \frac{fd}{8z} \;\Rightarrow\; v_{\max} = \f
 <h2>Kinetic measurands</h2>
 <p><span class="framesub">Elastic elements used in torque sensors</span></p>
 
-<img data-src="figures/torque-sensor-designs.svg" style="width:72%; display:block; margin:-0.5em auto 0 auto;" class="r-stretch"><div style="font-size: 0.75em;">
-<p>A cylinder is stiff, so it strains little. The other shapes replace it with thin beams that bend, which strain more for the same torque. <span class="red">More signal costs stiffness. The sensor then twists more under load.</span></p>
+<img data-src="figures/torque-sensor-designs.svg" style="width:85%; display:block; margin:-0.5em auto 0 auto;" class="r-stretch"><div style="font-size: 0.75em;">
+<p>A cylinder is stiff, so it strains little. The other shapes replace it with thin beams that bend, which strain more for the same torque. <span class="red">More signal achieved with reduced stiffness, so the sensor twists more under load.</span></p>
 </div>
 <p><span class="cite">Structures redrawn after Zhang, H.-X., Ryoo, Y.-J. &amp; Byun, K.-S. (2016). Development of torque sensor with high sensitivity for joint of robot manipulator using 4-bar linkage shape. <em>Sensors</em> 16(7), 991, Fig. 3. The gauge positions are typical ones and are not from the paper. <span style="color:#A51C30;">Red: gauges that stretch.</span> <span style="color:#2B6CB0;">Blue: gauges that shorten.</span></span></p>
 </section>
@@ -3414,10 +3414,13 @@ c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
 <ul>
 <li><span class="math inline">\(\mathbf{g}_0\)</span> holds the signals at no load. <span class="red">Record it before every measurement.</span></li>
 <li><span class="math inline">\(\mathbf{C}\)</span> belongs to one sensor. It does not fit another sensor of the same model.</li>
+<li>The six loads do not strain the beams equally. So each axis has its own range. One commercial sensor is rated for 40&nbsp;N along <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>, but 120&nbsp;N along <span class="math inline">\(z\)</span>.</li>
 <li>The torques are about the sensor’s own origin. A force applied away from that origin shows up as a torque too.</li>
 </ul>
 </div>
 </div></div>
+<!-- Source of the 40 N / 120 N ranges, held back until Siva has checked it (cite-only-what-he-has-read):
+[Ranges: ATI Mini40, calibration SI-40-2. ATI Industrial Automation, *F/T Transducer Section*, document 9620-05, Table 5.36, p. 52.]{.cite} -->
 </section>
 <section id="kinetic-measurands-20" class="slide level2">
 <h2>Kinetic measurands</h2>
@@ -3524,7 +3527,7 @@ c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
 </div></div>
 <div class="fragment">
 <div style="font-size: 0.80em; margin-top: -0.0em;">
-<p><span class="highlight">Three moments about the plate’s centre.</span> Each is a difference of corner forces times the sensor spacing. These are a step towards the centre of pressure, not a result we want.</p>
+<p><span class="highlight">Three moments about the plate’s centre.</span> Each is a difference of corner forces times the sensor spacing. These moments are about the plate’s centre, a point the body does not care about. We use them only to find the centre of pressure and the free moment.</p>
 </div>
 <div style="font-size: 0.80em; margin-top: -1.0em;">
 <p><span class="math display">\[M_x = \tfrac{b}{2}\big[(f_{z1} + f_{z2}) - (f_{z3} + f_{z4})\big] \qquad M_y = -\tfrac{a}{2}\big[(f_{z1} + f_{z4}) - (f_{z2} + f_{z3})\big] \qquad M_z = \sum_i \big(x_i f_{yi} - y_i f_{xi}\big)\]</span></p>
@@ -3676,9 +3679,6 @@ c_{61} &amp; c_{62} &amp; \cdots &amp; c_{66}
 <p>The bridge excitation is also the ADC’s reference. The bridge output is a fraction of the excitation, and the ADC reports a fraction of its reference. <span class="red">If the 3.3 V drifts, both move together and the number stays the same.</span></p>
 </div>
 </div>
-<!-- Held back for a later slide on one specific chip (ADS1232, TI datasheet SBAS350H, 3 V noise table):
-At a gain of 128 and 10 readings a second, the datasheet gives a noise of 18 nV at the input. Our cell gives 66 µV per kg. The noise is about 0.3 g, on a 100 kg cell.
--->
 </section>
 <section id="analog-front-ends-3" class="slide level2">
 <h2>Analog front ends</h2>
@@ -3894,7 +3894,7 @@ At a gain of 128 and 10 readings a second, the datasheet gives a noise of 18 nV 
 </div><div class="column" style="width: 48%;">
 <p><img data-src="figures/afe-noise-gain.svg" class="" style="width:100%; display:block; margin:0 auto;"></p>
 <div style="margin-top:-1.0em; text-align:justify;">
-<p><span class="cite">ADS1261 at 10 readings a second, sinc4 filter. Texas Instruments, ADS1261 datasheet SBAS760C (2019). Noise: Table 1, section 8.1, p.&nbsp;22, row 10 SPS sinc4, typical RMS values. One step: Table 15, p.&nbsp;52. We calculated the values in grams and the signal to noise ratios.</span></p>
+<p><span class="cite">ADS1261 at 10 readings a second, sinc4 filter. Texas Instruments, ADS1261 datasheet SBAS760C (2019). Noise: Table 1, section 8.1, p.&nbsp;22, row 10 SPS sinc4, typical RMS values, measured with the internal 2.5 V reference. One step: Table 15, p.&nbsp;52. We calculated the values in grams and the signal to noise ratios.</span></p>
 </div>
 </div></div>
 </section>
@@ -4056,10 +4056,10 @@ At a gain of 128 and 10 readings a second, the datasheet gives a noise of 18 nV 
 </div>
 <div style="margin-top: 1.0em;">
 <div class="columns" style="align-items:center;">
-<div class="column fragment" style="width: 65%;">
+<div class="column" style="width: 65%;">
 <p><img data-src="figures/afe-voltage-windows.svg" class="" style="width:84%; display:block; margin:0 auto;"></p>
 <div style="margin-top:-1.0em; text-align:justify;">
-<p><span class="cite">Texas Instruments, ADS1261 datasheet SBAS760C (2019). Input window: Equation 5, p.&nbsp;31. Supply and reference limits: section 7.3, p.&nbsp;7. Input impedance: section 7.5, p.&nbsp;8. We calculated the other values at a gain of 32. The 350 Ω is assumed.</span></p>
+<p><span class="cite">Texas Instruments, ADS1261 datasheet SBAS760C (2019). Input window: Equation 5, p.&nbsp;31. Damage limits: absolute maximum ratings, section 7.1, p.&nbsp;6. Supply and reference limits: section 7.3, p.&nbsp;7. Input impedance: section 7.5, p.&nbsp;8. We calculated the other values at a gain of 32. The 350 Ω is assumed.</span></p>
 </div>
 </div><div class="column" style="width: 33%;">
 <!-- One wrapper holds every block, so the fragments line up. -->
@@ -4069,6 +4069,9 @@ At a gain of 128 and 10 readings a second, the datasheet gives a noise of 18 nV 
 </div>
 <div class="fragment">
 <p><span class="highlight">Loading.</span> The bridge’s output impedance is 350 Ω. The chip’s input impedance is 1 GΩ. The loss is <span class="math inline">\(\approx 350\,\Omega \div 1\,\text{G}\Omega = 0.35 \times 10^{-6}\)</span>. At 100 kg that is 0.035 g.</p>
+</div>
+<div class="fragment">
+<p><span class="highlight">Damage.</span> Inside these windows the chip cannot be damaged. Power the bridge from the same supply as the chip, so the inputs never see a voltage while the chip is off.</p>
 </div>
 </div>
 </div></div>
@@ -4134,33 +4137,34 @@ At a gain of 128 and 10 readings a second, the datasheet gives a noise of 18 nV 
 <td style="text-align: left;">0</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">Nonlinearity</td>
-<td style="text-align: left;">±3 ppm of 206 mV = 0.62 µV</td>
-<td style="text-align: left;">9 g</td>
-<td style="text-align: left;">Up to 2 g</td>
-<td style="text-align: left;">Up to 2 g</td>
-</tr>
-<tr class="odd">
 <td style="text-align: left;"></td>
 <td style="text-align: left;"><strong>Combined, root sum of squares:</strong></td>
-<td style="text-align: left;">About 57 g</td>
-<td style="text-align: left;">Up to 2 g</td>
-<td style="text-align: left;">Up to 2.6 g</td>
+<td style="text-align: left;">About 56 g</td>
+<td style="text-align: left;">0.20 g</td>
+<td style="text-align: left;">About 1.6 g</td>
 </tr>
 </tbody>
 </table>
 </div>
+<!-- Nonlinearity row, commented out on 21 Nov 2026 on Siva's decision. Open question: how much
+     of the ADC's nonlinearity survives a two-point calibration over the 0 to +6.4 % of the
+     range our signal uses. Figure 26 is plotted at 10 % steps and cannot resolve it. If the
+     curve is smooth, the residue scales as the square of the stretch and is below 0.1 g.
+     With the row, the totals were: about 57 g, up to 2 g, up to 2.6 g, and the fragment
+     below said "up to about 3 g ... 0.003 % ... about 57 g".
+| Nonlinearity | ±3 ppm of 206 mV = 0.62 µV | 9 g | Up to 2 g | Up to 2 g |
+-->
 <div class="fragment">
-<p>The chip adds up to about 3 g on a 100 kg cell. That is 0.003 % of full scale. Before the zero and the calibration it was about 57&nbsp;g.</p>
+<p>The chip adds about 1.6 g on a 100 kg cell. That is 0.002 % of full scale. Before the zero and the calibration it was about 56 g.</p>
 </div>
 <div class="fragment">
 <p>This is the chip’s contribution alone. The cell, its mounting and the wiring add their own.</p>
 </div>
 <div class="fragment">
-<p><span class="highlight">The method.</span> Take a value from the datasheet. Convert it to the units of the measurand. Then decide. It works for any chip and any sensor.</p>
+<p><span class="highlight">The method.</span> Convert each datasheet value to the units of the measurand. Compare it with the smallest change you need to detect.</p>
 </div>
 <div style="margin-top:0.2em; text-align:justify;">
-<p><span class="cite">Typical values from the ADS1261 datasheet, SBAS760C (2019). Noise: Table 1, p.&nbsp;22, row 10 SPS sinc4, column gain 32. Offset, drifts, gain error, common-mode rejection and input impedance: section 7.5, p.&nbsp;8. The 130 dB is specified at 20 readings a second and 60 Hz. We calculated the values in grams and the loading. The bridge resistance of 350 Ω is assumed. The maximum offset drift is five times the typical value, and the maximum gain drift is eight times. The leak after zeroing assumes the excitation moves by 0.1 V, which moves the shared level by 0.05 V. Nonlinearity: section 7.5, p.&nbsp;8, over the full range of 2 × 3.3 V ÷ 32 = 206 mV (section 8.1, Equation 1). Our signal uses ±6 % of that range. Zeroing and calibration remove all but the curvature there, which we estimated from Figure 26, p.&nbsp;17.</span></p>
+<p><span class="cite">Typical values from the ADS1261 datasheet, SBAS760C (2019). Noise: Table 1, p.&nbsp;22, row 10 SPS sinc4, column gain 32. Offset, drifts, gain error, common-mode rejection and input impedance: section 7.5, p.&nbsp;8. The 130 dB is specified at 20 readings a second and 60 Hz. We calculated the values in grams and the loading. The bridge resistance of 350 Ω is assumed. The maximum offset drift is five times the typical value, and the maximum gain drift is eight times. The leak after zeroing assumes the excitation moves by 0.1 V, which moves the shared level by 0.05 V.</span> <!-- Citation for the commented nonlinearity row: Nonlinearity: section 7.5, p. 8, over the full range of 2 × 3.3 V ÷ 32 = 206 mV (section 8.1, Equation 1). Our signal uses ±6 % of that range. Zeroing and calibration remove all but the curvature there, which we estimated from Figure 26, p. 17. --></p>
 </div>
 </div>
 
